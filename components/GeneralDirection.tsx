@@ -88,7 +88,11 @@ Use this exact format:
 
 ## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept — what's the story, what's the hook?]
-**Key Scenes:** [4-5 key visual moments that would make up the video, described cinematically]
+**Scene 1:** [Describe the first scene — what happens, who appears, camera angle, duration]
+**Scene 2:** [Describe the second scene]
+**Scene 3:** [Describe the third scene]
+**Scene 4:** [Describe the fourth scene]
+**Scene 5:** [Describe the fifth/final scene — include the ending and CTA]
 **Visual Style:** [Describe the visual treatment: colour palette, lighting mood, camera style, film stock feel]
 **Why It Works:** [1 sentence on why this concept fits the brand, audience, and CTA]
 
@@ -650,7 +654,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     value={finetuneText}
                     onChange={(e) => setFinetuneText(e.target.value)}
                     rows={16}
-                    className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                    className="w-full bg-white border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#3a3a3a] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                   />
                 </div>
               </div>
@@ -665,13 +669,13 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   onChange={(e) => setFinetuneDirection(e.target.value)}
                   placeholder="e.g. Make the ending more emotional, add a scene in a NEXT store, change the character to a grandmother..."
                   rows={2}
-                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] placeholder:text-[#ceadd4] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
+                  className="w-full bg-white border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#3a3a3a] placeholder:text-[#ceadd4] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
                 />
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => onSaveAndCreateScript?.(finetuneTitle, finetuneText, finetuneDirection)}
                     disabled={isSaving || isGenerating || !finetuneText.trim()}
-                    className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                    className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
                     {isSaving ? 'Saving & Creating...' : 'Save & Create Script'}
@@ -775,20 +779,20 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                             value={editedBodies[idea.num] ?? idea.body}
                             onChange={(e) => setEditedBodies(prev => ({ ...prev, [idea.num]: e.target.value }))}
                             rows={14}
-                            className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                            className="w-full bg-white border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#3a3a3a] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                             autoFocus
                           />
                         ) : hasStructured ? (
-                          <div className="space-y-2.5">
+                          <div className="space-y-3">
                             {parsed.map((sec, j) => (
                               <div key={j}>
-                                <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]/70">{sec.label}</span>
-                                <p className="text-[11px] text-[#888] leading-relaxed mt-0.5">{sec.content}</p>
+                                <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]">{sec.label}:</span>
+                                <p className="text-[11px] text-[#3a3a3a] leading-relaxed mt-0.5 whitespace-pre-wrap">{sec.content}</p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <pre className="text-[11px] text-[#888]/80 whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
+                          <pre className="text-[11px] text-[#3a3a3a] whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
                       <div className="px-4 py-2.5 bg-[#f6f0f8] border-t border-[#ceadd4] space-y-2">
@@ -812,7 +816,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                                 {icon}
                               </button>
                             ))}
-                            <div className="w-px h-5 bg-[#4a3a52] mx-0.5"></div>
+                            <div className="w-px h-5 bg-[#ceadd4] mx-0.5"></div>
                             <button
                               onClick={() => onRegenerateSingleIdea?.(idea.num, visibleIdeas, {
                                 rating: ratings[idea.num],
@@ -833,18 +837,18 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                               setFinetuneDirection(feedbackNotes[idea.num] || '');
                               setFinetuneMode(true);
                             }}
-                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#edecec] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10"
+                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#91569c] text-white hover:bg-[#5c3a62]"
                           >
-                            <i className="fa-solid fa-hand-pointer text-[8px] mr-1"></i>
-                            Select
+                            <i className="fa-solid fa-check text-[8px] mr-1"></i>
+                            Accept & Create Script
                           </button>
                         </div>
                         <input
                           type="text"
                           value={feedbackNotes[idea.num] || ''}
                           onChange={(e) => setFeedbackNotes(prev => ({ ...prev, [idea.num]: e.target.value }))}
-                          placeholder="Feedback on this idea..."
-                          className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                          placeholder="Add comments to refine this idea..."
+                          className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                         />
                       </div>
                     </div>
