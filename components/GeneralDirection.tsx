@@ -861,6 +861,17 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           } catch { /* fallback: browser download */ }
                         };
                         reader.readAsDataURL(blob);
+                        const dataUrl = await new Promise<string>(resolve => {
+                          const r = new FileReader();
+                          r.onload = () => resolve(r.result as string);
+                          r.readAsDataURL(blob);
+                        });
+                        const filename = `${(value.projectName || 'Project').replace(/\s+/g, '_')}_Approved_Concept.docx`;
+                        await fetch('/api/save-file', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ filename, data: dataUrl, folder: 'assets/2. Screenplays' }),
+                        }).catch(() => {});
                       } catch (e) { console.warn('Word save failed:', e); }
 
                       onSaveAndCreateScript?.(title, fullText, '');
