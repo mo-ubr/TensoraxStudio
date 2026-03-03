@@ -16,27 +16,33 @@ interface NewProjectWizardProps {
   onCancel: () => void;
 }
 
-const SCOPE_OPTIONS: { id: ProjectScope; label: string; icon: string; description: string; route: string }[] = [
-  { id: 'copy', label: 'Copy & Screenplay', icon: 'fa-pen-nib', description: 'Write concepts, ideas, and screenplays', route: 'concept' },
-  { id: 'images', label: 'Images & Characters', icon: 'fa-image', description: 'Create characters, key visuals, backgrounds', route: 'images' },
-  { id: 'video', label: 'Full Video Production', icon: 'fa-video', description: 'End-to-end: copy, images, frames, and video', route: 'concept' },
-  { id: 'full', label: 'Custom / Other', icon: 'fa-wand-magic-sparkles', description: 'Describe what you need and I\'ll guide you', route: 'concept' },
+const SCOPE_OPTIONS: { id: ProjectScope; label: string; icon: string; description: string }[] = [
+  { id: 'copy', label: 'Copy & Screenplay', icon: 'fa-pen-nib', description: 'Write concepts, ideas, and screenplays' },
+  { id: 'images', label: 'Images & Characters', icon: 'fa-image', description: 'Create characters, key visuals, backgrounds' },
+  { id: 'video', label: 'Full Video Production', icon: 'fa-video', description: 'End-to-end: copy, images, frames, and video' },
+  { id: 'full', label: 'Custom / Other', icon: 'fa-wand-magic-sparkles', description: 'Describe what you need and I\'ll guide you' },
 ];
 
-type WizardStep = 'name' | 'brand' | 'scope';
+type WizardStep = 'brief' | 'name' | 'brand' | 'scope';
+const STEPS: { id: WizardStep; label: string }[] = [
+  { id: 'brief', label: 'Brief' },
+  { id: 'name', label: 'Name' },
+  { id: 'brand', label: 'Brand' },
+  { id: 'scope', label: 'Type' },
+];
 
 export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onComplete, onCancel }) => {
-  const [step, setStep] = useState<WizardStep>('name');
+  const [step, setStep] = useState<WizardStep>('brief');
+  const [brief, setBrief] = useState('');
   const [name, setName] = useState('');
   const [brandId, setBrandId] = useState(brands[0]?.id || '');
   const [scope, setScope] = useState<ProjectScope | null>(null);
-  const [brief, setBrief] = useState('');
-  const nameRef = useRef<HTMLInputElement>(null);
   const briefRef = useRef<HTMLTextAreaElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (step === 'brief' && briefRef.current) briefRef.current.focus();
     if (step === 'name' && nameRef.current) nameRef.current.focus();
-    if (step === 'scope' && briefRef.current) setTimeout(() => briefRef.current?.focus(), 100);
   }, [step]);
 
   const handleFinish = () => {
@@ -44,33 +50,64 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
     onComplete({ name: name.trim(), brandId, scope, brief: brief.trim() });
   };
 
-  const stepNum = step === 'name' ? 1 : step === 'brand' ? 2 : 3;
+  const stepIdx = STEPS.findIndex(s => s.id === step);
 
   return (
     <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
       <div className="w-full max-w-lg animate-fade-in">
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8 justify-center">
-          {['Name', 'Brand', 'Scope'].map((label, i) => (
-            <React.Fragment key={label}>
-              {i > 0 && <div className={`w-8 h-px ${i < stepNum ? 'bg-[#91569c]' : 'bg-[#ceadd4]'}`}></div>}
+          {STEPS.map((s, i) => (
+            <React.Fragment key={s.id}>
+              {i > 0 && <div className={`w-8 h-px ${i <= stepIdx ? 'bg-[#91569c]' : 'bg-[#ceadd4]'}`}></div>}
               <div className="flex items-center gap-1.5">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-                  i + 1 < stepNum ? 'bg-[#91569c] text-white' :
-                  i + 1 === stepNum ? 'bg-[#91569c] text-white' :
+                  i < stepIdx ? 'bg-[#91569c] text-white' :
+                  i === stepIdx ? 'bg-[#91569c] text-white' :
                   'bg-[#e0d6e3] text-[#888]'
                 }`}>
-                  {i + 1 < stepNum ? <i className="fa-solid fa-check text-[8px]"></i> : i + 1}
+                  {i < stepIdx ? <i className="fa-solid fa-check text-[8px]"></i> : i + 1}
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-wider ${i + 1 <= stepNum ? 'text-[#5c3a62]' : 'text-[#ceadd4]'}`}>
-                  {label}
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${i <= stepIdx ? 'text-[#5c3a62]' : 'text-[#ceadd4]'}`}>
+                  {s.label}
                 </span>
               </div>
             </React.Fragment>
           ))}
         </div>
 
-        {/* Step 1: Name */}
+        {/* Step 1: Brief — tell me about the project */}
+        {step === 'brief' && (
+          <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm space-y-5">
+            <div>
+              <h3 className="text-lg font-bold text-[#5c3a62] uppercase tracking-wide">Tell me about your project</h3>
+              <p className="text-xs text-[#888] mt-1">Describe what you want to create — the more detail the better</p>
+            </div>
+            <textarea
+              ref={briefRef}
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              rows={6}
+              placeholder="e.g. We need a Gift Card promotion video for NEXT. The campaign targets parents of young children, featuring a grandmother character giving a gift card. We want warm, emotional visuals following the NEXT brand guidelines..."
+              className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-[12px] text-[#3a3a3a] placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30 resize-none leading-relaxed"
+            />
+            <div className="flex justify-between">
+              <button onClick={onCancel} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => setStep('name')}
+                disabled={!brief.trim()}
+                className="px-6 py-2.5 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <i className="fa-solid fa-arrow-right ml-1.5"></i>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Name */}
         {step === 'name' && (
           <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm space-y-5">
             <div>
@@ -87,8 +124,8 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
               className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
             />
             <div className="flex justify-between">
-              <button onClick={onCancel} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
-                Cancel
+              <button onClick={() => setStep('brief')} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
               </button>
               <button
                 onClick={() => setStep('brand')}
@@ -101,7 +138,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
           </div>
         )}
 
-        {/* Step 2: Brand */}
+        {/* Step 3: Brand */}
         {step === 'brand' && (
           <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm space-y-5">
             <div>
@@ -146,12 +183,12 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
           </div>
         )}
 
-        {/* Step 3: Scope & Brief */}
+        {/* Step 4: Scope / Type */}
         {step === 'scope' && (
           <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm space-y-5">
             <div>
               <h3 className="text-lg font-bold text-[#5c3a62] uppercase tracking-wide">What do you want to create?</h3>
-              <p className="text-xs text-[#888] mt-1">Select the type and describe your project</p>
+              <p className="text-xs text-[#888] mt-1">Select the project type</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -172,21 +209,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
                   <span className="text-[9px] text-[#888] leading-tight">{opt.description}</span>
                 </button>
               ))}
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block mb-1.5">
-                Tell me about the project
-              </label>
-              <textarea
-                ref={briefRef}
-                value={brief}
-                onChange={(e) => setBrief(e.target.value)}
-                onKeyDown={(e) => e.stopPropagation()}
-                rows={4}
-                placeholder="e.g. We need a Gift Card promotion video for NEXT. The campaign targets parents of young children, featuring a grandmother character giving a gift card. We want warm, emotional visuals with the NEXT brand guidelines..."
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-[12px] text-[#3a3a3a] placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30 resize-none leading-relaxed"
-              />
             </div>
 
             <div className="flex justify-between">
