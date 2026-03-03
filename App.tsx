@@ -181,54 +181,56 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#edecec] overflow-y-auto">
-      {/* Pipeline steps + project button on the left */}
-      <div className="flex-1 flex px-6 py-6 gap-6">
-        <div className="flex flex-col gap-3 w-72 flex-shrink-0">
-          {/* Project buttons */}
+    <div className="flex-1 flex bg-[#edecec] overflow-hidden">
+      {/* Left nav */}
+      <div className="flex flex-col gap-3 w-64 flex-shrink-0 p-4 overflow-y-auto">
+        <button
+          onClick={() => onNavigate('projects')}
+          className="group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm text-left"
+        >
+          <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+            <i className="fa-solid fa-sliders text-[#91569c]"></i>
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">Project</span>
+            <p className="text-[9px] text-[#888] mt-0.5">Settings & Assets</p>
+          </div>
+        </button>
+
+        <div className="h-px bg-[#e0d6e3]"></div>
+
+        {pipelineSteps.map((item, idx) => (
           <button
-            onClick={() => onNavigate('projects')}
-            className="group flex items-center gap-4 px-5 py-3 rounded-xl border transition-all duration-200 bg-[#f6f0f8] border-[#ceadd4] hover:border-[#91569c] hover:bg-[#eadcef] shadow-sm hover:shadow-md text-left"
+            key={item.id}
+            onClick={() => onNavigate(item.id as any)}
+            className="group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm text-left"
           >
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
-              <i className="fa-solid fa-sliders text-[#91569c] text-lg"></i>
+            <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+              <i className={`fa-solid ${item.icon} text-[#91569c]`}></i>
             </div>
             <div className="flex-1 min-w-0">
-              <span className="font-bold uppercase tracking-wider text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
-                Project
-              </span>
-              <p className="text-[10px] text-[#888] mt-0.5">Settings & Assets</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-[#ceadd4]">{idx + 1}</span>
+                <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">{item.label}</span>
+              </div>
+              <p className="text-[9px] text-[#888] mt-0.5">{item.description}</p>
             </div>
-            <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
           </button>
-          <div className="h-px bg-[#e0d6e3] my-1"></div>
+        ))}
+      </div>
 
-          {pipelineSteps.map((item, idx) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id as any)}
-              className="group relative flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm hover:shadow-md text-left"
-            >
-              <div className="w-10 h-10 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-                <i className={`fa-solid ${item.icon} text-[#91569c] text-lg`}></i>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-[#ceadd4]">{idx + 1}</span>
-                  <span className="font-bold uppercase tracking-wider text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
-                    {item.label}
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#888] mt-0.5">{item.description}</p>
-              </div>
-              <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
-            </button>
-          ))}
+      {/* Middle — free area */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="text-center opacity-30">
+          <i className="fa-solid fa-wand-magic-sparkles text-4xl text-[#ceadd4] mb-3 block"></i>
+          <p className="text-[#888] text-xs font-bold uppercase tracking-wider">Ready to create</p>
+          <p className="text-[#ceadd4] text-[10px] mt-1">Pick a step from the left or chat with the assistant</p>
         </div>
+      </div>
 
-        <div className="flex-1 flex flex-col min-h-0">
-          <ChatBotBoundary><ChatBot /></ChatBotBoundary>
-        </div>
+      {/* Right — Assistant */}
+      <div className="w-80 flex-shrink-0 p-4 pl-0">
+        <ChatBotBoundary><ChatBot /></ChatBotBoundary>
       </div>
     </div>
   );

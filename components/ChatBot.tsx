@@ -110,10 +110,13 @@ export const ChatBot: React.FC = () => {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
-          <div className="text-center py-8 opacity-50">
-            <i className="fa-solid fa-wand-magic-sparkles text-2xl text-[#ceadd4] mb-2 block"></i>
-            <p className="text-[10px] text-[#888] font-bold uppercase tracking-wider">Ask me anything</p>
-            <p className="text-[9px] text-[#ceadd4] mt-1">I can help with concepts, prompts, characters, and more</p>
+          <div className="space-y-3 py-2">
+            <div className="bg-[#f6f0f8] rounded-xl px-3 py-2.5 text-[11px] leading-relaxed text-[#3a3a3a] border border-[#e0d6e3]">
+              Hi! I'm your creative assistant. I can help you with concepts, screenplays, image prompts, character design, and more.
+            </div>
+            <div className="bg-[#f6f0f8] rounded-xl px-3 py-2.5 text-[11px] leading-relaxed text-[#3a3a3a] border border-[#e0d6e3]">
+              Would you like me to guide you step by step through the project? Just say <strong>"guide me"</strong> and I'll walk you through it.
+            </div>
           </div>
         )}
         {messages.map((m, i) => (
