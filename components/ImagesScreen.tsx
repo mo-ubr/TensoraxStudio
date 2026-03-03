@@ -252,7 +252,7 @@ ${rawTraits}`,
       </header>
 
       {showKeyModal && (
-        <div className="px-5 py-3 border-b border-[#ceadd4] bg-[#4A4A4A] flex-shrink-0">
+        <div className="px-5 py-3 border-b border-[#ceadd4] bg-[#f6f0f8] flex-shrink-0">
           <div className="max-w-lg mx-auto space-y-2">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]">
@@ -299,11 +299,11 @@ ${rawTraits}`,
           const hasDone = assets.some(a => a.type === s.id && a.imageUrl);
           return (
             <React.Fragment key={s.id}>
-              {i > 0 && <span className="text-[#5c4a63] text-[8px] mx-1">—</span>}
+              {i > 0 && <span className="text-[#ceadd4] text-[8px] mx-1">—</span>}
               <button
                 onClick={() => setStep(s.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider ${
-                  isActive ? 'bg-[#91569c] text-[#3a3a3a]' : hasDone ? 'bg-[#3A3A3A] text-[#91569c] border border-[#91569c]/30' : 'bg-[#3A3A3A] text-[#888]/60 hover:text-[#5c3a62]'
+                  isActive ? 'bg-[#91569c] text-[#3a3a3a]' : hasDone ? 'bg-[#f6f0f8] text-[#91569c] border border-[#91569c]/30' : 'bg-[#f6f0f8] text-[#888]/60 hover:text-[#5c3a62]'
                 }`}
               >
                 {hasDone && !isActive ? <i className="fa-solid fa-circle-check text-[8px]"></i> : <span className="text-[8px]">{s.num}</span>}
@@ -354,7 +354,7 @@ ${rawTraits}`,
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {screenplay.scenes.length === 0 && (
-              <div className="bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-3">
+              <div className="bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-3">
                 <p className="text-[10px] text-[#888]/60">
                   <i className="fa-solid fa-triangle-exclamation text-[#91569c] mr-1"></i>
                   No saved screenplay found. Go to Concept &rarr; Finetune &rarr; save your screenplay first.
@@ -379,8 +379,8 @@ ${rawTraits}`,
                       disabled={alreadyAdded}
                       className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
                         alreadyAdded
-                          ? 'bg-[#3A3A3A] border-[#91569c]/20 text-[#888]/40 cursor-not-allowed'
-                          : 'bg-[#4A4A4A] border-[#ceadd4] hover:border-[#91569c]/40 text-[#5c3a62]'
+                          ? 'bg-[#f6f0f8] border-[#91569c]/20 text-[#888]/40 cursor-not-allowed'
+                          : 'bg-[#f6f0f8] border-[#ceadd4] hover:border-[#91569c]/40 text-[#5c3a62]'
                       }`}
                     >
                       <span className="text-[10px] font-bold block">{sug.label}</span>
@@ -400,7 +400,7 @@ ${rawTraits}`,
                     onChange={(e) => setPromptDraft(e.target.value)}
                     placeholder="Describe what you want to generate..."
                     rows={3}
-                    className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-2.5 text-[10px] text-[#888] placeholder:text-[#5c4a63] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                    className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-2.5 text-[10px] text-[#888] placeholder:text-[#ceadd4] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                   />
                   <button
                     onClick={() => {
@@ -435,7 +435,7 @@ ${rawTraits}`,
           <div className="flex-1 overflow-y-auto p-4">
             {(step === 'review' ? assets : stepAssets).length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <i className={`fa-solid ${step === 'review' ? 'fa-check-double' : STEP_META[stepIndex].icon} text-4xl text-[#5c4a63] mb-4`}></i>
+                <i className={`fa-solid ${step === 'review' ? 'fa-check-double' : STEP_META[stepIndex].icon} text-4xl text-[#ceadd4] mb-4`}></i>
                 <p className="text-[#888]/60 text-sm font-bold uppercase tracking-widest mb-2">
                   {step === 'review' ? 'No assets yet' : `No ${STEP_META[stepIndex].label} yet`}
                 </p>
@@ -448,8 +448,8 @@ ${rawTraits}`,
             ) : (
               <div className="space-y-4">
                 {(step === 'review' ? assets : stepAssets).map(asset => (
-                  <div key={asset.id} className="bg-[#4A4A4A] border border-[#ceadd4] rounded-xl overflow-hidden hover:border-[#91569c]/30 transition-colors">
-                    <div className="flex items-center gap-3 px-4 py-2.5 bg-[#3A3A3A] border-b border-[#ceadd4]">
+                  <div key={asset.id} className="bg-[#f6f0f8] border border-[#ceadd4] rounded-xl overflow-hidden hover:border-[#91569c]/30 transition-colors">
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-[#f6f0f8] border-b border-[#ceadd4]">
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-[10px] font-black">
                         <i className="fa-solid fa-user text-[8px]"></i>
                       </span>
@@ -468,10 +468,10 @@ ${rawTraits}`,
                         {editingPrompt === asset.id ? (
                           <div className="space-y-1.5">
                             <textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={4}
-                              className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[9px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y" autoFocus />
+                              className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[9px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y" autoFocus />
                             <div className="flex gap-1.5">
                               <button onClick={() => { updateAsset(asset.id, { prompt: promptDraft }); setEditingPrompt(null); }} className="flex-1 py-1 rounded text-[8px] font-bold uppercase bg-green-500/20 text-green-400 hover:bg-green-500/30">Save</button>
-                              <button onClick={() => setEditingPrompt(null)} className="flex-1 py-1 rounded text-[8px] font-bold uppercase bg-[#3A3A3A] text-[#888]/60 hover:text-[#5c3a62]">Cancel</button>
+                              <button onClick={() => setEditingPrompt(null)} className="flex-1 py-1 rounded text-[8px] font-bold uppercase bg-[#f6f0f8] text-[#888]/60 hover:text-[#5c3a62]">Cancel</button>
                             </div>
                           </div>
                         ) : (
@@ -484,13 +484,13 @@ ${rawTraits}`,
                             {asset.isGenerating ? 'Working...' : asset.imageUrl ? 'Regen' : 'Generate Image'}
                           </button>
                           <button onClick={() => { setPromptDraft(asset.prompt); setEditingPrompt(asset.id); }}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#888]/50 hover:text-[#91569c] hover:bg-[#3A3A3A] transition-colors" title="Edit prompt">
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#888]/50 hover:text-[#91569c] hover:bg-[#f6f0f8] transition-colors" title="Edit prompt">
                             <i className="fa-solid fa-pencil text-[9px]"></i>
                           </button>
                         </div>
                       </div>
                       {/* Right: image */}
-                      <div className="w-[180px] flex-shrink-0 bg-[#3A3A3A] flex items-center justify-center relative">
+                      <div className="w-[180px] flex-shrink-0 bg-[#f6f0f8] flex items-center justify-center relative">
                         {asset.imageUrl ? (
                           <>
                             <img src={asset.imageUrl} alt={asset.label} className="w-full h-full object-cover" />
@@ -520,7 +520,7 @@ ${rawTraits}`,
                           </div>
                         ) : (
                           <div className="text-center p-3">
-                            <i className="fa-solid fa-image text-xl text-[#5c4a63] mb-1"></i>
+                            <i className="fa-solid fa-image text-xl text-[#ceadd4] mb-1"></i>
                             <p className="text-[7px] text-[#888]/30">No image yet</p>
                           </div>
                         )}

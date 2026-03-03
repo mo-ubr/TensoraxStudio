@@ -591,8 +591,8 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         <div className="flex-1 overflow-y-auto p-5">
           {finetuneMode ? (
             <div className="space-y-4">
-              <div className="bg-[#4A4A4A] border border-[#91569c]/30 rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#ceadd4]">
+              <div className="bg-[#f6f0f8] border border-[#91569c]/30 rounded-xl overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3 bg-[#f6f0f8] border-b border-[#ceadd4]">
                   <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-xs font-black"><i className="fa-solid fa-check text-[9px]"></i></span>
                   <input
                     type="text"
@@ -606,12 +606,12 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     value={finetuneText}
                     onChange={(e) => setFinetuneText(e.target.value)}
                     rows={16}
-                    className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                    className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                   />
                 </div>
               </div>
 
-              <div className="bg-[#4A4A4A] border border-[#ceadd4] rounded-xl p-4">
+              <div className="bg-[#f6f0f8] border border-[#ceadd4] rounded-xl p-4">
                 <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-2 flex items-center gap-1.5">
                   <i className="fa-solid fa-pen text-[#91569c] text-[9px]"></i>
                   Additional Directions <span className="font-normal text-[#888]/40">(optional)</span>
@@ -621,7 +621,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   onChange={(e) => setFinetuneDirection(e.target.value)}
                   placeholder="e.g. Make the ending more emotional, add a scene in a NEXT store, change the character to a grandmother..."
                   rows={2}
-                  className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] placeholder:text-[#5c4a63] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] placeholder:text-[#ceadd4] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
                 />
                 <div className="mt-3 flex gap-2">
                   <button
@@ -673,7 +673,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
 
                 return (<>
                 {rejectionLog.length > 0 && (
-                  <div className="bg-[#3A3A3A] border border-[#ceadd4] rounded-lg px-3 py-2 mb-1">
+                  <div className="bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 mb-1">
                     <span className="text-[8px] font-black uppercase tracking-wider text-red-400/60">
                       <i className="fa-solid fa-ban text-[7px] mr-1"></i>
                       {rejectionLog.length} idea{rejectionLog.length > 1 ? 's' : ''} rejected (AI will avoid these)
@@ -691,8 +691,8 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   }
                   const hasStructured = parsed.length > 0;
                   return (
-                    <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isKept ? 'border-[#91569c]/40 ring-1 ring-[#91569c]/20' : 'border-[#ceadd4] hover:border-[#91569c]/30'}`}>
-                      <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#ceadd4]">
+                    <div key={i} className={`bg-[#f6f0f8] border rounded-xl overflow-hidden transition-colors ${isKept ? 'border-[#91569c]/40 ring-1 ring-[#91569c]/20' : 'border-[#ceadd4] hover:border-[#91569c]/30'}`}>
+                      <div className="flex items-center gap-3 px-4 py-3 bg-[#f6f0f8] border-b border-[#ceadd4]">
                         <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-xs font-black">{isKept ? <i className="fa-solid fa-heart text-[10px]"></i> : idea.num}</span>
                         <h3 className="flex-1 text-[13px] font-bold text-[#5c3a62] leading-snug">{idea.title || `Idea ${idea.num}`}</h3>
                         {isKept && <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c]/60 bg-[#91569c]/10 px-1.5 py-0.5 rounded">kept</span>}
@@ -731,7 +731,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                             value={editedBodies[idea.num] ?? idea.body}
                             onChange={(e) => setEditedBodies(prev => ({ ...prev, [idea.num]: e.target.value }))}
                             rows={14}
-                            className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                            className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                             autoFocus
                           />
                         ) : hasStructured ? (
@@ -747,7 +747,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           <pre className="text-[11px] text-[#888]/80 whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
-                      <div className="px-4 py-2.5 bg-[#3A3A3A] border-t border-[#ceadd4] space-y-2">
+                      <div className="px-4 py-2.5 bg-[#f6f0f8] border-t border-[#ceadd4] space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             {([
@@ -761,7 +761,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition-all ${
                                   ratings[idea.num] === key
                                     ? 'bg-[#91569c]/20 scale-110 ring-1 ring-[#91569c]/40'
-                                    : 'hover:bg-[#4A4A4A] opacity-50 hover:opacity-100'
+                                    : 'hover:bg-[#f6f0f8] opacity-50 hover:opacity-100'
                                 }`}
                                 title={title}
                               >
@@ -775,7 +775,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                                 comment: feedbackNotes[idea.num],
                               })}
                               disabled={isGenerating || (regeneratingIdeaNum != null)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all text-[#888]/40 hover:text-[#91569c] hover:bg-[#4A4A4A] disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all text-[#888]/40 hover:text-[#91569c] hover:bg-[#f6f0f8] disabled:opacity-30 disabled:cursor-not-allowed"
                               title="Regenerate this idea"
                             >
                               <i className={`fa-solid ${regeneratingIdeaNum === idea.num ? 'fa-spinner fa-spin' : 'fa-rotate-right'} text-[10px]`}></i>
@@ -800,7 +800,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           value={feedbackNotes[idea.num] || ''}
                           onChange={(e) => setFeedbackNotes(prev => ({ ...prev, [idea.num]: e.target.value }))}
                           placeholder="Feedback on this idea..."
-                          className="w-full bg-[#4A4A4A] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                          className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                         />
                       </div>
                     </div>
@@ -811,7 +811,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   <button
                     onClick={() => handleGenerate(buildFeedbackPrompt(ideaBlocks), ideaBlocks)}
                     disabled={isGenerating}
-                    className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#4A4A4A] text-[#91569c] hover:bg-[#edecec] border border-[#91569c]/30 hover:border-[#91569c]/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
+                    className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#f6f0f8] text-[#91569c] hover:bg-[#edecec] border border-[#91569c]/30 hover:border-[#91569c]/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
                   >
                     <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-rotate-right'}`}></i>
                     {isGenerating ? 'Regenerating...' : 'Regenerate with Feedback'}
@@ -822,7 +822,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <i className="fa-solid fa-lightbulb text-5xl text-[#5c4a63] mb-4"></i>
+              <i className="fa-solid fa-lightbulb text-5xl text-[#ceadd4] mb-4"></i>
               <p className="text-[#888]/60 text-sm font-bold uppercase tracking-widest mb-2">Idea Factory</p>
               <p className="text-[#888]/40 text-xs max-w-md leading-relaxed">
                 Fill in the project details and click "Generate 5 Ideas". The AI will create 5 unique video concept ideas based on your brief, brand, and style inspirations.

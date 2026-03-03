@@ -594,8 +594,8 @@ Please refine the concept based on this feedback. Keep the same structure but in
                       const promptMatch = scene.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
                       const isEditing = editingScene === i;
                       return (
-                        <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isEditing ? 'border-[#91569c]/40' : 'border-[#ceadd4]'}`}>
-                          <div className="flex items-center gap-3 px-4 py-2.5 bg-[#3A3A3A] border-b border-[#ceadd4]">
+                        <div key={i} className={`bg-[#f6f0f8] border rounded-xl overflow-hidden transition-colors ${isEditing ? 'border-[#91569c]/40' : 'border-[#ceadd4]'}`}>
+                          <div className="flex items-center gap-3 px-4 py-2.5 bg-[#f6f0f8] border-b border-[#ceadd4]">
                             <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-[10px] font-black">{sceneNum}</span>
                             <h3 className="flex-1 text-[12px] font-bold text-[#5c3a62]">{sceneTitle}</h3>
                             <button
@@ -614,7 +614,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
                                 isEditing
                                   ? 'text-green-400 bg-green-400/15 hover:bg-green-400/25 ring-1 ring-green-400/30'
-                                  : 'text-[#888]/70 hover:text-[#91569c] hover:bg-[#4A4A4A]'
+                                  : 'text-[#888]/70 hover:text-[#91569c] hover:bg-[#f6f0f8]'
                               }`}
                               title={isEditing ? 'Save edits' : 'Edit scene'}
                             >
@@ -629,7 +629,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                                   value={editedSceneData.scene}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, scene: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                   autoFocus
                                 />
                               </div>
@@ -639,7 +639,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                                   value={editedSceneData.dialogue}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, dialogue: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed italic focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed italic focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                 />
                               </div>
                               <div className="p-3">
@@ -648,7 +648,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                                   value={editedSceneData.prompt}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, prompt: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed font-mono focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed font-mono focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                 />
                               </div>
                             </div>

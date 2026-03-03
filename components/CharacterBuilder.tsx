@@ -263,7 +263,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
               className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
                 activeCharId === c.id
                   ? 'bg-[#91569c] text-[#3a3a3a]'
-                  : 'bg-[#3A3A3A] text-[#888]/60 hover:text-[#5c3a62] border border-[#ceadd4]'
+                  : 'bg-[#f6f0f8] text-[#888]/60 hover:text-[#5c3a62] border border-[#ceadd4]'
               }`}
             >
               {c.name}
@@ -279,7 +279,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && nameInput.trim()) addCharacter(nameInput.trim()); }}
             placeholder="Character name..."
-            className="flex-1 bg-[#3A3A3A] border border-[#ceadd4] rounded px-2 py-1 text-[9px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+            className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
           />
           <button
             onClick={() => { if (nameInput.trim()) addCharacter(nameInput.trim()); }}
@@ -298,7 +298,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
               <button
                 key={n}
                 onClick={() => addCharacter(n.charAt(0).toUpperCase() + n.slice(1))}
-                className="px-1.5 py-0.5 rounded text-[7px] font-bold bg-[#4A4A4A] text-[#888]/60 hover:text-[#91569c] border border-[#ceadd4] hover:border-[#91569c]/30 transition-colors"
+                className="px-1.5 py-0.5 rounded text-[7px] font-bold bg-[#f6f0f8] text-[#888]/60 hover:text-[#91569c] border border-[#ceadd4] hover:border-[#91569c]/30 transition-colors"
               >
                 + {n}
               </button>
@@ -312,7 +312,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {/* Mode toggle + delete */}
           <div className="flex items-center justify-between px-3 pt-3 pb-1">
-            <div className="flex bg-[#3A3A3A] rounded-lg p-0.5">
+            <div className="flex bg-[#f6f0f8] rounded-lg p-0.5">
               <button onClick={() => setMode('traits')} className={`px-2.5 py-1 rounded text-[8px] font-bold uppercase tracking-wider transition-all ${mode === 'traits' ? 'bg-[#91569c] text-[#3a3a3a]' : 'text-[#888]/50 hover:text-[#5c3a62]'}`}>
                 <i className="fa-solid fa-sliders text-[7px] mr-1"></i>Build
               </button>
@@ -331,7 +331,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
               {(activeChar.photoUrls || []).map((url, idx) => (
                 <div key={idx} className="flex items-start gap-1.5">
                   <img src={url} alt={`Ref ${idx + 1}`} className="w-12 h-12 rounded object-cover border border-[#ceadd4] flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  <input type="text" value={url} readOnly className="flex-1 bg-[#3A3A3A] border border-[#ceadd4] rounded px-2 py-1.5 text-[8px] text-[#888]/60 outline-none truncate" />
+                  <input type="text" value={url} readOnly className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1.5 text-[8px] text-[#888]/60 outline-none truncate" />
                   <button onClick={() => removePhoto(idx)} className="text-red-400/40 hover:text-red-400 p-1 flex-shrink-0">
                     <i className="fa-solid fa-xmark text-[9px]"></i>
                   </button>
@@ -339,7 +339,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
               ))}
               {(activeChar.photoUrls || []).length < 3 && (
                 <div className="flex gap-1.5">
-                  <input type="text" placeholder="Paste image URL..." className="flex-1 bg-[#3A3A3A] border border-[#ceadd4] rounded px-2.5 py-2 text-[9px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                  <input type="text" placeholder="Paste image URL..." className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-2 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                     onKeyDown={(e) => { if (e.key === 'Enter') { const val = (e.target as HTMLInputElement).value.trim(); if (val) { addPhoto(val); (e.target as HTMLInputElement).value = ''; } } }}
                   />
                   <button onClick={(e) => { const input = (e.currentTarget as HTMLElement).previousElementSibling as HTMLInputElement; const val = input?.value?.trim(); if (val) { addPhoto(val); input.value = ''; } }}
@@ -356,7 +356,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                 </div>
                 <p className="text-[7px] text-[#888]/30">Enter ages separated by commas. Leave empty for a single image.</p>
                 <input type="text" value={ageList} onChange={(e) => setAgeList(e.target.value)} placeholder="e.g. 6 months, 1 year, 3 years, 5 years, 7 years"
-                  className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[9px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
               </div>
 
               {/* Single Generate Prompt button */}
@@ -377,7 +377,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                   }
                 }}
                 disabled={isGeneratingPrompt || (activeChar.photoUrls || []).length === 0}
-                className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#4A4A4A] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#f6f0f8] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 <i className={`fa-solid ${isGeneratingPrompt ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[8px]`}></i>
                 {isGeneratingPrompt ? 'Generating Prompts...' : 'Generate Prompt'}
@@ -393,10 +393,10 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                 const isOpen = openCategory === cat.key;
                 const selected = activeChar.traits[cat.key];
                 return (
-                  <div key={cat.key} className="bg-[#3A3A3A] rounded-lg overflow-hidden border border-[#ceadd4]/50">
+                  <div key={cat.key} className="bg-[#f6f0f8] rounded-lg overflow-hidden border border-[#ceadd4]/50">
                     <button
                       onClick={() => setOpenCategory(isOpen ? null : cat.key)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#4A4A4A] transition-colors"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#f6f0f8] transition-colors"
                     >
                       <i className={`fa-solid ${cat.icon} text-[9px] ${selected ? 'text-[#91569c]' : 'text-[#888]/30'}`}></i>
                       <span className="flex-1 text-[9px] font-bold uppercase tracking-wider text-[#888]/70">{cat.label}</span>
@@ -420,7 +420,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                               onChange(updated);
                             }}
                             placeholder="Age"
-                            className="w-20 bg-[#4A4A4A] border border-[#ceadd4] rounded px-2 py-1.5 text-[10px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-center"
+                            className="w-20 bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1.5 text-[10px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-center"
                           />
                           <select
                             value={activeChar.traits.ageRange.includes('months') ? 'months' : 'years'}
@@ -435,7 +435,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                                 onChange(updated);
                               }
                             }}
-                            className="bg-[#4A4A4A] border border-[#ceadd4] rounded px-2 py-1.5 text-[10px] text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer"
+                            className="bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1.5 text-[10px] text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer"
                           >
                             <option value="months">months</option>
                             <option value="years">years</option>
@@ -454,7 +454,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                               className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-all text-center ${
                                 isSelected
                                   ? 'bg-[#91569c]/20 ring-2 ring-[#91569c]/60 text-[#91569c]'
-                                  : 'bg-[#4A4A4A] hover:bg-[#edecec] text-[#888]/70 hover:text-[#5c3a62]'
+                                  : 'bg-[#f6f0f8] hover:bg-[#edecec] text-[#888]/70 hover:text-[#5c3a62]'
                               }`}
                             >
                               {opt.svg ? (
@@ -486,7 +486,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                   value={activeChar.traits.distinguishing}
                   onChange={(e) => updateTrait('distinguishing', e.target.value)}
                   placeholder="e.g. glasses, beard, freckles, scar, dimples..."
-                  className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[9px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                 />
               </div>
             </div>
@@ -503,7 +503,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                 setEditedPrompt(optimised);
               }}
               disabled={isGeneratingPrompt || selectedCount < 3}
-              className="w-full py-2 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[#4A4A4A] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="w-full py-2 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[#f6f0f8] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               <i className={`fa-solid ${isGeneratingPrompt ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[8px]`}></i>
               {isGeneratingPrompt ? 'Generating Prompt...' : 'Generate Prompt'}
@@ -515,7 +515,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                   value={editedPrompt}
                   onChange={(e) => setEditedPrompt(e.target.value)}
                   rows={5}
-                  className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-2.5 text-[9px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-2.5 text-[9px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                 />
                 <button
                   onClick={() => onGenerateImage(activeChar.id, editedPrompt)}
@@ -532,7 +532,7 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <i className="fa-solid fa-user-plus text-3xl text-[#5c4a63] mb-3"></i>
+          <i className="fa-solid fa-user-plus text-3xl text-[#ceadd4] mb-3"></i>
           <p className="text-[10px] text-[#888]/50 font-bold uppercase tracking-widest mb-1">No characters yet</p>
           <p className="text-[8px] text-[#888]/30">Add a character above or pick from the screenplay suggestions.</p>
         </div>
