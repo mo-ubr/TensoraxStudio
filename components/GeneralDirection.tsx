@@ -809,12 +809,60 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     {isGenerating ? 'Regenerating...' : 'Regenerate'}
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const title = visibleIdeas[0]?.title || 'Concept';
                       const fullText = visibleIdeas.map(idea => {
                         const body = editedBodies[idea.num] ?? idea.body;
                         return `## ${idea.title || 'Scene ' + idea.num}\n${body}`;
                       }).join('\n\n');
+
+                      // Save as Word doc
+                      try {
+                        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+                        const sections = visibleIdeas.map(idea => {
+                          const body = editedBodies[idea.num] ?? idea.body;
+                          const parsed = body.split(/\n\*\*([^*]+)\*\*:?\s*/);
+                          const paras: any[] = [];
+                          for (let s = 1; s < parsed.length; s += 2) {
+                            if (parsed[s + 1] !== undefined) {
+                              paras.push(new Paragraph({ children: [new TextRun({ text: parsed[s].trim() + ':', bold: true, size: 22 })] }));
+                              paras.push(new Paragraph({ children: [new TextRun({ text: parsed[s + 1].trim(), size: 22 })] }));
+                              paras.push(new Paragraph({ text: '' }));
+                            }
+                          }
+                          if (paras.length === 0) {
+                            body.split('\n').forEach((line: string) => paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })] })));
+                          }
+                          return [
+                            new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: idea.title || `Scene ${idea.num}`, bold: true })] }),
+                            ...paras,
+                          ];
+                        });
+                        const doc = new Document({
+                          sections: [{
+                            children: [
+                              new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: `${value.projectName || 'Project'} — Approved Concept`, bold: true })] }),
+                              new Paragraph({ children: [new TextRun({ text: `Approved: ${new Date().toLocaleDateString()} — TensorAx Studio`, italics: true, color: '888888', size: 18 })] }),
+                              new Paragraph({ text: '' }),
+                              ...sections.flat(),
+                            ],
+                          }],
+                        });
+                        const blob = await Packer.toBlob(doc);
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          const filename = `${(value.projectName || 'Project').replace(/\s+/g, '_')}_Approved_Concept.docx`;
+                          try {
+                            await fetch('/api/save-file', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ filename, data: reader.result, folder: 'assets/2. Screenplays' }),
+                            });
+                          } catch { /* fallback: browser download */ }
+                        };
+                        reader.readAsDataURL(blob);
+                      } catch (e) { console.warn('Word save failed:', e); }
+
                       setSelectedIdea(1);
                       setFinetuneTitle(title);
                       setFinetuneText(fullText);
