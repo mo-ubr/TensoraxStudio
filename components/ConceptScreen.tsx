@@ -121,7 +121,12 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
   const [generalDirection, setGeneralDirection] = useState<GeneralDirectionType>(() => {
     try {
       const stored = localStorage.getItem('tensorax_general_direction');
-      return stored ? JSON.parse(stored) : emptyDirection;
+      const dir = stored ? JSON.parse(stored) : emptyDirection;
+      if (activeProject) {
+        dir.projectName = activeProject.name;
+        if (!dir.aim && activeProject.description) dir.aim = activeProject.description;
+      }
+      return dir;
     } catch { return emptyDirection; }
   });
   const [isGeneratingDirection, setIsGeneratingDirection] = useState(false);

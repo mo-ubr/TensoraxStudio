@@ -331,7 +331,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
     onChange({ ...value, [field]: val });
   };
 
-  const hasContent = value.projectName || value.aim;
+  const hasContent = value.aim || value.projectName;
   const prevPromptRef = React.useRef(value.generatedPrompt);
 
   React.useEffect(() => {
@@ -460,21 +460,6 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Project Name */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-              <i className="fa-solid fa-folder-open text-[#91569c] text-[9px]"></i>
-              Project Name
-            </label>
-            <input
-              type="text"
-              value={value.projectName}
-              onChange={(e) => update('projectName', e.target.value)}
-              placeholder="e.g. NEXT Summer Campaign 2026"
-              className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
-            />
-          </div>
-
           {/* Project Aim */}
           <div>
             <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1 flex items-center gap-1.5">
