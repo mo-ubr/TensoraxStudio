@@ -51,19 +51,19 @@ const Field: React.FC<{
 }> = ({ label, icon, children, hint }) => (
   <div className="space-y-1.5">
     <label className="text-[11px] font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-      <i className={`fa-solid ${icon} text-[#E6C01F] text-xs`}></i>
+      <i className={`fa-solid ${icon} text-[#91569c] text-xs`}></i>
       {label}
     </label>
-    {hint && <p className="text-[9px] text-[#0d0d0d]/60 leading-relaxed">{hint}</p>}
+    {hint && <p className="text-[9px] text-[#edecec]/60 leading-relaxed">{hint}</p>}
     {children}
   </div>
 );
 
 const inputClass =
-  'w-full bg-[#B0B0B0] border border-[#8A8A8A] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#E6C01F]/50 outline-none text-[#0d0d0d] placeholder:text-[#0d0d0d]/50';
+  'w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec] placeholder:text-[#edecec]/50';
 
 const selectClass =
-  'w-full bg-[#B0B0B0] border border-[#8A8A8A] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#E6C01F]/50 outline-none text-[#0d0d0d] appearance-none cursor-pointer';
+  'w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec] appearance-none cursor-pointer';
 
 export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit, onSearchVideos }) => {
   const [videoSuggestions, setVideoSuggestions] = useState<VideoSuggestion[]>([]);
@@ -106,9 +106,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
-        <div className="bg-[#B0B0B0] border border-gray-600/80 p-4 rounded-xl space-y-4">
+        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-4">
           <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-building text-[#E6C01F]"></i>
+            <i className="fa-solid fa-building text-[#91569c]"></i>
             Background
           </h3>
 
@@ -135,9 +135,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
           </Field>
         </div>
 
-        <div className="bg-[#B0B0B0] border border-gray-600/80 p-4 rounded-xl space-y-4">
+        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-4">
           <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-film text-[#E6C01F]"></i>
+            <i className="fa-solid fa-film text-[#91569c]"></i>
             Video Concept
           </h3>
 
@@ -164,9 +164,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
           </Field>
         </div>
 
-        <div className="bg-[#B0B0B0] border border-gray-600/80 p-4 rounded-xl space-y-4">
+        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-4">
           <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-sliders text-[#E6C01F]"></i>
+            <i className="fa-solid fa-sliders text-[#91569c]"></i>
             Specifications
           </h3>
 
@@ -221,9 +221,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
           </div>
         </div>
 
-        <div className="bg-[#B0B0B0] border border-gray-600/80 p-4 rounded-xl space-y-4">
+        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-4">
           <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-bullseye text-[#E6C01F]"></i>
+            <i className="fa-solid fa-bullseye text-[#91569c]"></i>
             Audience & Action
           </h3>
 
@@ -258,9 +258,9 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
           </Field>
         </div>
 
-        <div className="bg-[#B0B0B0] border border-gray-600/80 p-4 rounded-xl space-y-4">
+        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-4">
           <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-link text-[#E6C01F]"></i>
+            <i className="fa-solid fa-link text-[#91569c]"></i>
             Reference
           </h3>
 
@@ -281,8 +281,8 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
               disabled={isSearching || (!brief.videoConcept.trim() && !brief.promoDetails.trim())}
               className={`w-full py-2.5 rounded-lg font-black uppercase text-[10px] tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 ${
                 isSearching || (!brief.videoConcept.trim() && !brief.promoDetails.trim())
-                  ? 'bg-[#5A5A5A]/50 text-[#0d0d0d]/30 cursor-not-allowed'
-                  : 'bg-[#5A5A5A] text-white border border-[#6A6A6A] hover:bg-[#585858]'
+                  ? 'bg-[#2d2633]/50 text-[#edecec]/30 cursor-not-allowed'
+                  : 'bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858]'
               }`}
             >
               {isSearching ? (
@@ -297,7 +297,7 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
                 {videoSuggestions.map((v, i) => (
                   <div
                     key={i}
-                    className="bg-[#5A5A5A]/30 border border-[#8A8A8A]/50 rounded-lg p-2.5 space-y-1 group hover:border-[#E6C01F]/30 transition-colors"
+                    className="bg-[#2d2633]/30 border border-[#5c4a63]/50 rounded-lg p-2.5 space-y-1 group hover:border-[#91569c]/30 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -305,17 +305,17 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
                           href={v.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[10px] font-bold text-[#E6C01F] hover:text-[#E6C01F]/80 leading-tight block truncate"
+                          className="text-[10px] font-bold text-[#91569c] hover:text-[#91569c]/80 leading-tight block truncate"
                         >
                           <i className="fa-brands fa-youtube mr-1 text-red-500"></i>
                           {v.title}
                         </a>
-                        <p className="text-[9px] text-[#0d0d0d]/60 leading-relaxed mt-0.5">{v.why}</p>
+                        <p className="text-[9px] text-[#edecec]/60 leading-relaxed mt-0.5">{v.why}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => update('sampleVideoUrl', v.url)}
-                        className="flex-shrink-0 text-[8px] font-black uppercase px-2 py-1 rounded bg-[#E6C01F]/20 text-[#0d0d0d] hover:bg-[#E6C01F]/40 transition-colors"
+                        className="flex-shrink-0 text-[8px] font-black uppercase px-2 py-1 rounded bg-[#91569c]/20 text-[#edecec] hover:bg-[#91569c]/40 transition-colors"
                       >
                         Use
                       </button>
@@ -339,11 +339,11 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
                 htmlFor="brief-sample-video"
                 className={`flex items-center gap-3 w-full p-3 rounded-lg border border-dashed transition-all cursor-pointer ${
                   brief.sampleVideoFile
-                    ? 'border-[#E6C01F]/50 bg-[#E6C01F]/10 text-[#0d0d0d]'
-                    : 'border-[#8A8A8A] bg-[#B0B0B0] text-[#0d0d0d]/60 hover:border-[#E6C01F]/40'
+                    ? 'border-[#91569c]/50 bg-[#91569c]/10 text-[#edecec]'
+                    : 'border-[#5c4a63] bg-[#3d3444] text-[#edecec]/60 hover:border-[#91569c]/40'
                 }`}
               >
-                <i className={`fa-solid ${brief.sampleVideoFile ? 'fa-check-circle text-[#E6C01F]' : 'fa-cloud-arrow-up'}`}></i>
+                <i className={`fa-solid ${brief.sampleVideoFile ? 'fa-check-circle text-[#91569c]' : 'fa-cloud-arrow-up'}`}></i>
                 <span className="text-[10px] font-bold uppercase">
                   {brief.sampleVideoFile ? 'Video attached' : 'Choose file'}
                 </span>
@@ -353,14 +353,14 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
         </div>
       </div>
 
-      <div className="p-4 border-t border-gray-600/60 bg-[#5A5A5A] flex-shrink-0">
+      <div className="p-4 border-t border-gray-600/60 bg-[#2d2633] flex-shrink-0">
         <button
           onClick={onSubmit}
           disabled={!isValid}
           className={`w-full py-3 rounded-xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-lg active:scale-95 ${
             isValid
-              ? 'bg-[#E6C01F] hover:bg-[#E6C01F]/90 text-black'
-              : 'bg-[#B0B0B0]/50 text-[#0d0d0d]/40 cursor-not-allowed'
+              ? 'bg-[#91569c] hover:bg-[#91569c]/90 text-black'
+              : 'bg-[#3d3444]/50 text-[#edecec]/40 cursor-not-allowed'
           }`}
         >
           <i className="fa-solid fa-arrow-right mr-2"></i>

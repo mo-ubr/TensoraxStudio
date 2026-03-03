@@ -51,7 +51,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#5A5A5A]">
-        <i className="fa-solid fa-spinner fa-spin text-3xl text-[#E6C01F]"></i>
+        <i className="fa-solid fa-spinner fa-spin text-3xl text-[#91569c]"></i>
       </div>
     );
   }
@@ -60,14 +60,14 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
     <div className="flex-1 flex flex-col bg-[#5A5A5A] overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-600/60">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-[#E6C01F]/80 hover:text-[#E6C01F] transition-colors p-1">
+          <button onClick={onBack} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
             <i className="fa-solid fa-arrow-left text-sm"></i>
           </button>
           <h2 className="text-lg font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-            <i className="fa-solid fa-folder-open text-[#E6C01F]"></i>
+            <i className="fa-solid fa-folder-open text-[#91569c]"></i>
             Projects
           </h2>
-          <span className="text-[10px] text-[#D7D7D7]/60 font-bold uppercase tracking-wider">
+          <span className="text-[10px] text-[#d4cdd7]/60 font-bold uppercase tracking-wider">
             {projects.length} project{projects.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -76,9 +76,9 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
       <div className="flex-1 overflow-y-auto p-6">
         {projects.length === 0 ? (
           <div className="text-center py-20 opacity-40">
-            <i className="fa-solid fa-folder-plus text-6xl text-[#D7D7D7] mb-4 block"></i>
-            <p className="text-[#D7D7D7] font-bold uppercase tracking-wider text-sm">No projects yet</p>
-            <p className="text-[#D7D7D7]/60 text-xs mt-2">Create a project from the dashboard to get started</p>
+            <i className="fa-solid fa-folder-plus text-6xl text-[#d4cdd7] mb-4 block"></i>
+            <p className="text-[#d4cdd7] font-bold uppercase tracking-wider text-sm">No projects yet</p>
+            <p className="text-[#d4cdd7]/60 text-xs mt-2">Create a project from the dashboard to get started</p>
           </div>
         ) : (
           <div className="grid gap-4 max-w-4xl mx-auto">
@@ -92,7 +92,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
                 (p.imageIds?.length || 0) + (p.videoIds?.length || 0);
 
               return (
-                <div key={p.id} className="bg-[#B0B0B0] border border-gray-600/80 rounded-xl overflow-hidden">
+                <div key={p.id} className="bg-[#3d3444] border border-gray-600/80 rounded-xl overflow-hidden">
                   <div
                     className="flex items-center gap-4 p-4 cursor-pointer hover:bg-[#A0A0A0] transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : p.id)}
@@ -100,31 +100,31 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
                     <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusColor(p.status)}`}></div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-white uppercase tracking-wide truncate">{p.name}</h3>
-                      <p className="text-[10px] text-[#0d0d0d]/60 mt-0.5">
+                      <p className="text-[10px] text-[#edecec]/60 mt-0.5">
                         {new Date(p.createdAt).toLocaleDateString()} · {totalAssets} asset{totalAssets !== 1 ? 's' : ''} linked
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); onSelectProject(p); }}
-                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#5A5A5A] text-white border border-[#6A6A6A] hover:bg-[#484848] transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#5A5A5A] text-white border border-[#4a3a52] hover:bg-[#484848] transition-colors"
                       >
                         Open
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
-                        className="p-1.5 rounded-lg text-[#0d0d0d]/40 hover:text-red-500 transition-colors"
+                        className="p-1.5 rounded-lg text-[#edecec]/40 hover:text-red-500 transition-colors"
                       >
                         <i className="fa-solid fa-trash text-xs"></i>
                       </button>
-                      <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[#0d0d0d]/40 text-xs`}></i>
+                      <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[#edecec]/40 text-xs`}></i>
                     </div>
                   </div>
 
                   {isExpanded && (
                     <div className="px-4 pb-4 border-t border-gray-600/40 pt-3 space-y-3">
                       {p.description && (
-                        <p className="text-[11px] text-[#0d0d0d]/80">{p.description}</p>
+                        <p className="text-[11px] text-[#edecec]/80">{p.description}</p>
                       )}
                       <div className="grid grid-cols-3 gap-3">
                         <AssetGroup label="Characters" icon="fa-user" items={charNames as string[]} />
@@ -138,8 +138,8 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
                       </div>
                       {p.notes && (
                         <div className="bg-[#5A5A5A]/30 rounded-lg p-3">
-                          <p className="text-[10px] text-[#0d0d0d]/60 font-bold uppercase tracking-wider mb-1">Notes</p>
-                          <p className="text-[11px] text-[#0d0d0d]/80 whitespace-pre-wrap">{p.notes}</p>
+                          <p className="text-[10px] text-[#edecec]/60 font-bold uppercase tracking-wider mb-1">Notes</p>
+                          <p className="text-[11px] text-[#edecec]/80 whitespace-pre-wrap">{p.notes}</p>
                         </div>
                       )}
                     </div>
@@ -156,11 +156,11 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
 
 const AssetGroup: React.FC<{ label: string; icon: string; items: string[] }> = ({ label, icon, items }) => (
   <div className="bg-[#5A5A5A]/20 rounded-lg p-2.5">
-    <p className="text-[9px] font-bold text-[#0d0d0d]/50 uppercase tracking-wider flex items-center gap-1 mb-1.5">
-      <i className={`fa-solid ${icon} text-[#E6C01F]/70`}></i> {label}
+    <p className="text-[9px] font-bold text-[#edecec]/50 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+      <i className={`fa-solid ${icon} text-[#91569c]/70`}></i> {label}
     </p>
     {items.length === 0 ? (
-      <p className="text-[10px] text-[#0d0d0d]/30 italic">None</p>
+      <p className="text-[10px] text-[#edecec]/30 italic">None</p>
     ) : (
       <div className="flex flex-wrap gap-1">
         {items.map((name, i) => (
@@ -173,8 +173,8 @@ const AssetGroup: React.FC<{ label: string; icon: string; items: string[] }> = (
 
 const Stat: React.FC<{ label: string; count: number; icon: string }> = ({ label, count, icon }) => (
   <div className="bg-[#5A5A5A]/20 rounded-lg p-2">
-    <i className={`fa-solid ${icon} text-[#E6C01F]/50 text-sm`}></i>
+    <i className={`fa-solid ${icon} text-[#91569c]/50 text-sm`}></i>
     <p className="text-lg font-bold text-white mt-1">{count}</p>
-    <p className="text-[9px] text-[#0d0d0d]/50 uppercase tracking-wider font-bold">{label}</p>
+    <p className="text-[9px] text-[#edecec]/50 uppercase tracking-wider font-bold">{label}</p>
   </div>
 );

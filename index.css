@@ -4,17 +4,21 @@
 @source "./components/**/*.{tsx,ts}";
 
 @theme {
-  --color-accent: #E6C01F;
+  --color-accent: #91569c;
   --font-family-heading: "Poppins", sans-serif;
   --font-family-body: "Sora", sans-serif;
 }
 
 :root {
-  --accent: #E6C01F;
+  --accent: #91569c;
+  --accent-light: #af7eb8;
+  --accent-pale: #ceadd4;
+  --accent-mist: #eadcef;
   --body-text: #D7D7D7;
-  --bg-dark: #454545;
-  --bg-light: #B0B0B0;
+  --bg-dark: #2d2633;
+  --bg-light: #3d3444;
   --title-color: #ffffff;
+  --heading-purple: #5c3a62;
 }
 
 body {
@@ -32,6 +36,6 @@ body {
 }
 
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #B0B0B0; }
-::-webkit-scrollbar-thumb { background: #606060; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #707070; }
+::-webkit-scrollbar-track { background: #3d3444; }
+::-webkit-scrollbar-thumb { background: #5c3a62; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #91569c; }

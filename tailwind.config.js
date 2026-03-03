@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        accent: "#E6C01F",
+        accent: "#91569c",
       },
       fontFamily: {
         heading: ["Poppins", "sans-serif"],

@@ -71,20 +71,20 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-[#3A3A3A] hover:bg-[#4A4A4A] border border-[#6A6A6A] rounded-lg px-3.5 py-2 transition-all group shadow-md"
+        className="flex items-center gap-2 bg-[#3A3A3A] hover:bg-[#4A4A4A] border border-[#4a3a52] rounded-lg px-3.5 py-2 transition-all group shadow-md"
       >
-        <i className="fa-solid fa-tag text-[#E6C01F] text-xs"></i>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-[#D7D7D7]">Brand:</span>
+        <i className="fa-solid fa-tag text-[#91569c] text-xs"></i>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#d4cdd7]">Brand:</span>
         <span className="text-xs font-black uppercase tracking-widest text-white">
           {activeBrand.name}
         </span>
-        <i className={`fa-solid fa-chevron-down text-[9px] text-[#E6C01F] transition-transform ${open ? 'rotate-180' : ''}`}></i>
+        <i className={`fa-solid fa-chevron-down text-[9px] text-[#91569c] transition-transform ${open ? 'rotate-180' : ''}`}></i>
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-64 bg-[#4A4A4A] border border-[#8A8A8A] rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
-          <div className="px-3 py-2 border-b border-[#6A6A6A]">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[#D7D7D7]/60">Brand Identity</span>
+        <div className="absolute top-full left-0 mt-1 w-64 bg-[#4A4A4A] border border-[#5c4a63] rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+          <div className="px-3 py-2 border-b border-[#4a3a52]">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[#d4cdd7]/60">Brand Identity</span>
           </div>
 
           <div className="max-h-48 overflow-y-auto">
@@ -93,16 +93,16 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
                 key={brand.id}
                 className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors group ${
                   brand.id === activeBrandId
-                    ? 'bg-[#E6C01F]/10 border-l-2 border-[#E6C01F]'
-                    : 'hover:bg-[#5A5A5A] border-l-2 border-transparent'
+                    ? 'bg-[#91569c]/10 border-l-2 border-[#91569c]'
+                    : 'hover:bg-[#2d2633] border-l-2 border-transparent'
                 }`}
                 onClick={() => { onSelectBrand(brand.id); setOpen(false); }}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <i className={`fa-solid ${brand.id === activeBrandId ? 'fa-circle-check text-[#E6C01F]' : 'fa-circle text-[#8A8A8A]'} text-[10px]`}></i>
+                  <i className={`fa-solid ${brand.id === activeBrandId ? 'fa-circle-check text-[#91569c]' : 'fa-circle text-[#5c4a63]'} text-[10px]`}></i>
                   <span className="text-[11px] font-bold text-white truncate">{brand.name}</span>
                   {brand.isDefault && (
-                    <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F]/60 bg-[#E6C01F]/10 px-1.5 py-0.5 rounded">default</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c]/60 bg-[#91569c]/10 px-1.5 py-0.5 rounded">default</span>
                   )}
                 </div>
                 {!brand.isDefault && (
@@ -118,7 +118,7 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
             ))}
           </div>
 
-          <div className="border-t border-[#6A6A6A]">
+          <div className="border-t border-[#4a3a52]">
             <input
               ref={fileRef}
               type="file"
@@ -129,11 +129,11 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#D7D7D7] hover:bg-[#5A5A5A] hover:text-[#E6C01F] transition-colors disabled:opacity-50"
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#d4cdd7] hover:bg-[#2d2633] hover:text-[#91569c] transition-colors disabled:opacity-50"
             >
               <i className={`fa-solid ${uploading ? 'fa-spinner fa-spin' : 'fa-plus'} text-[10px]`}></i>
               {uploading ? 'Parsing...' : 'Upload Brand Guidelines'}
-              <span className="ml-auto text-[8px] text-[#8A8A8A]">.txt .md .docx</span>
+              <span className="ml-auto text-[8px] text-[#5c4a63]">.txt .md .docx</span>
             </button>
           </div>
         </div>

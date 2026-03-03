@@ -488,7 +488,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Sub-navigation stepper */}
-      <div className="flex-shrink-0 bg-[#5A5A5A] border-b border-gray-600/60 px-5 py-2">
+      <div className="flex-shrink-0 bg-[#2d2633] border-b border-gray-600/60 px-5 py-2">
         <div className="flex items-center gap-1 max-w-2xl mx-auto">
           {STEP_META.map((s, i) => {
             const isActive = s.id === step;
@@ -496,24 +496,24 @@ Please refine the concept based on this feedback. Keep the same structure but in
             return (
               <React.Fragment key={s.id}>
                 {i > 0 && (
-                  <div className={`flex-1 h-px ${i <= stepIndex ? 'bg-[#E6C01F]' : 'bg-[#6A6A6A]'}`} />
+                  <div className={`flex-1 h-px ${i <= stepIndex ? 'bg-[#91569c]' : 'bg-[#4a3a52]'}`} />
                 )}
                 <button
                   onClick={() => setStep(s.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider ${
                     isActive
-                      ? 'bg-[#E6C01F]/20 text-[#E6C01F] border border-[#E6C01F]/30'
+                      ? 'bg-[#91569c]/20 text-[#91569c] border border-[#91569c]/30'
                       : isDone
-                      ? 'text-[#E6C01F]/60 hover:text-[#E6C01F]'
-                      : 'text-[#D7D7D7]/40 cursor-default'
+                      ? 'text-[#91569c]/60 hover:text-[#91569c]'
+                      : 'text-[#d4cdd7]/40 cursor-default'
                   }`}
                 >
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] border ${
                     isActive
-                      ? 'border-[#E6C01F] bg-[#E6C01F] text-black'
+                      ? 'border-[#91569c] bg-[#91569c] text-black'
                       : isDone
-                      ? 'border-[#E6C01F]/50 bg-[#E6C01F]/20 text-[#E6C01F]'
-                      : 'border-[#6A6A6A] text-[#6A6A6A]'
+                      ? 'border-[#91569c]/50 bg-[#91569c]/20 text-[#91569c]'
+                      : 'border-[#4a3a52] text-[#4a3a52]'
                   }`}>
                     {isDone ? <i className="fa-solid fa-check text-[8px]"></i> : s.num}
                   </span>
@@ -528,13 +528,13 @@ Please refine the concept based on this feedback. Keep the same structure but in
       {/* Content area */}
       <div className="flex flex-1 min-h-0 overflow-hidden px-2 pb-2">
         {step === 'screenplay' ? (
-          <div className="flex-1 h-full bg-[#5A5A5A] border border-[#9A9A9A] rounded-xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-[#8A8A8A] flex-shrink-0 flex items-center justify-between">
+          <div className="flex-1 h-full bg-[#2d2633] border border-[#6b5873] rounded-xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-[#5c4a63] flex-shrink-0 flex items-center justify-between">
               <h2 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <i className="fa-solid fa-clapperboard text-[#E6C01F]"></i>
+                <i className="fa-solid fa-clapperboard text-[#91569c]"></i>
                 Screenplay
               </h2>
-              <button onClick={() => setStep('ideas')} className="text-[9px] font-bold uppercase tracking-wider text-[#D7D7D7]/60 hover:text-[#E6C01F] transition-colors flex items-center gap-1">
+              <button onClick={() => setStep('ideas')} className="text-[9px] font-bold uppercase tracking-wider text-[#d4cdd7]/60 hover:text-[#91569c] transition-colors flex items-center gap-1">
                 <i className="fa-solid fa-arrow-left text-[8px]"></i>
                 Back to Ideas
               </button>
@@ -542,7 +542,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
             <div className="flex-1 overflow-y-auto p-4">
               {(() => {
                 const scenes = screenplay.split(/(?=###\s*Scene\s*\d)/i).filter(b => b.trim() && /^###\s*Scene\s*\d/i.test(b.trim()));
-                if (scenes.length === 0) return <pre className="text-[11px] text-[#D7D7D7] whitespace-pre-wrap font-sans">{screenplay}</pre>;
+                if (scenes.length === 0) return <pre className="text-[11px] text-[#d4cdd7] whitespace-pre-wrap font-sans">{screenplay}</pre>;
                 const saveSceneEdit = (sceneIdx: number) => {
                   const updated = [...scenes];
                   const titleMatch = updated[sceneIdx].match(/###\s*Scene\s*(\d+)[:\s\-–]*(.*)/i);
@@ -564,9 +564,9 @@ Please refine the concept based on this feedback. Keep the same structure but in
                       const promptMatch = scene.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
                       const isEditing = editingScene === i;
                       return (
-                        <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isEditing ? 'border-[#E6C01F]/40' : 'border-[#6A6A6A]'}`}>
-                          <div className="flex items-center gap-3 px-4 py-2.5 bg-[#3A3A3A] border-b border-[#6A6A6A]">
-                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#E6C01F] flex items-center justify-center text-[#0d0d0d] text-[10px] font-black">{sceneNum}</span>
+                        <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isEditing ? 'border-[#91569c]/40' : 'border-[#4a3a52]'}`}>
+                          <div className="flex items-center gap-3 px-4 py-2.5 bg-[#3A3A3A] border-b border-[#4a3a52]">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#91569c] flex items-center justify-center text-[#edecec] text-[10px] font-black">{sceneNum}</span>
                             <h3 className="flex-1 text-[12px] font-bold text-white">{sceneTitle}</h3>
                             <button
                               onClick={() => {
@@ -584,7 +584,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
                                 isEditing
                                   ? 'text-green-400 bg-green-400/15 hover:bg-green-400/25 ring-1 ring-green-400/30'
-                                  : 'text-[#D7D7D7]/70 hover:text-[#E6C01F] hover:bg-[#4A4A4A]'
+                                  : 'text-[#d4cdd7]/70 hover:text-[#91569c] hover:bg-[#4A4A4A]'
                               }`}
                               title={isEditing ? 'Save edits' : 'Edit scene'}
                             >
@@ -592,49 +592,49 @@ Please refine the concept based on this feedback. Keep the same structure but in
                             </button>
                           </div>
                           {isEditing ? (
-                            <div className="grid grid-cols-3 divide-x divide-[#6A6A6A]">
+                            <div className="grid grid-cols-3 divide-x divide-[#4a3a52]">
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Scene</span>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Scene</span>
                                 <textarea
                                   value={editedSceneData.scene}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, scene: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#E6C01F]/30 rounded p-2 text-[10px] text-[#D7D7D7] leading-relaxed focus:ring-1 focus:ring-[#E6C01F]/50 outline-none resize-y"
+                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#d4cdd7] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                   autoFocus
                                 />
                               </div>
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Dialogue</span>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Dialogue</span>
                                 <textarea
                                   value={editedSceneData.dialogue}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, dialogue: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#E6C01F]/30 rounded p-2 text-[10px] text-[#D7D7D7] leading-relaxed italic focus:ring-1 focus:ring-[#E6C01F]/50 outline-none resize-y"
+                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#d4cdd7] leading-relaxed italic focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                 />
                               </div>
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Video Prompt</span>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Video Prompt</span>
                                 <textarea
                                   value={editedSceneData.prompt}
                                   onChange={(e) => setEditedSceneData(prev => ({ ...prev, prompt: e.target.value }))}
                                   rows={6}
-                                  className="w-full bg-[#3A3A3A] border border-[#E6C01F]/30 rounded p-2 text-[10px] text-[#D7D7D7] leading-relaxed font-mono focus:ring-1 focus:ring-[#E6C01F]/50 outline-none resize-y"
+                                  className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#d4cdd7] leading-relaxed font-mono focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
                                 />
                               </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-3 divide-x divide-[#6A6A6A]">
+                            <div className="grid grid-cols-3 divide-x divide-[#4a3a52]">
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Scene</span>
-                                <p className="text-[10px] text-[#D7D7D7] leading-relaxed">{sceneMatch?.[1]?.trim() || '—'}</p>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Scene</span>
+                                <p className="text-[10px] text-[#d4cdd7] leading-relaxed">{sceneMatch?.[1]?.trim() || '—'}</p>
                               </div>
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Dialogue</span>
-                                <p className="text-[10px] text-[#D7D7D7] leading-relaxed italic">{dialogueMatch?.[1]?.trim() || '—'}</p>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Dialogue</span>
+                                <p className="text-[10px] text-[#d4cdd7] leading-relaxed italic">{dialogueMatch?.[1]?.trim() || '—'}</p>
                               </div>
                               <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1.5">Video Prompt</span>
-                                <p className="text-[10px] text-[#D7D7D7] leading-relaxed font-mono">{promptMatch?.[1]?.trim() || '—'}</p>
+                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Video Prompt</span>
+                                <p className="text-[10px] text-[#d4cdd7] leading-relaxed font-mono">{promptMatch?.[1]?.trim() || '—'}</p>
                               </div>
                             </div>
                           )}
@@ -645,7 +645,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                 );
               })()}
             </div>
-            <div className="p-4 border-t border-[#8A8A8A] flex-shrink-0">
+            <div className="p-4 border-t border-[#5c4a63] flex-shrink-0">
               <button
                 onClick={async () => {
                   localStorage.setItem('tensorax_screenplay', screenplay);
@@ -671,7 +671,7 @@ Please refine the concept based on this feedback. Keep the same structure but in
                   }
                 }}
                 disabled={!screenplay}
-                className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#E6C01F] text-[#0d0d0d] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#edecec] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
               >
                 <i className="fa-solid fa-floppy-disk"></i>
                 Save Screenplay
@@ -692,11 +692,11 @@ Please refine the concept based on this feedback. Keep the same structure but in
           />
         ) : (
         <>
-        <aside className="w-[30%] min-w-[320px] max-w-[480px] h-full min-h-0 bg-[#5A5A5A] border border-[#9A9A9A] rounded-xl flex flex-col overflow-hidden flex-shrink-0">
-          <div className="p-4 border-b border-[#8A8A8A] flex-shrink-0">
+        <aside className="w-[30%] min-w-[320px] max-w-[480px] h-full min-h-0 bg-[#2d2633] border border-[#6b5873] rounded-xl flex flex-col overflow-hidden flex-shrink-0">
+          <div className="p-4 border-b border-[#5c4a63] flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <i className={`fa-solid ${STEP_META[stepIndex].icon} text-[#E6C01F]`}></i>
+                <i className={`fa-solid ${STEP_META[stepIndex].icon} text-[#91569c]`}></i>
                 {STEP_META[stepIndex].label}
               </h2>
               <div className="flex gap-1.5">
@@ -713,13 +713,13 @@ Please refine the concept based on this feedback. Keep the same structure but in
                       title={`${title}${hasKey ? ' ✓' : ' — click to set'}`}
                       className={`relative w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
                         hasKey
-                          ? 'bg-[#5A5A5A] border-[#E6C01F]/40 text-[#E6C01F]'
-                          : 'bg-[#5A5A5A] border-[#6A6A6A] text-white/50 hover:text-white hover:border-[#8A8A8A]'
+                          ? 'bg-[#2d2633] border-[#91569c]/40 text-[#91569c]'
+                          : 'bg-[#2d2633] border-[#4a3a52] text-white/50 hover:text-white hover:border-[#5c4a63]'
                       }`}
                     >
                       <i className={`fa-solid ${icon} text-xs`}></i>
                       {hasKey && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#E6C01F] rounded-full"></span>
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#91569c] rounded-full"></span>
                       )}
                     </button>
                   );
@@ -743,11 +743,11 @@ Please refine the concept based on this feedback. Keep the same structure but in
         </aside>
 
         {/* Main preview area */}
-        <main className="flex-1 flex flex-col min-h-0 bg-[#5A5A5A] pt-0 pb-2 px-2 min-w-0 overflow-hidden">
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden mx-auto max-w-4xl w-full bg-[#5A5A5A] border border-[#9A9A9A] rounded-xl">
-            <div className="flex-shrink-0 p-4 border-b border-[#8A8A8A]">
+        <main className="flex-1 flex flex-col min-h-0 bg-[#2d2633] pt-0 pb-2 px-2 min-w-0 overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden mx-auto max-w-4xl w-full bg-[#2d2633] border border-[#6b5873] rounded-xl">
+            <div className="flex-shrink-0 p-4 border-b border-[#5c4a63]">
               <h2 className="text-lg font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <i className="fa-solid fa-eye text-[#E6C01F]"></i>
+                <i className="fa-solid fa-eye text-[#91569c]"></i>
                 Preview
               </h2>
             </div>
@@ -787,12 +787,12 @@ const BriefPreview: React.FC<{ brief: ProjectBrief }> = ({ brief }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-[#E6C01F]/20 rounded-xl flex items-center justify-center">
-          <i className="fa-solid fa-file-lines text-[#E6C01F]"></i>
+        <div className="w-10 h-10 bg-[#91569c]/20 rounded-xl flex items-center justify-center">
+          <i className="fa-solid fa-file-lines text-[#91569c]"></i>
         </div>
         <div>
           <h3 className="text-lg font-heading font-bold text-white uppercase tracking-wide">Project Brief</h3>
-          <p className="text-[10px] text-[#D7D7D7] uppercase tracking-wider">Live preview</p>
+          <p className="text-[10px] text-[#d4cdd7] uppercase tracking-wider">Live preview</p>
         </div>
       </div>
 
@@ -803,10 +803,10 @@ const BriefPreview: React.FC<{ brief: ProjectBrief }> = ({ brief }) => {
           { label: 'Duration', value: brief.duration, icon: 'fa-clock' },
           { label: 'Tone', value: brief.tone, icon: 'fa-palette' },
         ].map((item) => (
-          <div key={item.label} className="bg-[#B0B0B0] rounded-lg p-3 text-center">
-            <i className={`fa-solid ${item.icon} text-[#E6C01F] text-sm mb-1 block`}></i>
-            <span className="text-[9px] font-black uppercase tracking-wider text-[#0d0d0d]/60 block">{item.label}</span>
-            <span className="text-[11px] font-bold text-[#0d0d0d] capitalize">{item.value}</span>
+          <div key={item.label} className="bg-[#3d3444] rounded-lg p-3 text-center">
+            <i className={`fa-solid ${item.icon} text-[#91569c] text-sm mb-1 block`}></i>
+            <span className="text-[9px] font-black uppercase tracking-wider text-[#edecec]/60 block">{item.label}</span>
+            <span className="text-[11px] font-bold text-[#edecec] capitalize">{item.value}</span>
           </div>
         ))}
       </div>
@@ -824,8 +824,8 @@ const BriefPreview: React.FC<{ brief: ProjectBrief }> = ({ brief }) => {
         <PreviewSection title="Proof" icon="fa-certificate" text={brief.proof} />
       )}
       {brief.cta && (
-        <div className="bg-[#E6C01F]/10 border border-[#E6C01F]/20 rounded-lg p-4">
-          <span className="text-[9px] font-black uppercase tracking-wider text-[#E6C01F] block mb-1">Call to Action</span>
+        <div className="bg-[#91569c]/10 border border-[#91569c]/20 rounded-lg p-4">
+          <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c] block mb-1">Call to Action</span>
           <p className="text-sm text-white font-bold">{brief.cta}</p>
         </div>
       )}
@@ -844,24 +844,24 @@ const BriefPreview: React.FC<{ brief: ProjectBrief }> = ({ brief }) => {
 };
 
 const PreviewSection: React.FC<{ title: string; icon: string; text: string }> = ({ title, icon, text }) => (
-  <div className="bg-[#B0B0B0]/60 rounded-lg p-4 space-y-1">
-    <span className="text-[9px] font-black uppercase tracking-wider text-[#0d0d0d]/60 flex items-center gap-1">
-      <i className={`fa-solid ${icon} text-[#E6C01F] text-[8px]`}></i>
+  <div className="bg-[#3d3444]/60 rounded-lg p-4 space-y-1">
+    <span className="text-[9px] font-black uppercase tracking-wider text-[#edecec]/60 flex items-center gap-1">
+      <i className={`fa-solid ${icon} text-[#91569c] text-[8px]`}></i>
       {title}
     </span>
-    <p className="text-[11px] text-[#0d0d0d] leading-relaxed whitespace-pre-wrap">{text}</p>
+    <p className="text-[11px] text-[#edecec] leading-relaxed whitespace-pre-wrap">{text}</p>
   </div>
 );
 
 const IdeasPreview: React.FC<{ ideas: ConceptIdea[] }> = ({ ideas }) => (
   <div className="space-y-4 animate-fade-in">
     <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 bg-[#E6C01F]/20 rounded-xl flex items-center justify-center">
-        <i className="fa-solid fa-lightbulb text-[#E6C01F]"></i>
+      <div className="w-10 h-10 bg-[#91569c]/20 rounded-xl flex items-center justify-center">
+        <i className="fa-solid fa-lightbulb text-[#91569c]"></i>
       </div>
       <div>
         <h3 className="text-lg font-heading font-bold text-white uppercase tracking-wide">Generated Concepts</h3>
-        <p className="text-[10px] text-[#D7D7D7] uppercase tracking-wider">{ideas.length} ideas generated</p>
+        <p className="text-[10px] text-[#d4cdd7] uppercase tracking-wider">{ideas.length} ideas generated</p>
       </div>
     </div>
 
@@ -870,24 +870,24 @@ const IdeasPreview: React.FC<{ ideas: ConceptIdea[] }> = ({ ideas }) => (
         key={idea.id}
         className={`rounded-xl p-4 space-y-2 border ${
           idea.status === 'accepted'
-            ? 'bg-[#E6C01F]/10 border-[#E6C01F]/30'
+            ? 'bg-[#91569c]/10 border-[#91569c]/30'
             : idea.status === 'rejected'
-            ? 'bg-[#B0B0B0]/20 border-gray-600/30 opacity-40'
-            : 'bg-[#B0B0B0]/40 border-gray-600/50'
+            ? 'bg-[#3d3444]/20 border-gray-600/30 opacity-40'
+            : 'bg-[#3d3444]/40 border-gray-600/50'
         }`}
       >
         <div className="flex items-center gap-2">
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-            idea.status === 'accepted' ? 'bg-[#E6C01F] text-black' : 'bg-[#6A6A6A] text-[#D7D7D7]'
+            idea.status === 'accepted' ? 'bg-[#91569c] text-black' : 'bg-[#4a3a52] text-[#d4cdd7]'
           }`}>
             {idea.status === 'accepted' ? <i className="fa-solid fa-check"></i> : i + 1}
           </span>
           <h4 className="text-sm font-heading font-bold text-white uppercase tracking-wide">{idea.title}</h4>
         </div>
-        <p className="text-[11px] text-[#D7D7D7] leading-relaxed">{idea.summary}</p>
+        <p className="text-[11px] text-[#d4cdd7] leading-relaxed">{idea.summary}</p>
         {idea.keyScenes && (
-          <p className="text-[10px] text-[#D7D7D7]/70 leading-relaxed">
-            <span className="font-bold text-[#E6C01F]/60">Scenes:</span> {idea.keyScenes}
+          <p className="text-[10px] text-[#d4cdd7]/70 leading-relaxed">
+            <span className="font-bold text-[#91569c]/60">Scenes:</span> {idea.keyScenes}
           </p>
         )}
       </div>
@@ -898,14 +898,14 @@ const IdeasPreview: React.FC<{ ideas: ConceptIdea[] }> = ({ ideas }) => (
 const ConceptPreview: React.FC<{ text: string; isFinalized: boolean }> = ({ text, isFinalized }) => (
   <div className="space-y-4 animate-fade-in">
     <div className="flex items-center gap-3 mb-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isFinalized ? 'bg-green-500/20' : 'bg-[#E6C01F]/20'}`}>
-        <i className={`fa-solid ${isFinalized ? 'fa-check-double text-green-400' : 'fa-wand-magic-sparkles text-[#E6C01F]'}`}></i>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isFinalized ? 'bg-green-500/20' : 'bg-[#91569c]/20'}`}>
+        <i className={`fa-solid ${isFinalized ? 'fa-check-double text-green-400' : 'fa-wand-magic-sparkles text-[#91569c]'}`}></i>
       </div>
       <div>
         <h3 className="text-lg font-heading font-bold text-white uppercase tracking-wide">
           {isFinalized ? 'Finalised Concept' : 'Refined Concept'}
         </h3>
-        <p className="text-[10px] text-[#D7D7D7] uppercase tracking-wider">
+        <p className="text-[10px] text-[#d4cdd7] uppercase tracking-wider">
           {isFinalized ? 'Ready for screenplay' : 'Work in progress'}
         </p>
       </div>
@@ -916,17 +916,17 @@ const ConceptPreview: React.FC<{ text: string; isFinalized: boolean }> = ({ text
         <span className="text-[11px] text-green-300 font-bold uppercase tracking-wider">Concept approved and locked</span>
       </div>
     )}
-    <div className="bg-[#B0B0B0]/40 border border-gray-600/50 rounded-xl p-6">
+    <div className="bg-[#3d3444]/40 border border-gray-600/50 rounded-xl p-6">
       <div className="prose prose-sm max-w-none">
         {text.split('\n').map((line, i) => {
           if (line.startsWith('# ')) {
             return <h2 key={i} className="text-lg font-heading font-bold text-white uppercase tracking-wide mt-4 mb-2">{line.slice(2)}</h2>;
           }
           if (line.startsWith('## ')) {
-            return <h3 key={i} className="text-sm font-heading font-bold text-[#E6C01F] uppercase tracking-wide mt-3 mb-1">{line.slice(3)}</h3>;
+            return <h3 key={i} className="text-sm font-heading font-bold text-[#91569c] uppercase tracking-wide mt-3 mb-1">{line.slice(3)}</h3>;
           }
           if (line.trim() === '') return <br key={i} />;
-          return <p key={i} className="text-[12px] text-[#D7D7D7] leading-relaxed mb-1">{line}</p>;
+          return <p key={i} className="text-[12px] text-[#d4cdd7] leading-relaxed mb-1">{line}</p>;
         })}
       </div>
     </div>
@@ -935,8 +935,8 @@ const ConceptPreview: React.FC<{ text: string; isFinalized: boolean }> = ({ text
 
 const EmptyPreview: React.FC<{ icon: string; title: string; subtitle: string }> = ({ icon, title, subtitle }) => (
   <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-20">
-    <i className={`fa-solid ${icon} text-[100px] text-[#D7D7D7]`}></i>
-    <p className="font-black uppercase tracking-[0.3em] text-[#D7D7D7]">{title}</p>
-    <p className="text-[10px] text-[#D7D7D7] max-w-xs">{subtitle}</p>
+    <i className={`fa-solid ${icon} text-[100px] text-[#d4cdd7]`}></i>
+    <p className="font-black uppercase tracking-[0.3em] text-[#d4cdd7]">{title}</p>
+    <p className="text-[10px] text-[#d4cdd7] max-w-xs">{subtitle}</p>
   </div>
 );
