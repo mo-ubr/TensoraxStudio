@@ -794,61 +794,20 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           <pre className="text-[11px] text-[#3a3a3a] whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
-                      <div className="px-4 py-2.5 bg-[#f6f0f8] border-t border-[#ceadd4] space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            {([
-                              { key: 'like' as const, icon: '😊', title: 'Like' },
-                              { key: 'neutral' as const, icon: '😐', title: 'Neutral' },
-                              { key: 'dislike' as const, icon: '😞', title: 'Dislike' },
-                            ]).map(({ key, icon, title }) => (
-                              <button
-                                key={key}
-                                onClick={() => setRatings(prev => ({ ...prev, [idea.num]: prev[idea.num] === key ? undefined as any : key }))}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition-all ${
-                                  ratings[idea.num] === key
-                                    ? 'bg-[#91569c]/20 scale-110 ring-1 ring-[#91569c]/40'
-                                    : 'hover:bg-[#f6f0f8] opacity-50 hover:opacity-100'
-                                }`}
-                                title={title}
-                              >
-                                {icon}
-                              </button>
-                            ))}
-                            <div className="w-px h-5 bg-[#ceadd4] mx-0.5"></div>
-                            <button
-                              onClick={() => onRegenerateSingleIdea?.(idea.num, visibleIdeas, {
-                                rating: ratings[idea.num],
-                                comment: feedbackNotes[idea.num],
-                              })}
-                              disabled={isGenerating || (regeneratingIdeaNum != null)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all text-[#888]/40 hover:text-[#91569c] hover:bg-[#f6f0f8] disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Regenerate this idea"
-                            >
-                              <i className={`fa-solid ${regeneratingIdeaNum === idea.num ? 'fa-spinner fa-spin' : 'fa-rotate-right'} text-[10px]`}></i>
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setSelectedIdea(idea.num);
-                              setFinetuneTitle(idea.title);
-                              setFinetuneText(editedBodies[idea.num] ?? idea.body);
-                              setFinetuneDirection(feedbackNotes[idea.num] || '');
-                              setFinetuneMode(true);
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#91569c] text-white hover:bg-[#5c3a62]"
-                          >
-                            <i className="fa-solid fa-check text-[8px] mr-1"></i>
-                            Accept & Create Script
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          value={feedbackNotes[idea.num] || ''}
-                          onChange={(e) => setFeedbackNotes(prev => ({ ...prev, [idea.num]: e.target.value }))}
-                          placeholder="Add comments to refine this idea..."
-                          className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
-                        />
+                      <div className="px-4 py-2.5 border-t border-[#ceadd4] flex items-center justify-end">
+                        <button
+                          onClick={() => {
+                            setSelectedIdea(idea.num);
+                            setFinetuneTitle(idea.title);
+                            setFinetuneText(editedBodies[idea.num] ?? idea.body);
+                            setFinetuneDirection('');
+                            setFinetuneMode(true);
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#91569c] text-white hover:bg-[#5c3a62]"
+                        >
+                          <i className="fa-solid fa-check text-[8px] mr-1"></i>
+                          Accept & Create Script
+                        </button>
                       </div>
                     </div>
                   );
