@@ -863,11 +863,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                         reader.readAsDataURL(blob);
                       } catch (e) { console.warn('Word save failed:', e); }
 
-                      setSelectedIdea(1);
-                      setFinetuneTitle(title);
-                      setFinetuneText(fullText);
-                      setFinetuneDirection('');
-                      setFinetuneMode(true);
+                      onSaveAndCreateScript?.(title, fullText, '');
                     }}
                     className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] active:scale-[0.98]"
                   >
