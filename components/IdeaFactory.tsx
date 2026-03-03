@@ -198,7 +198,7 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
             {isGenerating ? (
               <span><i className="fa-solid fa-spinner fa-spin mr-2"></i>Generating...</span>
             ) : ideas.length === 0 ? (
-              <span><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate 5 Ideas</span>
+              <span><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Generate Idea</span>
             ) : (
               <span><i className="fa-solid fa-rotate mr-2"></i>Generate 5 More</span>
             )}

@@ -400,17 +400,15 @@ Return exactly 5 suggestions as a JSON array.`;
       const model = getAiModel();
       const briefText = buildBriefSummary(conceptState.brief);
 
-      const prompt = `You are a creative director at a top video production studio. Based on the following project brief, generate exactly 5 unique video concept ideas. Each concept should have a different creative angle.
+      const prompt = `You are a creative director at a top video production studio. Based on the following project brief, generate exactly 1 video concept idea.
 
-For EACH idea, use this exact format:
+Use this exact format:
 
-## Idea 1: [Creative Title]
+## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept approach]
 **Key Scenes:** [Brief description of 3-4 key visual moments]
 **Visual Style:** [Describe the visual treatment, color palette, mood]
-
-## Idea 2: [Creative Title]
-...and so on for all 5 ideas.
+**Why It Works:** [1 sentence on why this concept fits]
 
 PROJECT BRIEF:
 ${briefText}`;

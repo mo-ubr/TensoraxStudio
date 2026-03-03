@@ -56,9 +56,9 @@ export { emptyDirection };
 const IDEA_MODEL_KEY = 'tensorax_idea_model';
 const IDEA_APIKEY_KEY = 'tensorax_idea_apiKey';
 
-export const GENERAL_DIRECTION_SYSTEM_PROMPT = (direction: GeneralDirectionType, brand: BrandProfile | undefined) => `You are a senior creative director. Generate exactly 5 video concept ideas.
+export const GENERAL_DIRECTION_SYSTEM_PROMPT = (direction: GeneralDirectionType, brand: BrandProfile | undefined) => `You are a senior creative director. Generate exactly 1 video concept idea.
 
-CRITICAL: The PROJECT BRIEF below is your PRIMARY instruction. Every idea MUST directly implement what the brief describes. Do NOT invent your own story — follow the brief's specific direction. If the brief says "show a growing child" then EVERY idea shows a growing child. If the brief says "show gift cards from relatives" then EVERY idea shows that. Vary only the creative TREATMENT (editing style, pacing, visual approach, narrative structure) — NOT the core content.
+CRITICAL: The PROJECT BRIEF below is your PRIMARY instruction. The idea MUST directly implement what the brief describes. Do NOT invent your own story — follow the brief's specific direction. If the brief says "show a growing child" then the idea shows a growing child. If the brief says "show gift cards from relatives" then the idea shows that.
 
 ---
 
@@ -84,22 +84,18 @@ ${brand ? `Brand typography: ${brand.typography}` : ''}
 
 ---
 
-For EACH idea, use this exact format:
+Use this exact format:
 
-## Idea 1: [Creative Title]
+## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept — what's the story, what's the hook?]
 **Key Scenes:** [4-5 key visual moments that would make up the video, described cinematically]
 **Visual Style:** [Describe the visual treatment: colour palette, lighting mood, camera style, film stock feel]
 **Why It Works:** [1 sentence on why this concept fits the brand, audience, and CTA]
 
-## Idea 2: [Creative Title]
-...and so on for all 5 ideas.
-
 Rules:
-- ALL 5 ideas must faithfully implement the PROJECT BRIEF — same core story elements, same characters, same message
-- Vary ONLY the creative treatment: editing rhythm, visual metaphors, pacing, narrative structure, camera approach
+- The idea must faithfully implement the PROJECT BRIEF — same core story elements, same characters, same message
 - Keep it simple and uncomplicated as the brief requests — no overcomplication
-- Ideas must be feasible with AI video generation tools (Veo, Kling, Imagen)
+- The idea must be feasible with AI video generation tools (Veo, Kling, Imagen)
 - Be very specific about scenes — describe exactly what is shown frame by frame
 ${brand ? `- Integrate the ${brand.name} brand naturally (logo placement, brand colours, typography style)` : ''}`;
 
@@ -613,7 +609,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
             className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-lightbulb'}`}></i>
-            {isGenerating ? 'Generating Ideas...' : 'Generate 5 Ideas'}
+            {isGenerating ? 'Generating...' : 'Generate Idea'}
           </button>
         </div>
       </aside>
@@ -873,7 +869,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
               <i className="fa-solid fa-lightbulb text-5xl text-[#ceadd4] mb-4"></i>
               <p className="text-[#888]/60 text-sm font-bold uppercase tracking-widest mb-2">Idea Factory</p>
               <p className="text-[#888]/40 text-xs max-w-md leading-relaxed">
-                Fill in the project details and click "Generate 5 Ideas". The AI will create 5 unique video concept ideas based on your brief, brand, and style inspirations.
+                Fill in the project details and click "Generate Idea". The AI will create a video concept based on your brief, brand, and style inspirations.
               </p>
             </div>
           )}
