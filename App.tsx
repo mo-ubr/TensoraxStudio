@@ -15,6 +15,31 @@ import { NewProjectWizard, getScopeRoute, type NewProjectData } from './componen
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
 
+const ApiKeyButton: React.FC = () => {
+  const [hasKey, setHasKey] = useState(() => GeminiService.hasApiKey());
+  return (
+    <button
+      onClick={() => {
+        const key = prompt('Enter your Gemini API key:');
+        if (key?.trim()) {
+          GeminiService.setApiKey(key.trim());
+          setHasKey(true);
+          window.location.reload();
+        }
+      }}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors border ${
+        hasKey
+          ? 'bg-[#f6f0f8] border-[#ceadd4] text-[#91569c] hover:bg-[#eadcef]'
+          : 'bg-[#91569c] border-[#91569c] text-white hover:bg-[#5c3a62] animate-pulse'
+      }`}
+      title={hasKey ? 'API key set — click to change' : 'Set Gemini API key'}
+    >
+      <i className={`fa-solid fa-key text-[8px]`}></i>
+      {hasKey ? 'API' : 'Set Key'}
+    </button>
+  );
+};
+
 class ChatBotBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
@@ -815,6 +840,7 @@ const App: React.FC = () => {
               ) : null; })()}
             </div>
           )}
+          <ApiKeyButton />
         </header>
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
       </div>
@@ -834,6 +860,7 @@ const App: React.FC = () => {
               ) : null; })()}
             </div>
             )}
+            <ApiKeyButton />
           </header>
           <LandingPage
             onNavigate={(screen) => setCurrentScreen(screen as any)}
@@ -869,7 +896,10 @@ const App: React.FC = () => {
               ) : null; })()}
             </div>
           )}
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
+            <ApiKeyButton />
+          </div>
         </header>
         <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
 
@@ -932,7 +962,12 @@ const App: React.FC = () => {
           <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
         </div>
         {activeProject && (
-          <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            <div className="mx-auto flex items-center gap-3">
+              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+              ) : null; })()}
+            </div>
         )}
         <div className="flex items-center gap-2">
           {currentScreen === 'scenes' && images.some(img => img.url) && !isGenerating && (
@@ -945,6 +980,7 @@ const App: React.FC = () => {
               {isZipping ? 'Zipping...' : 'Download Zip'}
             </button>
           )}
+          <ApiKeyButton />
         </div>
       </header>
 
