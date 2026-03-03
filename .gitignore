@@ -16,6 +16,9 @@ dist-ssr
 tensorax-key.json
 Tensorax-Key.json
 *-key.json
+*.db
+*.db-wal
+*.db-shm
 
 # Editor directories and files
 .vscode/*

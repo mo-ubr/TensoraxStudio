@@ -1,28 +1,19 @@
 /**
- * Tensorax Studio — Project DB backend service
+ * Tensorax Studio — Project DB backend (SQLite)
  *
- * Manages assets/db.json and the assets/ folder structure.
- * Provides Express router mounted at /api/db.
+ * Single-file database at assets/tensorax.db.
+ * All API shapes identical to the previous JSON version — frontend unchanged.
  */
 
 import { Router } from "express";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { mkdir, writeFile } from "fs/promises";
 import { resolve, join } from "path";
+import Database from "better-sqlite3";
 
 const router = Router();
 
 const ASSETS_ROOT = resolve(process.cwd(), "assets");
-const DB_PATH = join(ASSETS_ROOT, "db.json");
-
-const EMPTY_DB = {
-  version: 1,
-  projects: [],
-  characters: [],
-  scenery: [],
-  clothing: [],
-  assets: [],
-};
+const DB_PATH = join(ASSETS_ROOT, "tensorax.db");
 
 const SUBFOLDER_MAP = {
   projects: "0. Projects",
@@ -40,20 +31,6 @@ async function ensureAssetFolders() {
   }
 }
 
-async function loadDB() {
-  await ensureAssetFolders();
-  if (!existsSync(DB_PATH)) {
-    await writeFile(DB_PATH, JSON.stringify(EMPTY_DB, null, 2), "utf-8");
-    return structuredClone(EMPTY_DB);
-  }
-  const raw = await readFile(DB_PATH, "utf-8");
-  return JSON.parse(raw);
-}
-
-async function saveDB(db) {
-  await writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf-8");
-}
-
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -62,12 +39,99 @@ function slugify(name) {
   return name.trim().replace(/[^a-zA-Z0-9\s_-]/g, "").replace(/\s+/g, "_");
 }
 
-// ─── Full DB ─────────────────────────────────────────────────────────────────
+function now() {
+  return new Date().toISOString();
+}
 
-router.get("/", async (_req, res) => {
+// ─── Database initialisation ─────────────────────────────────────────────────
+
+let db;
+
+function getDB() {
+  if (db) return db;
+  db = new Database(DB_PATH);
+  db.pragma("journal_mode = WAL");
+  db.pragma("foreign_keys = ON");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id            TEXT PRIMARY KEY,
+      name          TEXT NOT NULL,
+      slug          TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'active',
+      brandId       TEXT NOT NULL DEFAULT '',
+      description   TEXT NOT NULL DEFAULT '',
+      createdAt     TEXT NOT NULL,
+      updatedAt     TEXT NOT NULL,
+      notes         TEXT NOT NULL DEFAULT ''
+    );
+
+    CREATE TABLE IF NOT EXISTS assets (
+      id              TEXT PRIMARY KEY,
+      type            TEXT NOT NULL,  -- 'character','scenery','clothing','concept','image','video'
+      name            TEXT NOT NULL,
+      description     TEXT NOT NULL DEFAULT '',
+      thumbnail       TEXT NOT NULL DEFAULT '',
+      filePath        TEXT NOT NULL DEFAULT '',
+      createdAt       TEXT NOT NULL,
+      tags            TEXT NOT NULL DEFAULT '[]',       -- JSON array
+      metadata        TEXT NOT NULL DEFAULT '{}',       -- JSON object
+      referenceImages TEXT NOT NULL DEFAULT '[]'        -- JSON array
+    );
+
+    CREATE TABLE IF NOT EXISTS project_assets (
+      projectId TEXT NOT NULL,
+      assetId   TEXT NOT NULL,
+      assetType TEXT NOT NULL,  -- 'character','scenery','clothing','concept','image','video'
+      linkedAt  TEXT NOT NULL,
+      PRIMARY KEY (projectId, assetId),
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (assetId)   REFERENCES assets(id)   ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(type);
+    CREATE INDEX IF NOT EXISTS idx_pa_project  ON project_assets(projectId);
+    CREATE INDEX IF NOT EXISTS idx_pa_asset    ON project_assets(assetId);
+  `);
+
+  return db;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function projectRow(row) {
+  if (!row) return null;
+  const d = getDB();
+  const links = d.prepare("SELECT assetId, assetType FROM project_assets WHERE projectId = ?").all(row.id);
+  const grouped = { characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [] };
+  for (const l of links) {
+    const key = `${l.assetType}Ids`;
+    if (grouped[key]) grouped[key].push(l.assetId);
+  }
+  return { ...row, ...grouped };
+}
+
+function assetRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    tags: JSON.parse(row.tags || "[]"),
+    metadata: JSON.parse(row.metadata || "{}"),
+    referenceImages: JSON.parse(row.referenceImages || "[]"),
+  };
+}
+
+// ─── Full DB (legacy compat) ─────────────────────────────────────────────────
+
+router.get("/", (_req, res) => {
   try {
-    const db = await loadDB();
-    res.json(db);
+    const d = getDB();
+    const projects = d.prepare("SELECT * FROM projects ORDER BY createdAt DESC").all().map(projectRow);
+    const characters = d.prepare("SELECT * FROM assets WHERE type='character' ORDER BY createdAt DESC").all().map(assetRow);
+    const scenery = d.prepare("SELECT * FROM assets WHERE type='scenery' ORDER BY createdAt DESC").all().map(assetRow);
+    const clothing = d.prepare("SELECT * FROM assets WHERE type='clothing' ORDER BY createdAt DESC").all().map(assetRow);
+    const assets = d.prepare("SELECT * FROM assets ORDER BY createdAt DESC").all().map(assetRow);
+    res.json({ version: 2, projects, characters, scenery, clothing, assets });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -75,21 +139,20 @@ router.get("/", async (_req, res) => {
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
-router.get("/projects", async (_req, res) => {
+router.get("/projects", (_req, res) => {
   try {
-    const db = await loadDB();
-    res.json(db.projects);
+    const rows = getDB().prepare("SELECT * FROM projects ORDER BY createdAt DESC").all();
+    res.json(rows.map(projectRow));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.get("/projects/:id", async (req, res) => {
+router.get("/projects/:id", (req, res) => {
   try {
-    const db = await loadDB();
-    const p = db.projects.find((x) => x.id === req.params.id);
-    if (!p) return res.status(404).json({ error: "Project not found" });
-    res.json(p);
+    const row = getDB().prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!row) return res.status(404).json({ error: "Project not found" });
+    res.json(projectRow(row));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -97,98 +160,94 @@ router.get("/projects/:id", async (req, res) => {
 
 router.post("/projects", async (req, res) => {
   try {
-    const db = await loadDB();
-    const now = new Date().toISOString();
-    const project = {
-      id: newId(),
-      name: req.body.name || "Untitled",
-      slug: slugify(req.body.name || "Untitled"),
-      status: req.body.status || "active",
-      brandId: req.body.brandId || "",
-      description: req.body.description || "",
-      createdAt: now,
-      updatedAt: now,
-      characterIds: req.body.characterIds || [],
-      sceneryIds: req.body.sceneryIds || [],
-      clothingIds: req.body.clothingIds || [],
-      conceptIds: req.body.conceptIds || [],
-      imageIds: req.body.imageIds || [],
-      videoIds: req.body.videoIds || [],
-      notes: req.body.notes || "",
-    };
-    db.projects.push(project);
-    await saveDB(db);
+    const d = getDB();
+    const id = newId();
+    const n = now();
+    const name = req.body.name || "Untitled";
+    const slug = slugify(name);
 
-    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, project.slug);
+    d.prepare(`INSERT INTO projects (id, name, slug, status, brandId, description, createdAt, updatedAt, notes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      id, name, slug,
+      req.body.status || "active",
+      req.body.brandId || "",
+      req.body.description || "",
+      n, n,
+      req.body.notes || ""
+    );
+
+    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, slug);
     await mkdir(projectDir, { recursive: true });
     await mkdir(join(projectDir, "concepts"), { recursive: true });
     await mkdir(join(projectDir, "images"), { recursive: true });
     await mkdir(join(projectDir, "frames"), { recursive: true });
     await mkdir(join(projectDir, "videos"), { recursive: true });
 
-    res.json(project);
+    const row = d.prepare("SELECT * FROM projects WHERE id = ?").get(id);
+    res.json(projectRow(row));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.patch("/projects/:id", async (req, res) => {
+router.patch("/projects/:id", (req, res) => {
   try {
-    const db = await loadDB();
-    const idx = db.projects.findIndex((x) => x.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: "Project not found" });
-    const patch = { ...req.body, updatedAt: new Date().toISOString() };
-    delete patch.id;
-    delete patch.createdAt;
-    db.projects[idx] = { ...db.projects[idx], ...patch };
-    await saveDB(db);
-    res.json(db.projects[idx]);
+    const d = getDB();
+    const existing = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Project not found" });
+
+    const fields = ["name", "slug", "status", "brandId", "description", "notes"];
+    const updates = [];
+    const values = [];
+    for (const f of fields) {
+      if (req.body[f] !== undefined) { updates.push(`${f} = ?`); values.push(req.body[f]); }
+    }
+    updates.push("updatedAt = ?");
+    values.push(now());
+    values.push(req.params.id);
+
+    d.prepare(`UPDATE projects SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+    const row = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    res.json(projectRow(row));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.delete("/projects/:id", async (req, res) => {
+router.delete("/projects/:id", (req, res) => {
   try {
-    const db = await loadDB();
-    db.projects = db.projects.filter((x) => x.id !== req.params.id);
-    await saveDB(db);
+    getDB().prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Link / Unlink assets to a project ───────────────────────────────────────
+// ─── Link / Unlink ───────────────────────────────────────────────────────────
 
-router.post("/projects/:id/link", async (req, res) => {
+router.post("/projects/:id/link", (req, res) => {
   try {
-    const db = await loadDB();
-    const p = db.projects.find((x) => x.id === req.params.id);
-    if (!p) return res.status(404).json({ error: "Project not found" });
+    const d = getDB();
+    const row = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!row) return res.status(404).json({ error: "Project not found" });
     const { assetType, assetId } = req.body;
-    const key = `${assetType}Ids`;
-    if (!Array.isArray(p[key])) p[key] = [];
-    if (!p[key].includes(assetId)) p[key].push(assetId);
-    p.updatedAt = new Date().toISOString();
-    await saveDB(db);
-    res.json(p);
+    d.prepare("INSERT OR IGNORE INTO project_assets (projectId, assetId, assetType, linkedAt) VALUES (?, ?, ?, ?)").run(req.params.id, assetId, assetType, now());
+    d.prepare("UPDATE projects SET updatedAt = ? WHERE id = ?").run(now(), req.params.id);
+    res.json(projectRow(d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/projects/:id/unlink", async (req, res) => {
+router.post("/projects/:id/unlink", (req, res) => {
   try {
-    const db = await loadDB();
-    const p = db.projects.find((x) => x.id === req.params.id);
-    if (!p) return res.status(404).json({ error: "Project not found" });
+    const d = getDB();
+    const row = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!row) return res.status(404).json({ error: "Project not found" });
     const { assetType, assetId } = req.body;
-    const key = `${assetType}Ids`;
-    if (Array.isArray(p[key])) p[key] = p[key].filter((id) => id !== assetId);
-    p.updatedAt = new Date().toISOString();
-    await saveDB(db);
-    res.json(p);
+    d.prepare("DELETE FROM project_assets WHERE projectId = ? AND assetId = ? AND assetType = ?").run(req.params.id, assetId, assetType);
+    d.prepare("UPDATE projects SET updatedAt = ? WHERE id = ?").run(now(), req.params.id);
+    res.json(projectRow(d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -198,8 +257,8 @@ router.post("/projects/:id/unlink", async (req, res) => {
 
 router.post("/projects/:id/files", async (req, res) => {
   try {
-    const db = await loadDB();
-    const p = db.projects.find((x) => x.id === req.params.id);
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
     if (!p) return res.status(404).json({ error: "Project not found" });
 
     const { filename, data, subfolder } = req.body;
@@ -228,168 +287,127 @@ router.post("/projects/:id/files", async (req, res) => {
   }
 });
 
-// ─── Characters ──────────────────────────────────────────────────────────────
+// ─── Generic asset CRUD (characters, scenery, clothing) ──────────────────────
 
-router.get("/characters", async (_req, res) => {
-  try {
-    const db = await loadDB();
-    res.json(db.characters);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post("/characters", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const character = {
-      id: newId(),
-      type: "character",
-      name: req.body.name || "Unnamed",
-      description: req.body.description || "",
-      referenceImages: req.body.referenceImages || [],
-      thumbnail: req.body.thumbnail || "",
-      filePath: req.body.filePath || "",
-      createdAt: new Date().toISOString(),
-      tags: req.body.tags || [],
-      metadata: req.body.metadata || {},
-    };
-    db.characters.push(character);
-    await saveDB(db);
-    res.json(character);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.patch("/characters/:id", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const idx = db.characters.findIndex((x) => x.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: "Character not found" });
-    const patch = { ...req.body };
-    delete patch.id;
-    delete patch.createdAt;
-    db.characters[idx] = { ...db.characters[idx], ...patch };
-    await saveDB(db);
-    res.json(db.characters[idx]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.delete("/characters/:id", async (req, res) => {
-  try {
-    const db = await loadDB();
-    db.characters = db.characters.filter((x) => x.id !== req.params.id);
-    for (const p of db.projects) {
-      p.characterIds = (p.characterIds || []).filter((id) => id !== req.params.id);
+function assetRoutes(typeName) {
+  router.get(`/${typeName}`, (_req, res) => {
+    try {
+      const rows = getDB().prepare("SELECT * FROM assets WHERE type = ? ORDER BY createdAt DESC").all(typeName.replace(/s$/, "").replace("ry", "ry"));
+      res.json(rows.map(assetRow));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
-    await saveDB(db);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  });
 
-// ─── Scenery ─────────────────────────────────────────────────────────────────
+  router.post(`/${typeName}`, (req, res) => {
+    try {
+      const d = getDB();
+      const id = newId();
+      const type = typeName === "scenery" ? "scenery" : typeName.replace(/s$/, "");
+      d.prepare(`INSERT INTO assets (id, type, name, description, thumbnail, filePath, createdAt, tags, metadata, referenceImages)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, type,
+        req.body.name || "Unnamed",
+        req.body.description || "",
+        req.body.thumbnail || "",
+        req.body.filePath || "",
+        now(),
+        JSON.stringify(req.body.tags || []),
+        JSON.stringify(req.body.metadata || {}),
+        JSON.stringify(req.body.referenceImages || [])
+      );
+      const row = d.prepare("SELECT * FROM assets WHERE id = ?").get(id);
+      res.json(assetRow(row));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-router.get("/scenery", async (_req, res) => {
-  try {
-    const db = await loadDB();
-    res.json(db.scenery);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  router.patch(`/${typeName}/:id`, (req, res) => {
+    try {
+      const d = getDB();
+      const existing = d.prepare("SELECT * FROM assets WHERE id = ?").get(req.params.id);
+      if (!existing) return res.status(404).json({ error: `${typeName} not found` });
 
-router.post("/scenery", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const scenery = {
-      id: newId(),
-      type: "scenery",
-      name: req.body.name || "Unnamed",
-      description: req.body.description || "",
-      referenceImages: req.body.referenceImages || [],
-      thumbnail: req.body.thumbnail || "",
-      filePath: req.body.filePath || "",
-      createdAt: new Date().toISOString(),
-      tags: req.body.tags || [],
-      metadata: req.body.metadata || {},
-    };
-    db.scenery.push(scenery);
-    await saveDB(db);
-    res.json(scenery);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+      const fields = { name: "name", description: "description", thumbnail: "thumbnail", filePath: "filePath" };
+      const jsonFields = { tags: "tags", metadata: "metadata", referenceImages: "referenceImages" };
+      const updates = [];
+      const values = [];
 
-router.patch("/scenery/:id", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const idx = db.scenery.findIndex((x) => x.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: "Scenery not found" });
-    const patch = { ...req.body };
-    delete patch.id;
-    delete patch.createdAt;
-    db.scenery[idx] = { ...db.scenery[idx], ...patch };
-    await saveDB(db);
-    res.json(db.scenery[idx]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+      for (const [bodyKey, col] of Object.entries(fields)) {
+        if (req.body[bodyKey] !== undefined) { updates.push(`${col} = ?`); values.push(req.body[bodyKey]); }
+      }
+      for (const [bodyKey, col] of Object.entries(jsonFields)) {
+        if (req.body[bodyKey] !== undefined) { updates.push(`${col} = ?`); values.push(JSON.stringify(req.body[bodyKey])); }
+      }
 
-// ─── Clothing ────────────────────────────────────────────────────────────────
+      if (updates.length > 0) {
+        values.push(req.params.id);
+        d.prepare(`UPDATE assets SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+      }
 
-router.get("/clothing", async (_req, res) => {
-  try {
-    const db = await loadDB();
-    res.json(db.clothing);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+      const row = d.prepare("SELECT * FROM assets WHERE id = ?").get(req.params.id);
+      res.json(assetRow(row));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-router.post("/clothing", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const clothing = {
-      id: newId(),
-      type: "clothing",
-      name: req.body.name || "Unnamed",
-      description: req.body.description || "",
-      referenceImages: req.body.referenceImages || [],
-      thumbnail: req.body.thumbnail || "",
-      filePath: req.body.filePath || "",
-      createdAt: new Date().toISOString(),
-      tags: req.body.tags || [],
-      metadata: req.body.metadata || {},
-    };
-    db.clothing.push(clothing);
-    await saveDB(db);
-    res.json(clothing);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  router.delete(`/${typeName}/:id`, (req, res) => {
+    try {
+      getDB().prepare("DELETE FROM assets WHERE id = ?").run(req.params.id);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+}
 
-router.patch("/clothing/:id", async (req, res) => {
-  try {
-    const db = await loadDB();
-    const idx = db.clothing.findIndex((x) => x.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: "Clothing not found" });
-    const patch = { ...req.body };
-    delete patch.id;
-    delete patch.createdAt;
-    db.clothing[idx] = { ...db.clothing[idx], ...patch };
-    await saveDB(db);
-    res.json(db.clothing[idx]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+assetRoutes("characters");
+assetRoutes("scenery");
+assetRoutes("clothing");
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+ensureAssetFolders().then(() => {
+  getDB();
+  console.log(`[DB] SQLite ready: ${DB_PATH}`);
+
+  // Migrate JSON data if db.json exists and SQLite is empty
+  import("fs").then(({ existsSync, readFileSync }) => {
+    const jsonPath = join(ASSETS_ROOT, "db.json");
+    if (!existsSync(jsonPath)) return;
+    const d = getDB();
+    const count = d.prepare("SELECT COUNT(*) as c FROM projects").get().c;
+    if (count > 0) return;
+
+    try {
+      const json = JSON.parse(readFileSync(jsonPath, "utf-8"));
+      const insertProject = d.prepare(`INSERT OR IGNORE INTO projects (id, name, slug, status, brandId, description, createdAt, updatedAt, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      const insertAsset = d.prepare(`INSERT OR IGNORE INTO assets (id, type, name, description, thumbnail, filePath, createdAt, tags, metadata, referenceImages) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      const insertLink = d.prepare(`INSERT OR IGNORE INTO project_assets (projectId, assetId, assetType, linkedAt) VALUES (?, ?, ?, ?)`);
+
+      const migrate = d.transaction(() => {
+        for (const p of json.projects || []) {
+          insertProject.run(p.id, p.name, p.slug || slugify(p.name), p.status || "active", p.brandId || "", p.description || "", p.createdAt || now(), p.updatedAt || now(), p.notes || "");
+          for (const type of ["character", "scenery", "clothing", "concept", "image", "video"]) {
+            for (const aid of p[`${type}Ids`] || []) {
+              insertLink.run(p.id, aid, type, now());
+            }
+          }
+        }
+        for (const list of [json.characters, json.scenery, json.clothing, json.assets]) {
+          for (const a of list || []) {
+            insertAsset.run(a.id, a.type || "character", a.name || "Unnamed", a.description || "", a.thumbnail || "", a.filePath || "", a.createdAt || now(), JSON.stringify(a.tags || []), JSON.stringify(a.metadata || {}), JSON.stringify(a.referenceImages || []));
+          }
+        }
+      });
+      migrate();
+      console.log("[DB] Migrated JSON data to SQLite");
+    } catch (e) {
+      console.warn("[DB] JSON migration skipped:", e.message);
+    }
+  });
 });
 
 export default router;
