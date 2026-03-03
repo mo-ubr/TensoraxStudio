@@ -900,7 +900,12 @@ const App: React.FC = () => {
             <ApiKeyButton />
           </div>
         </header>
-        <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+          <div className="w-72 flex-shrink-0 p-3 pl-0">
+            <ChatBotBoundary><ChatBot /></ChatBotBoundary>
+          </div>
+        </div>
 
         {apiKeyModalType && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={closeApiKeyModal}>
