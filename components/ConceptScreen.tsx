@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getApiKeyForType, getModelForType, hasStoredKeyForType } from '../services/geminiService';
 import { ProjectBrief, ConceptIdea, ConceptState, GeneralDirection as GeneralDirectionType, BrandProfile } from '../types';
 import { BriefForm, VideoSuggestion } from './BriefForm';
@@ -119,15 +119,12 @@ interface ConceptScreenProps {
 export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject }) => {
   const [step, setStep] = useState<ConceptStep>('direction');
   const [generalDirection, setGeneralDirection] = useState<GeneralDirectionType>(() => {
-    try {
-      const stored = localStorage.getItem('tensorax_general_direction');
-      const dir = stored ? JSON.parse(stored) : emptyDirection;
-      if (activeProject) {
-        dir.projectName = activeProject.name;
-        if (!dir.aim && activeProject.description) dir.aim = activeProject.description;
-      }
-      return dir;
-    } catch { return emptyDirection; }
+    const dir = { ...emptyDirection };
+    if (activeProject) {
+      dir.projectName = activeProject.name;
+      if (activeProject.description) dir.aim = activeProject.description;
+    }
+    return dir;
   });
   const [isGeneratingDirection, setIsGeneratingDirection] = useState(false);
   const [regeneratingIdeaNum, setRegeneratingIdeaNum] = useState<number | null>(null);
@@ -141,9 +138,41 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
   const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [isSavingConcept, setIsSavingConcept] = useState(false);
-  const [screenplay, setScreenplay] = useState(() => localStorage.getItem('tensorax_screenplay') || '');
+  const [screenplay, setScreenplay] = useState('');
   const [editingScene, setEditingScene] = useState<number | null>(null);
   const [editedSceneData, setEditedSceneData] = useState<{ scene: string; dialogue: string; prompt: string }>({ scene: '', dialogue: '', prompt: '' });
+  const [dbLoaded, setDbLoaded] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load from DB on mount
+  useEffect(() => {
+    if (!activeProject) return;
+    DB.getMetadata(activeProject.id).then(meta => {
+      if (meta.generalDirection) {
+        const dir = meta.generalDirection as GeneralDirectionType;
+        dir.projectName = activeProject.name;
+        setGeneralDirection(dir);
+      }
+      if (meta.screenplay) setScreenplay(meta.screenplay as string);
+      if (meta.conceptState) setConceptState(meta.conceptState as ConceptState);
+      setDbLoaded(true);
+    }).catch(() => setDbLoaded(true));
+  }, [activeProject?.id]);
+
+  // Auto-save to DB (debounced 1s)
+  const saveToDb = useCallback(() => {
+    if (!activeProject || !dbLoaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      DB.saveMetadata(activeProject.id, {
+        generalDirection,
+        screenplay,
+        conceptState,
+      }).catch(e => console.warn('[ConceptScreen] Auto-save failed:', e));
+    }, 1000);
+  }, [activeProject?.id, generalDirection, screenplay, conceptState, dbLoaded]);
+
+  useEffect(() => { saveToDb(); }, [saveToDb]);
 
   const activeBrand = brands.find(b => b.id === activeBrandId) || brands[0];
 
@@ -221,7 +250,6 @@ Rules:
 
   const handleDirectionChange = (dir: GeneralDirectionType) => {
     setGeneralDirection(dir);
-    localStorage.setItem('tensorax_general_direction', JSON.stringify(dir));
   };
 
   const callAiText = async (prompt: string): Promise<string> => {
@@ -262,7 +290,6 @@ Rules:
       if (text) {
         const updated = { ...generalDirection, generatedPrompt: text };
         setGeneralDirection(updated);
-        localStorage.setItem('tensorax_general_direction', JSON.stringify(updated));
       }
     } catch (err: any) {
       alert(`Failed to generate direction: ${err.message || err}`);
@@ -294,7 +321,6 @@ Rules:
 
         const updated = { ...generalDirection, generatedPrompt: updatedPrompt };
         setGeneralDirection(updated);
-        localStorage.setItem('tensorax_general_direction', JSON.stringify(updated));
       }
     } catch (err: any) {
       alert(`Failed to regenerate idea: ${err.message || err}`);
@@ -653,7 +679,6 @@ Please refine the concept based on this feedback. Keep the same structure but in
             <div className="p-4 border-t border-[#ceadd4] flex-shrink-0">
               <button
                 onClick={async () => {
-                  localStorage.setItem('tensorax_screenplay', screenplay);
                   const proj = (generalDirection.projectName || 'Project').replace(/\s+/g, '_');
                   const filename = `${proj}_Screenplay.md`;
                   try {

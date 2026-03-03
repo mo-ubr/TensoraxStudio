@@ -209,4 +209,10 @@ export const DB = {
   // Save a generated asset file to the project folder
   saveProjectFile: (projectId: string, filename: string, data: string, subfolder?: string) =>
     apiFetch<{ path: string }>(`/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify({ filename, data, subfolder }) }),
+
+  // Project metadata (stores all user inputs: generalDirection, screenplay, etc.)
+  getMetadata: (projectId: string) =>
+    apiFetch<Record<string, unknown>>(`/projects/${projectId}/metadata`),
+  saveMetadata: (projectId: string, patch: Record<string, unknown>) =>
+    apiFetch<Record<string, unknown>>(`/projects/${projectId}/metadata`, { method: 'PATCH', body: JSON.stringify(patch) }),
 };

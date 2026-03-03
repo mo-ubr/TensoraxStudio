@@ -63,7 +63,8 @@ function getDB() {
       description   TEXT NOT NULL DEFAULT '',
       createdAt     TEXT NOT NULL,
       updatedAt     TEXT NOT NULL,
-      notes         TEXT NOT NULL DEFAULT ''
+      notes         TEXT NOT NULL DEFAULT '',
+      metadata      TEXT NOT NULL DEFAULT '{}'
     );
 
     CREATE TABLE IF NOT EXISTS assets (
@@ -94,6 +95,13 @@ function getDB() {
     CREATE INDEX IF NOT EXISTS idx_pa_asset    ON project_assets(assetId);
   `);
 
+  // Migrate: add metadata column if missing (existing DBs)
+  try {
+    db.prepare("SELECT metadata FROM projects LIMIT 1").get();
+  } catch {
+    db.exec("ALTER TABLE projects ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'");
+  }
+
   return db;
 }
 
@@ -108,7 +116,9 @@ function projectRow(row) {
     const key = `${l.assetType}Ids`;
     if (grouped[key]) grouped[key].push(l.assetId);
   }
-  return { ...row, ...grouped };
+  let metadata = {};
+  try { metadata = JSON.parse(row.metadata || "{}"); } catch { /* ignore */ }
+  return { ...row, metadata, ...grouped };
 }
 
 function assetRow(row) {
@@ -166,14 +176,15 @@ router.post("/projects", async (req, res) => {
     const name = req.body.name || "Untitled";
     const slug = slugify(name);
 
-    d.prepare(`INSERT INTO projects (id, name, slug, status, brandId, description, createdAt, updatedAt, notes)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    d.prepare(`INSERT INTO projects (id, name, slug, status, brandId, description, createdAt, updatedAt, notes, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       id, name, slug,
       req.body.status || "active",
       req.body.brandId || "",
       req.body.description || "",
       n, n,
-      req.body.notes || ""
+      req.body.notes || "",
+      JSON.stringify(req.body.metadata || {})
     );
 
     const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, slug);
@@ -202,6 +213,10 @@ router.patch("/projects/:id", (req, res) => {
     for (const f of fields) {
       if (req.body[f] !== undefined) { updates.push(`${f} = ?`); values.push(req.body[f]); }
     }
+    if (req.body.metadata !== undefined) {
+      updates.push("metadata = ?");
+      values.push(typeof req.body.metadata === 'string' ? req.body.metadata : JSON.stringify(req.body.metadata));
+    }
     updates.push("updatedAt = ?");
     values.push(now());
     values.push(req.params.id);
@@ -209,6 +224,30 @@ router.patch("/projects/:id", (req, res) => {
     d.prepare(`UPDATE projects SET ${updates.join(", ")} WHERE id = ?`).run(...values);
     const row = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
     res.json(projectRow(row));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/projects/:id/metadata", (req, res) => {
+  try {
+    const row = getDB().prepare("SELECT metadata FROM projects WHERE id = ?").get(req.params.id);
+    if (!row) return res.status(404).json({ error: "Project not found" });
+    res.json(JSON.parse(row.metadata || "{}"));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/projects/:id/metadata", (req, res) => {
+  try {
+    const d = getDB();
+    const row = d.prepare("SELECT metadata FROM projects WHERE id = ?").get(req.params.id);
+    if (!row) return res.status(404).json({ error: "Project not found" });
+    const existing = JSON.parse(row.metadata || "{}");
+    const merged = { ...existing, ...req.body };
+    d.prepare("UPDATE projects SET metadata = ?, updatedAt = ? WHERE id = ?").run(JSON.stringify(merged), now(), req.params.id);
+    res.json(merged);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
