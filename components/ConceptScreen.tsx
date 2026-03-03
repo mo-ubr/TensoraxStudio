@@ -328,15 +328,17 @@ Rules:
   const getAiKey = (): string => {
     const copyKey = getApiKeyForType('copy');
     const analysisKey = getApiKeyForType('analysis');
-    const key = copyKey || analysisKey;
+    const globalKey = (() => { try { return localStorage.getItem('gemini_api_key') || ''; } catch { return ''; } })();
+    const key = copyKey || analysisKey || globalKey;
     if (!key) {
-      throw new Error('Please set an API key via Settings → API Keys (Analysis or Copy) on the Scenes page first, then return here.');
+      throw new Error('Please set an API key via the API button in the header.');
     }
     return key;
   };
 
   const getAiModel = (): string | undefined => {
-    return getModelForType('copy') || getModelForType('analysis') || undefined;
+    const globalModel = (() => { try { return localStorage.getItem('tensorax_active_model') || ''; } catch { return ''; } })();
+    return getModelForType('copy') || getModelForType('analysis') || globalModel || undefined;
   };
 
   const handleSearchVideos = async (brief: ProjectBrief): Promise<VideoSuggestion[]> => {
