@@ -209,10 +209,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               <i className={`fa-solid ${item.icon} text-[#91569c]`}></i>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black text-[#ceadd4]">{idx + 1}</span>
-                <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">{item.label}</span>
-              </div>
+              <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">{item.label}</span>
               <p className="text-[9px] text-[#888] mt-0.5">{item.description}</p>
             </div>
           </button>

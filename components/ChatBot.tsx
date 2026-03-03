@@ -112,10 +112,7 @@ export const ChatBot: React.FC = () => {
         {messages.length === 0 && (
           <div className="space-y-3 py-2">
             <div className="bg-[#f6f0f8] rounded-xl px-3 py-2.5 text-[11px] leading-relaxed text-[#3a3a3a] border border-[#e0d6e3]">
-              Hi! I'm your creative assistant. I can help you with concepts, screenplays, image prompts, character design, and more.
-            </div>
-            <div className="bg-[#f6f0f8] rounded-xl px-3 py-2.5 text-[11px] leading-relaxed text-[#3a3a3a] border border-[#e0d6e3]">
-              Would you like me to guide you step by step through the project? Just say <strong>"guide me"</strong> and I'll walk you through it.
+              Let's start by creating the screenplay. Open <strong>Copy</strong> from the menu to write your concept, generate ideas, and build the script.
             </div>
           </div>
         )}
