@@ -829,7 +829,7 @@ const App: React.FC = () => {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
+          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
           {activeProject && (
             <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
           )}
@@ -843,7 +843,7 @@ const App: React.FC = () => {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
          <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
             {activeProject && (
               <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
             )}
@@ -872,7 +872,7 @@ const App: React.FC = () => {
             >
               <i className="fa-solid fa-arrow-left text-sm"></i>
             </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
           </div>
           {activeProject && (
             <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
@@ -937,7 +937,7 @@ const App: React.FC = () => {
           >
             <i className="fa-solid fa-arrow-left text-sm"></i>
           </button>
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
+          <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
         </div>
         {activeProject && (
           <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
