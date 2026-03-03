@@ -81,9 +81,10 @@ interface LandingPageProps {
   brands: BrandProfile[];
   onCreateProject: (data: NewProjectData) => void;
   onSelectProject: (p: Project) => void;
+  onNewProject: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject, onNewProject }) => {
   const [showWizard, setShowWizard] = useState(false);
 
   const pipelineSteps = [
@@ -159,10 +160,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       {/* Pipeline steps + project button on the left */}
       <div className="flex-1 flex px-6 py-6 gap-6">
         <div className="flex flex-col gap-3 w-72 flex-shrink-0">
-          {/* Project settings button */}
+          {/* Project buttons */}
           <button
             onClick={() => onNavigate('projects')}
-            className="group flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 bg-[#f6f0f8] border-[#ceadd4] hover:border-[#91569c] hover:bg-[#eadcef] shadow-sm hover:shadow-md text-left"
+            className="group flex items-center gap-4 px-5 py-3 rounded-xl border transition-all duration-200 bg-[#f6f0f8] border-[#ceadd4] hover:border-[#91569c] hover:bg-[#eadcef] shadow-sm hover:shadow-md text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
               <i className="fa-solid fa-sliders text-[#91569c] text-lg"></i>
@@ -174,6 +175,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               <p className="text-[10px] text-[#888] mt-0.5">Settings & Assets</p>
             </div>
             <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
+          </button>
+          <button
+            onClick={onNewProject}
+            className="group flex items-center gap-4 px-5 py-3 rounded-xl border-2 border-dashed transition-all duration-200 border-[#ceadd4] hover:border-[#91569c] hover:bg-[#f6f0f8] text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+              <i className="fa-solid fa-plus text-[#91569c] text-lg"></i>
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-bold uppercase tracking-wider text-sm text-[#888] group-hover:text-[#91569c] transition-colors">
+                New Project
+              </span>
+            </div>
           </button>
 
           <div className="h-px bg-[#e0d6e3] my-1"></div>
@@ -841,6 +855,7 @@ const App: React.FC = () => {
             brands={brands}
             onCreateProject={handleCreateProject}
             onSelectProject={handleSelectProject}
+            onNewProject={() => persistProject(null)}
           />
       </div>
     );
