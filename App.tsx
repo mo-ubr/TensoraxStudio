@@ -76,10 +76,12 @@ const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
 interface LandingPageProps {
   onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects') => void;
   activeProject: Project | null;
+  allProjects: Project[];
   onCreateProject: (name: string) => void;
+  onSelectProject: (p: Project) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, onCreateProject }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, onCreateProject, onSelectProject }) => {
   const [showNewProject, setShowNewProject] = useState(false);
   const [projectName, setProjectName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,81 +105,97 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
     { id: 'video', label: 'Video', icon: 'fa-video', description: 'Video Generation' },
   ];
 
-  return (
-    <div className="flex-1 flex flex-col bg-[#edecec] overflow-y-auto">
-      {/* Project bar */}
-      <div className="px-6 py-4">
-        {activeProject ? (
-          <div className="bg-white border border-[#e0d6e3] rounded-xl px-5 py-3 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></div>
-              <div>
-                <p className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</p>
-                <p className="text-[10px] text-[#888]">Active project</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onNavigate('projects')}
-                className="px-3 py-2 rounded-lg text-[10px] font-black uppercase bg-[#f6f0f8] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors flex items-center gap-1.5"
-              >
-                <i className="fa-solid fa-sliders"></i>Project Settings & Assets
-              </button>
-            </div>
+  if (!activeProject) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+        <div className="w-full max-w-md space-y-6 animate-fade-in">
+          <div className="text-center mb-8">
+            <i className="fa-solid fa-folder-open text-5xl text-[#ceadd4] mb-4 block"></i>
+            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
+            <p className="text-sm text-[#888] mt-1">Open an existing project or start a new one</p>
           </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            {showNewProject ? (
-              <div className="flex-1 flex items-center gap-2 bg-white border border-[#ceadd4] rounded-xl px-4 py-2.5 shadow-sm animate-fade-in">
-                <i className="fa-solid fa-folder-plus text-[#91569c] text-sm"></i>
+
+          {allProjects.length > 0 && (
+            <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm space-y-3">
+              <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block">Open project</label>
+              <select
+                onChange={(e) => {
+                  const p = allProjects.find(x => x.id === e.target.value);
+                  if (p) onSelectProject(p);
+                }}
+                defaultValue=""
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer appearance-none"
+              >
+                <option value="" disabled>Select a project...</option>
+                {allProjects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
+
+          {showNewProject ? (
+            <div className="bg-white border border-[#ceadd4] rounded-xl p-5 shadow-sm space-y-3 animate-fade-in">
+              <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block">New project</label>
+              <div className="flex items-center gap-2">
                 <input
                   ref={inputRef}
                   type="text"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewProject(false); }}
-                  placeholder="Enter project name..."
-                  className="flex-1 bg-transparent text-[#5c3a62] text-sm font-bold placeholder:text-[#ceadd4] outline-none uppercase tracking-wide"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowNewProject(false); setProjectName(''); } }}
+                  placeholder="Project name..."
+                  className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
                 />
                 <button
                   onClick={handleCreate}
                   disabled={!projectName.trim()}
-                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-5 py-3 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Create
                 </button>
-                <button
-                  onClick={() => setShowNewProject(false)}
-                  className="px-2 py-1.5 text-[#888] hover:text-[#5c3a62] transition-colors"
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </button>
               </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => setShowNewProject(true)}
-                  className="flex-1 h-12 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
-                >
-                  <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
-                  <span className="font-black uppercase tracking-wider text-xs">New Project</span>
-                </button>
-                <button
-                  onClick={() => onNavigate('projects')}
-                  className="h-12 px-5 rounded-xl border border-[#ceadd4] bg-white/50 hover:bg-white text-[#888] hover:text-[#5c3a62] transition-all flex items-center gap-2 shadow-sm"
-                >
-                  <i className="fa-solid fa-folder-open text-sm"></i>
-                  <span className="font-black uppercase tracking-wider text-[10px]">Projects</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowNewProject(true)}
+              className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
+            >
+              <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
+              <span className="font-black uppercase tracking-wider text-xs">Start New Project</span>
+            </button>
+          )}
+        </div>
       </div>
+    );
+  }
 
-      {/* Pipeline steps — vertical list on the left */}
-      <div className="flex-1 flex px-6 pb-6 gap-6">
+  return (
+    <div className="flex-1 flex flex-col bg-[#edecec] overflow-y-auto">
+      {/* Pipeline steps + project button on the left */}
+      <div className="flex-1 flex px-6 py-6 gap-6">
         <div className="flex flex-col gap-3 w-72 flex-shrink-0">
+          {/* Project settings button */}
+          <button
+            onClick={() => onNavigate('projects')}
+            className="group flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 bg-[#f6f0f8] border-[#ceadd4] hover:border-[#91569c] hover:bg-[#eadcef] shadow-sm hover:shadow-md text-left"
+          >
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+              <i className="fa-solid fa-sliders text-[#91569c] text-lg"></i>
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-bold uppercase tracking-wider text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
+                Project
+              </span>
+              <p className="text-[10px] text-[#888] mt-0.5">Settings & Assets</p>
+            </div>
+            <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
+          </button>
+
+          <div className="h-px bg-[#e0d6e3] my-1"></div>
+
           {pipelineSteps.map((item, idx) => (
             <button
               key={item.id}
@@ -201,7 +219,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
           ))}
         </div>
 
-        {/* Right area — placeholder for future content */}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center opacity-30">
             <i className="fa-solid fa-arrow-left text-4xl text-[#ceadd4] mb-3 block"></i>
@@ -297,6 +314,7 @@ const App: React.FC = () => {
 
   // ─── Project state ───────────────────────────────────────────────────────
   const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('tensorax_active_project');
@@ -306,6 +324,7 @@ const App: React.FC = () => {
         setActiveProject(parsed);
       } catch { /* ignore */ }
     }
+    DB.listProjects().then(setAllProjects).catch(() => {});
   }, []);
 
   const persistProject = (p: Project | null) => {
@@ -318,6 +337,7 @@ const App: React.FC = () => {
     try {
       const project = await DB.createProject({ name, status: 'active', brandId: activeBrandId, description: '', characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: '' });
       persistProject(project);
+      setAllProjects(prev => [...prev, project]);
     } catch (e) {
       console.error('[App] Create project failed:', e);
       alert('Failed to create project. Is the backend running?');
@@ -799,9 +819,11 @@ const App: React.FC = () => {
   if (currentScreen === 'projects') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-6 z-20 shadow-sm">
+        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
           <img src="/logo-main.png" alt="TensorAx Studio" className="h-8" />
-          <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
+          {activeProject && (
+            <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+          )}
         </header>
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
       </div>
@@ -811,14 +833,18 @@ const App: React.FC = () => {
   if (currentScreen === 'landing') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-6 z-20 shadow-sm">
+         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-8" />
-            <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
+            {activeProject && (
+              <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            )}
           </header>
           <LandingPage
             onNavigate={(screen) => setCurrentScreen(screen as any)}
             activeProject={activeProject}
+            allProjects={allProjects}
             onCreateProject={handleCreateProject}
+            onSelectProject={handleSelectProject}
           />
       </div>
     );
@@ -827,7 +853,7 @@ const App: React.FC = () => {
   if (currentScreen === 'concept') {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-5 z-20 shadow-sm">
+        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentScreen('landing')}
@@ -836,16 +862,11 @@ const App: React.FC = () => {
               <i className="fa-solid fa-arrow-left text-sm"></i>
             </button>
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-6" />
-            {activeProject && (
-              <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c] bg-[#eadcef] px-2 py-0.5 rounded">
-                {activeProject.name}
-              </span>
-            )}
           </div>
-          <div className="flex items-center gap-3">
-            <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
-          </div>
+          {activeProject && (
+            <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+          )}
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
         </header>
         <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
 
@@ -897,7 +918,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-      <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-5 z-20 shadow-sm">
+      <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setCurrentScreen('landing')}
@@ -906,14 +927,11 @@ const App: React.FC = () => {
             <i className="fa-solid fa-arrow-left text-sm"></i>
           </button>
           <img src="/logo-main.png" alt="TensorAx Studio" className="h-6" />
-          {activeProject && (
-            <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c] bg-[#eadcef] px-2 py-0.5 rounded">
-              {activeProject.name}
-            </span>
-          )}
         </div>
+        {activeProject && (
+          <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+        )}
         <div className="flex items-center gap-2">
-          <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
           {currentScreen === 'scenes' && images.some(img => img.url) && !isGenerating && (
             <button
               onClick={downloadAllImages}
