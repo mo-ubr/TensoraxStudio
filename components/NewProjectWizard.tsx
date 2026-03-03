@@ -37,8 +37,14 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
   const [name, setName] = useState('');
   const [brandId, setBrandId] = useState(brands[0]?.id || '');
   const [scope, setScope] = useState<ProjectScope | null>(null);
+  const scopeRef = useRef<ProjectScope | null>(null);
   const briefRef = useRef<HTMLTextAreaElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+
+  const selectScope = (s: ProjectScope) => {
+    setScope(s);
+    scopeRef.current = s;
+  };
 
   useEffect(() => {
     if (step === 'brief' && briefRef.current) briefRef.current.focus();
@@ -46,8 +52,9 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
   }, [step]);
 
   const handleFinish = () => {
-    if (!name.trim() || !scope) return;
-    onComplete({ name: name.trim(), brandId, scope, brief: brief.trim() });
+    const s = scopeRef.current || scope;
+    if (!name.trim() || !s) return;
+    onComplete({ name: name.trim(), brandId, scope: s, brief: brief.trim() });
   };
 
   const stepIdx = STEPS.findIndex(s => s.id === step);
@@ -195,7 +202,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
               {SCOPE_OPTIONS.map(opt => (
                 <button
                   key={opt.id}
-                  onClick={() => setScope(opt.id)}
+                  onClick={() => selectScope(opt.id)}
                   className={`flex flex-col items-center gap-2 px-3 py-4 rounded-xl border transition-all text-center ${
                     scope === opt.id
                       ? 'bg-[#f6f0f8] border-[#91569c] shadow-sm'

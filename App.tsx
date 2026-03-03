@@ -201,18 +201,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
           ))}
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center opacity-30">
-            <i className="fa-solid fa-arrow-left text-4xl text-[#ceadd4] mb-3 block"></i>
-            <p className="text-[#888] text-xs font-bold uppercase tracking-wider">Select a step to begin</p>
-          </div>
+        <div className="flex-1 flex flex-col min-h-0">
+          <ChatBotBoundary><ChatBot /></ChatBotBoundary>
         </div>
-      </div>
-
-      <div className="px-6 pb-4 text-[#888] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
-        <span>© 2026 TensorAx Studio</span>
-        <span className="w-1 h-1 bg-[#ceadd4] rounded-full"></span>
-        <span>Version 4.0.0</span>
       </div>
     </div>
   );
