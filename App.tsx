@@ -104,28 +104,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
   ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[#edecec] p-6 overflow-y-auto">
-      <div className="mb-10 text-center animate-fade-in">
-        <img src="/logo-main.png" alt="TensorAx Studio" className="h-20 mx-auto mb-4" />
-      </div>
-
-      {/* Active project banner or create new */}
-      <div className="w-full max-w-2xl mb-8">
+    <div className="flex-1 flex flex-col bg-[#edecec] overflow-y-auto">
+      {/* Project bar */}
+      <div className="px-6 py-4">
         {activeProject ? (
-          <div className="bg-white border border-[#ceadd4] rounded-xl px-5 py-3 flex items-center justify-between shadow-sm">
+          <div className="bg-white border border-[#e0d6e3] rounded-xl px-5 py-3 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0"></div>
               <div>
-                <p className="text-[10px] text-[#888] uppercase tracking-wider font-bold">Active Project</p>
                 <p className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</p>
+                <p className="text-[10px] text-[#888]">Active project</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onNavigate('projects')}
-                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#f6f0f8] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors"
+                className="px-3 py-2 rounded-lg text-[10px] font-black uppercase bg-[#f6f0f8] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors flex items-center gap-1.5"
               >
-                <i className="fa-solid fa-folder-open mr-1.5"></i>All Projects
+                <i className="fa-solid fa-sliders"></i>Project Settings & Assets
               </button>
             </div>
           </div>
@@ -146,7 +142,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
                 <button
                   onClick={handleCreate}
                   disabled={!projectName.trim()}
-                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-[#5c3a62] hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Create
                 </button>
@@ -161,14 +157,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
               <>
                 <button
                   onClick={() => setShowNewProject(true)}
-                  className="flex-1 h-14 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
+                  className="flex-1 h-12 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
                 >
-                  <i className="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
+                  <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
                   <span className="font-black uppercase tracking-wider text-xs">New Project</span>
                 </button>
                 <button
                   onClick={() => onNavigate('projects')}
-                  className="h-14 px-5 rounded-xl border border-[#ceadd4] bg-white/50 hover:bg-white text-[#888] hover:text-[#5c3a62] transition-all flex items-center gap-2 shadow-sm"
+                  className="h-12 px-5 rounded-xl border border-[#ceadd4] bg-white/50 hover:bg-white text-[#888] hover:text-[#5c3a62] transition-all flex items-center gap-2 shadow-sm"
                 >
                   <i className="fa-solid fa-folder-open text-sm"></i>
                   <span className="font-black uppercase tracking-wider text-[10px]">Projects</span>
@@ -179,35 +175,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
         )}
       </div>
 
-      {/* Pipeline steps */}
-      <div className="grid grid-cols-4 gap-4 w-full max-w-2xl">
-        {pipelineSteps.map((item, idx) => (
-          <button
-            key={item.id}
-            onClick={() => onNavigate(item.id as any)}
-            className="group relative h-40 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center justify-center gap-3 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm hover:shadow-md"
-          >
-            <div className="absolute top-3 left-4 text-[10px] font-black text-[#ceadd4] uppercase">{idx + 1}</div>
-            <div className="text-3xl transition-transform duration-300 group-hover:scale-110 text-[#91569c]">
-              <i className={`fa-solid ${item.icon}`}></i>
-            </div>
-            <span className="font-black uppercase tracking-[0.2em] text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
-              {item.label}
-            </span>
-            <span className="text-[8px] text-[#888] uppercase tracking-wider font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-              {item.description}
-            </span>
-            {idx < pipelineSteps.length - 1 && (
-              <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-[#ceadd4] z-10 hidden sm:block">
-                <i className="fa-solid fa-chevron-right text-xs"></i>
+      {/* Pipeline steps — vertical list on the left */}
+      <div className="flex-1 flex px-6 pb-6 gap-6">
+        <div className="flex flex-col gap-3 w-72 flex-shrink-0">
+          {pipelineSteps.map((item, idx) => (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id as any)}
+              className="group relative flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm hover:shadow-md text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+                <i className={`fa-solid ${item.icon} text-[#91569c] text-lg`}></i>
               </div>
-            )}
-            <div className="absolute top-3 right-3 w-2 h-2 bg-[#91569c] rounded-full animate-pulse shadow-[0_0_8px_rgba(145,86,156,0.5)]"></div>
-          </button>
-        ))}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-[#ceadd4]">{idx + 1}</span>
+                  <span className="font-bold uppercase tracking-wider text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
+                    {item.label}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#888] mt-0.5">{item.description}</p>
+              </div>
+              <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
+            </button>
+          ))}
+        </div>
+
+        {/* Right area — placeholder for future content */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center opacity-30">
+            <i className="fa-solid fa-arrow-left text-4xl text-[#ceadd4] mb-3 block"></i>
+            <p className="text-[#888] text-xs font-bold uppercase tracking-wider">Select a step to begin</p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-16 text-[#888] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
+      <div className="px-6 pb-4 text-[#888] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
         <span>© 2026 TensorAx Studio</span>
         <span className="w-1 h-1 bg-[#ceadd4] rounded-full"></span>
         <span>Version 4.0.0</span>
