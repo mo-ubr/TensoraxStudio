@@ -176,20 +176,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
             </div>
             <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] text-xs transition-colors"></i>
           </button>
-          <button
-            onClick={onNewProject}
-            className="group flex items-center gap-4 px-5 py-3 rounded-xl border-2 border-dashed transition-all duration-200 border-[#ceadd4] hover:border-[#91569c] hover:bg-[#f6f0f8] text-left"
-          >
-            <div className="w-10 h-10 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-              <i className="fa-solid fa-plus text-[#91569c] text-lg"></i>
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-bold uppercase tracking-wider text-sm text-[#888] group-hover:text-[#91569c] transition-colors">
-                New Project
-              </span>
-            </div>
-          </button>
-
           <div className="h-px bg-[#e0d6e3] my-1"></div>
 
           {pipelineSteps.map((item, idx) => (
