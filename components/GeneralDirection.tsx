@@ -88,11 +88,10 @@ Use this exact format:
 
 ## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept — what's the story, what's the hook?]
-**Scene 1:** [Describe the first scene — what happens, who appears, camera angle, duration]
-**Scene 2:** [Describe the second scene]
-**Scene 3:** [Describe the third scene]
-**Scene 4:** [Describe the fourth scene]
-**Scene 5:** [Describe the fifth/final scene — include the ending and CTA]
+**Scene 1:** [Describe the scene — what happens, who appears, camera angle, approximate duration]
+**Scene 2:** [Next scene]
+...continue with as many scenes as the concept needs (typically 3-8 depending on complexity and video duration)...
+**Scene N:** [Final scene — include the ending and CTA]
 **Visual Style:** [Describe the visual treatment: colour palette, lighting mood, camera style, film stock feel]
 **Why It Works:** [1 sentence on why this concept fits the brand, audience, and CTA]
 
