@@ -794,35 +794,39 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           <pre className="text-[11px] text-[#3a3a3a] whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
-                      <div className="px-4 py-2.5 border-t border-[#ceadd4] flex items-center justify-end">
-                        <button
-                          onClick={() => {
-                            setSelectedIdea(idea.num);
-                            setFinetuneTitle(idea.title);
-                            setFinetuneText(editedBodies[idea.num] ?? idea.body);
-                            setFinetuneDirection('');
-                            setFinetuneMode(true);
-                          }}
-                          className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#91569c] text-white hover:bg-[#5c3a62]"
-                        >
-                          <i className="fa-solid fa-check text-[8px] mr-1"></i>
-                          Accept & Create Script
-                        </button>
-                      </div>
                     </div>
                   );
                 })}
 
-                {hasFeedback && (
+                {/* Actions for the whole concept */}
+                <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => handleGenerate(buildFeedbackPrompt(ideaBlocks), ideaBlocks)}
+                    onClick={() => handleGenerate()}
                     disabled={isGenerating}
-                    className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#f6f0f8] text-[#91569c] hover:bg-[#edecec] border border-[#91569c]/30 hover:border-[#91569c]/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
+                    className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-white text-[#91569c] border border-[#ceadd4] hover:bg-[#f6f0f8] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-rotate-right'}`}></i>
-                    {isGenerating ? 'Regenerating...' : 'Regenerate with Feedback'}
+                    {isGenerating ? 'Regenerating...' : 'Regenerate'}
                   </button>
-                )}
+                  <button
+                    onClick={() => {
+                      const title = visibleIdeas[0]?.title || 'Concept';
+                      const fullText = visibleIdeas.map(idea => {
+                        const body = editedBodies[idea.num] ?? idea.body;
+                        return `## ${idea.title || 'Scene ' + idea.num}\n${body}`;
+                      }).join('\n\n');
+                      setSelectedIdea(1);
+                      setFinetuneTitle(title);
+                      setFinetuneText(fullText);
+                      setFinetuneDirection('');
+                      setFinetuneMode(true);
+                    }}
+                    className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] active:scale-[0.98]"
+                  >
+                    <i className="fa-solid fa-check"></i>
+                    Accept & Create Script
+                  </button>
+                </div>
                 </>);
               })()}
             </div>
