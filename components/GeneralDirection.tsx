@@ -204,7 +204,7 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
       setAnalyses(prev => ({ ...prev, [idx]: data.analysis }));
 
       const notes = value.additionalNotes || '';
-      const header = `\n\n--- STYLE ANALYSIS (Video ${idx + 1}: ${data.videoName}) ---\n`;
+      const header = `\n\n--- STYLE ANALYSIS (${data.mediaType === 'video' ? 'Video' : 'Images'} ${idx + 1}: ${data.mediaName}) ---\n`;
       onChange({ ...value, additionalNotes: notes + header + data.analysis });
     } catch (err: any) {
       alert(`Video analysis failed: ${err.message}`);
@@ -254,7 +254,8 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
           </div>
           {analyses[i] && (
             <div className="ml-4 mt-1 bg-[#f6f0f8] border border-[#ceadd4] rounded p-2 text-[8px] text-[#3a3a3a] max-h-24 overflow-y-auto leading-relaxed">
-              <span className="font-bold text-[#91569c]">Analysis complete</span> — appended to Additional Notes
+              <i className="fa-solid fa-circle-check text-green-500 mr-1"></i>
+              <span className="font-bold text-[#91569c]">Analysis complete</span> — saved to Screenplays folder & appended to notes
             </div>
           )}
         </div>
