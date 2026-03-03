@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
             changeOrigin: true,
           },
         },
+        watch: {
+          ignored: ['**/assets/**', '**/output/**', '**/*.db', '**/*.db-wal', '**/*.db-shm'],
+        },
       },
       plugins: [react()],
       define: {
