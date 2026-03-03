@@ -94,9 +94,15 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
               ref={briefRef}
               value={brief}
               onChange={(e) => setBrief(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab' && !brief.trim()) {
+                  e.preventDefault();
+                  setBrief('We need a Gift Card promotion video for NEXT. The campaign targets parents of young children, featuring a grandmother character giving a gift card. We want warm, emotional visuals following the NEXT brand guidelines.');
+                }
+                e.stopPropagation();
+              }}
               rows={6}
-              placeholder="e.g. We need a Gift Card promotion video for NEXT. The campaign targets parents of young children, featuring a grandmother character giving a gift card. We want warm, emotional visuals following the NEXT brand guidelines..."
+              placeholder="We need a Gift Card promotion video for NEXT. The campaign targets parents of young children, featuring a grandmother character giving a gift card. We want warm, emotional visuals following the NEXT brand guidelines...  [Tab to use this example]"
               className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-[12px] text-[#3a3a3a] placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30 resize-none leading-relaxed"
             />
             <div className="flex justify-between">
@@ -126,8 +132,11 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) setStep('brand'); }}
-              placeholder="e.g. NEXT Gift Card Campaign"
+              onKeyDown={(e) => {
+                if (e.key === 'Tab' && !name.trim()) { e.preventDefault(); setName('NEXT Gift Card Campaign'); }
+                if (e.key === 'Enter' && name.trim()) setStep('brand');
+              }}
+              placeholder="NEXT Gift Card Campaign  [Tab to use]"
               className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
             />
             <div className="flex justify-between">
