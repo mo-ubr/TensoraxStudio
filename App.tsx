@@ -808,7 +808,12 @@ const App: React.FC = () => {
         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
           <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
           {activeProject && (
-            <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            <div className="mx-auto flex items-center gap-3">
+              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+              ) : null; })()}
+            </div>
           )}
         </header>
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
@@ -822,7 +827,12 @@ const App: React.FC = () => {
          <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
             {activeProject && (
-              <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+              <div className="mx-auto flex items-center gap-3">
+              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+              ) : null; })()}
+            </div>
             )}
           </header>
           <LandingPage
@@ -852,7 +862,12 @@ const App: React.FC = () => {
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
           </div>
           {activeProject && (
-            <span className="mx-auto text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            <div className="mx-auto flex items-center gap-3">
+              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+              ) : null; })()}
+            </div>
           )}
           <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
         </header>
