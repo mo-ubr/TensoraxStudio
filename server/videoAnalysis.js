@@ -128,52 +128,71 @@ Be specific and detailed — this analysis will be used as creative reference fo
   return typeof response.text === "string" ? response.text : "";
 }
 
-async function saveAnalysisAsDocx(analysis, mediaName, mediaType) {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+const ANALYSES_JSON = join(SCREENPLAYS_DIR, "style_references.json");
+const ANALYSES_DOCX = join(SCREENPLAYS_DIR, "Style_References_Analysis.docx");
 
-  const paragraphs = analysis.split("\n").map(line => {
+function markdownToParagraphs(text) {
+  const { Paragraph, TextRun, HeadingLevel } = require("docx");
+  return text.split("\n").map(line => {
     const trimmed = line.trim();
-    if (trimmed.startsWith("# ")) {
-      return new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: trimmed.replace(/^#+\s*/, ""), bold: true })] });
-    }
-    if (trimmed.startsWith("## ")) {
-      return new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: trimmed.replace(/^#+\s*/, ""), bold: true })] });
-    }
-    if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
-      return new Paragraph({ children: [new TextRun({ text: trimmed.replace(/\*\*/g, ""), bold: true, size: 22 })] });
-    }
-    if (trimmed.match(/^\d+\.\s+\*\*/)) {
-      const parts = trimmed.match(/^(\d+\.\s+)\*\*([^*]+)\*\*:?\s*(.*)/);
-      if (parts) {
-        return new Paragraph({ children: [
-          new TextRun({ text: parts[1], size: 22 }),
-          new TextRun({ text: parts[2], bold: true, size: 22 }),
-          new TextRun({ text: parts[3] ? ": " + parts[3] : "", size: 22 }),
-        ]});
-      }
-    }
+    if (!trimmed) return new Paragraph({ text: "" });
+    if (trimmed.startsWith("# ")) return new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: trimmed.replace(/^#+\s*/, ""), bold: true })] });
+    if (trimmed.startsWith("## ")) return new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: trimmed.replace(/^#+\s*/, ""), bold: true })] });
+    if (trimmed.startsWith("**") && trimmed.endsWith("**")) return new Paragraph({ children: [new TextRun({ text: trimmed.replace(/\*\*/g, ""), bold: true, size: 22 })] });
+    const numbered = trimmed.match(/^(\d+\.\s+)\*\*([^*]+)\*\*:?\s*(.*)/);
+    if (numbered) return new Paragraph({ children: [new TextRun({ text: numbered[1], size: 22 }), new TextRun({ text: numbered[2], bold: true, size: 22 }), new TextRun({ text: numbered[3] ? ": " + numbered[3] : "", size: 22 })] });
     return new Paragraph({ children: [new TextRun({ text: trimmed, size: 22 })] });
   });
+}
+
+async function saveAnalysisAsDocx(analysis, mediaName, mediaType) {
+  await mkdir(SCREENPLAYS_DIR, { recursive: true });
+
+  let allAnalyses = [];
+  try {
+    const raw = await readFile(ANALYSES_JSON, "utf-8");
+    allAnalyses = JSON.parse(raw);
+  } catch { /* first time */ }
+
+  allAnalyses.push({ mediaName, mediaType, date: new Date().toISOString(), analysis });
+  await writeFile(ANALYSES_JSON, JSON.stringify(allAnalyses, null, 2), "utf-8");
+
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } = await import("docx");
+
+  const sections = [];
+  for (let i = 0; i < allAnalyses.length; i++) {
+    const a = allAnalyses[i];
+    const paras = markdownToParagraphs(a.analysis);
+    sections.push({
+      children: [
+        new Paragraph({ heading: HeadingLevel.HEADING_1, children: [
+          new TextRun({ text: `Reference ${i + 1}: ${a.mediaType === "video" ? "Video" : "Image"} Analysis`, bold: true }),
+        ]}),
+        new Paragraph({ children: [new TextRun({ text: `Source: ${a.mediaName}`, italics: true, color: "888888", size: 18 })] }),
+        new Paragraph({ children: [new TextRun({ text: `Analysed: ${new Date(a.date).toLocaleDateString()} by TensorAx Studio`, italics: true, color: "888888", size: 18 })] }),
+        new Paragraph({ text: "" }),
+        ...paras,
+      ],
+    });
+  }
 
   const doc = new Document({
-    sections: [{
-      children: [
-        new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: `${mediaType === "video" ? "Video" : "Image"} Style Analysis`, bold: true })] }),
-        new Paragraph({ children: [new TextRun({ text: `Source: ${mediaName}`, italics: true, color: "888888", size: 18 })] }),
-        new Paragraph({ children: [new TextRun({ text: `Analysed: ${new Date().toLocaleDateString()} by TensorAx Studio`, italics: true, color: "888888", size: 18 })] }),
-        new Paragraph({ text: "" }),
-        ...paragraphs,
-      ],
-    }],
+    sections: [
+      {
+        children: [
+          new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: "Style References Analysis", bold: true })] }),
+          new Paragraph({ children: [new TextRun({ text: `${allAnalyses.length} reference${allAnalyses.length !== 1 ? "s" : ""} analysed`, italics: true, color: "888888", size: 20 })] }),
+          new Paragraph({ text: "" }),
+        ],
+      },
+      ...sections,
+    ],
   });
 
   const buffer = await Packer.toBuffer(doc);
-  await mkdir(SCREENPLAYS_DIR, { recursive: true });
-  const filename = `${mediaName.replace(/\.[^.]+$/, "").replace(/\s+/g, "_")}_Analysis.docx`;
-  const filepath = join(SCREENPLAYS_DIR, filename);
-  await writeFile(filepath, buffer);
-  console.log(`[Analysis] Saved Word doc: ${filepath}`);
-  return filepath;
+  await writeFile(ANALYSES_DOCX, buffer);
+  console.log(`[Analysis] Updated Word doc: ${ANALYSES_DOCX} (${allAnalyses.length} references)`);
+  return ANALYSES_DOCX;
 }
 
 // ─── API endpoint ────────────────────────────────────────────────────────────
