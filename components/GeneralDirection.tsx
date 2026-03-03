@@ -181,35 +181,82 @@ ${brand ? `- Integrate the ${brand.name} brand naturally` : ''}`;
 };
 
 const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: GeneralDirectionType) => void }> = ({ value, onChange }) => {
+  const [analysing, setAnalysing] = useState<number | null>(null);
+  const [analyses, setAnalyses] = useState<Record<number, string>>({});
+
+  const analyseVideo = async (idx: number, url: string) => {
+    if (!url.trim()) return;
+    setAnalysing(idx);
+    try {
+      const apiKey = (() => {
+        try { return localStorage.getItem('gemini_api_key') || ''; } catch { return ''; }
+      })();
+      if (!apiKey) { alert('Set a Gemini API key first (click API in the header).'); setAnalysing(null); return; }
+
+      const res = await fetch('/api/video/analyse-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, apiKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+
+      setAnalyses(prev => ({ ...prev, [idx]: data.analysis }));
+
+      const notes = value.additionalNotes || '';
+      const header = `\n\n--- STYLE ANALYSIS (Video ${idx + 1}: ${data.videoName}) ---\n`;
+      onChange({ ...value, additionalNotes: notes + header + data.analysis });
+    } catch (err: any) {
+      alert(`Video analysis failed: ${err.message}`);
+    } finally {
+      setAnalysing(null);
+    }
+  };
+
   return (
     <div className="mt-2.5">
       <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1.5">
         Style Inspirations <span className="text-[#888]/40 font-normal">(up to 3)</span>
       </label>
       {(value.styleVideos || []).map((sv, i) => (
-        <div key={i} className="mb-2 flex items-center gap-1.5">
-          <span className="text-[8px] font-black text-[#91569c] uppercase tracking-wider w-3">{i + 1}</span>
-          <input
-            type="text"
-            value={sv.url}
-            onChange={(e) => {
-              const updated = [...(value.styleVideos || [])];
-              updated[i] = { ...updated[i], url: e.target.value };
-              onChange({ ...value, styleVideos: updated });
-            }}
-            placeholder="Paste video URL (YouTube, Drive, etc.)..."
-            className="flex-1 bg-white border border-[#ceadd4] rounded px-2 py-1.5 text-[9px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
-          />
-          <button
-            onClick={() => {
-              const updated = (value.styleVideos || []).filter((_, j) => j !== i);
-              onChange({ ...value, styleVideos: updated });
-            }}
-            className="text-red-400/50 hover:text-red-400 transition-colors p-0.5"
-            title="Remove"
-          >
-            <i className="fa-solid fa-xmark text-[9px]"></i>
-          </button>
+        <div key={i} className="mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[8px] font-black text-[#91569c] uppercase tracking-wider w-3">{i + 1}</span>
+            <input
+              type="text"
+              value={sv.url}
+              onChange={(e) => {
+                const updated = [...(value.styleVideos || [])];
+                updated[i] = { ...updated[i], url: e.target.value };
+                onChange({ ...value, styleVideos: updated });
+              }}
+              placeholder="Paste Google Drive video URL..."
+              className="flex-1 bg-white border border-[#ceadd4] rounded px-2 py-1.5 text-[9px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+            />
+            <button
+              onClick={() => analyseVideo(i, sv.url)}
+              disabled={analysing !== null || !sv.url.trim()}
+              className="px-1.5 py-1 rounded text-[8px] font-bold uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Analyse video: extract frames and get AI style breakdown"
+            >
+              {analysing === i ? <i className="fa-solid fa-spinner fa-spin text-[8px]"></i> : <i className="fa-solid fa-eye text-[8px]"></i>}
+            </button>
+            <button
+              onClick={() => {
+                const updated = (value.styleVideos || []).filter((_, j) => j !== i);
+                onChange({ ...value, styleVideos: updated });
+              }}
+              className="text-red-400/50 hover:text-red-400 transition-colors p-0.5"
+              title="Remove"
+            >
+              <i className="fa-solid fa-xmark text-[9px]"></i>
+            </button>
+          </div>
+          {analyses[i] && (
+            <div className="ml-4 mt-1 bg-[#f6f0f8] border border-[#ceadd4] rounded p-2 text-[8px] text-[#3a3a3a] max-h-24 overflow-y-auto leading-relaxed">
+              <span className="font-bold text-[#91569c]">Analysis complete</span> — appended to Additional Notes
+            </div>
+          )}
         </div>
       ))}
       {(value.styleVideos || []).length < 3 && (
