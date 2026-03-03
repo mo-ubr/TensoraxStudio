@@ -987,13 +987,18 @@ const App: React.FC = () => {
               </h3>
               <div className="mb-3">
                 <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">Model</label>
-                <input
-                  type="text"
+                <select
                   value={apiKeyModalModel}
                   onChange={(e) => setApiKeyModalModel(e.target.value)}
-                  placeholder="e.g. claude-opus-4-6, claude-sonnet-4-6, gemini-2.0-flash"
-                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
-                />
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer"
+                >
+                  <option value="">Select model...</option>
+                  {API_MODELS.map(g => (
+                    <optgroup key={g.group} label={g.group}>
+                      {g.models.map(m => <option key={m} value={m}>{m}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
               <div className="mb-4">
                 <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">API Key</label>

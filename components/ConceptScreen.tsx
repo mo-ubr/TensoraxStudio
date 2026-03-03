@@ -4,7 +4,7 @@ import { ProjectBrief, ConceptIdea, ConceptState, GeneralDirection as GeneralDir
 import { BriefForm, VideoSuggestion } from './BriefForm';
 import { IdeaFactory } from './IdeaFactory';
 import { IdeaFinetune } from './IdeaFinetune';
-import { GeneralDirection, emptyDirection, GENERAL_DIRECTION_SYSTEM_PROMPT, SINGLE_IDEA_REGEN_PROMPT, getIdeaFactoryModel, getIdeaFactoryApiKey } from './GeneralDirection';
+import { GeneralDirection, emptyDirection, GENERAL_DIRECTION_SYSTEM_PROMPT, SINGLE_IDEA_REGEN_PROMPT } from './GeneralDirection';
 import { isClaudeModel } from '../services/claudeService';
 import { DB, type Project } from '../services/projectDB';
 
@@ -253,10 +253,9 @@ Rules:
   };
 
   const callAiText = async (prompt: string): Promise<string> => {
-    const ideaKey = getIdeaFactoryApiKey();
-    const ideaModel = getIdeaFactoryModel();
-    const apiKey = ideaKey || getAiKey();
-    const model = ideaModel || getAiModel();
+    const globalModel = (() => { try { return localStorage.getItem('tensorax_active_model') || ''; } catch { return ''; } })();
+    const apiKey = getAiKey();
+    const model = globalModel || getAiModel() || 'gemini-2.5-flash';
 
     if (isClaudeModel(model || null)) {
       const Anthropic = (await import('@anthropic-ai/sdk')).default;

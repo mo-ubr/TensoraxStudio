@@ -56,9 +56,6 @@ export { emptyDirection };
 const IDEA_MODEL_KEY = 'tensorax_idea_model';
 const IDEA_APIKEY_KEY = 'tensorax_idea_apiKey';
 
-export const getIdeaFactoryModel = (): string | null => localStorage.getItem(IDEA_MODEL_KEY);
-export const getIdeaFactoryApiKey = (): string | null => localStorage.getItem(IDEA_APIKEY_KEY);
-
 export const GENERAL_DIRECTION_SYSTEM_PROMPT = (direction: GeneralDirectionType, brand: BrandProfile | undefined) => `You are a senior creative director. Generate exactly 5 video concept ideas.
 
 CRITICAL: The PROJECT BRIEF below is your PRIMARY instruction. Every idea MUST directly implement what the brief describes. Do NOT invent your own story — follow the brief's specific direction. If the brief says "show a growing child" then EVERY idea shows a growing child. If the brief says "show gift cards from relatives" then EVERY idea shows that. Vary only the creative TREATMENT (editing style, pacing, visual approach, narrative structure) — NOT the core content.
