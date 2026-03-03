@@ -110,32 +110,46 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
         <div className="w-full max-w-md space-y-6 animate-fade-in">
           <div className="text-center mb-8">
-            <i className="fa-solid fa-folder-open text-5xl text-[#ceadd4] mb-4 block"></i>
             <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
             <p className="text-sm text-[#888] mt-1">Open an existing project or start a new one</p>
           </div>
 
-          {allProjects.length > 0 && (
-            <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm space-y-3">
-              <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block">Open project</label>
+          {/* Open existing project */}
+          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm space-y-3">
+            <button
+              onClick={() => onNavigate('projects')}
+              className="w-full flex items-center gap-4 px-4 py-3 rounded-lg bg-[#f6f0f8] border border-[#ceadd4] hover:bg-[#eadcef] hover:border-[#91569c] transition-all text-left group"
+            >
+              <i className="fa-solid fa-folder-open text-2xl text-[#91569c]"></i>
+              <div className="flex-1">
+                <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">Open Project</span>
+                <p className="text-[10px] text-[#888] mt-0.5">
+                  {allProjects.length > 0 ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''} available` : 'Browse all projects'}
+                </p>
+              </div>
+              <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
+            </button>
+
+            {allProjects.length > 0 && (
               <select
                 onChange={(e) => {
                   const p = allProjects.find(x => x.id === e.target.value);
                   if (p) onSelectProject(p);
                 }}
                 defaultValue=""
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer appearance-none"
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer"
               >
-                <option value="" disabled>Select a project...</option>
+                <option value="" disabled>Quick select...</option>
                 {allProjects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
 
+          {/* Create new project */}
           {showNewProject ? (
             <div className="bg-white border border-[#ceadd4] rounded-xl p-5 shadow-sm space-y-3 animate-fade-in">
               <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block">New project</label>
