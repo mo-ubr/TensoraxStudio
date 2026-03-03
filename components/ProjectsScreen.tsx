@@ -45,20 +45,20 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
   const statusColor = (s: string) => {
     if (s === 'active') return 'bg-green-500';
     if (s === 'completed') return 'bg-blue-400';
-    return 'bg-gray-500';
+    return 'bg-gray-400';
   };
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#5A5A5A]">
+      <div className="flex-1 flex items-center justify-center bg-[#edecec]">
         <i className="fa-solid fa-spinner fa-spin text-3xl text-[#91569c]"></i>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#5A5A5A] overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#e0d6e3]/60">
+    <div className="flex-1 flex flex-col bg-[#edecec] overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#e0d6e3]">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
             <i className="fa-solid fa-arrow-left text-sm"></i>
@@ -67,7 +67,7 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
             <i className="fa-solid fa-folder-open text-[#91569c]"></i>
             Projects
           </h2>
-          <span className="text-[10px] text-[#888]/60 font-bold uppercase tracking-wider">
+          <span className="text-[10px] text-[#888] font-bold uppercase tracking-wider">
             {projects.length} project{projects.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -76,9 +76,9 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
       <div className="flex-1 overflow-y-auto p-6">
         {projects.length === 0 ? (
           <div className="text-center py-20 opacity-40">
-            <i className="fa-solid fa-folder-plus text-6xl text-[#888] mb-4 block"></i>
+            <i className="fa-solid fa-folder-plus text-6xl text-[#ceadd4] mb-4 block"></i>
             <p className="text-[#888] font-bold uppercase tracking-wider text-sm">No projects yet</p>
-            <p className="text-[#888]/60 text-xs mt-2">Create a project from the dashboard to get started</p>
+            <p className="text-[#888] text-xs mt-2">Create a project from the dashboard to get started</p>
           </div>
         ) : (
           <div className="grid gap-4 max-w-4xl mx-auto">
@@ -92,39 +92,39 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
                 (p.imageIds?.length || 0) + (p.videoIds?.length || 0);
 
               return (
-                <div key={p.id} className="bg-white border border-[#e0d6e3]/80 rounded-xl overflow-hidden">
+                <div key={p.id} className="bg-white border border-[#e0d6e3] rounded-xl overflow-hidden shadow-sm">
                   <div
-                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-[#A0A0A0] transition-colors"
+                    className="flex items-center gap-4 p-4 cursor-pointer hover:bg-[#f6f0f8] transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : p.id)}
                   >
                     <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusColor(p.status)}`}></div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide truncate">{p.name}</h3>
-                      <p className="text-[10px] text-[#3a3a3a]/60 mt-0.5">
+                      <p className="text-[10px] text-[#888] mt-0.5">
                         {new Date(p.createdAt).toLocaleDateString()} · {totalAssets} asset{totalAssets !== 1 ? 's' : ''} linked
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); onSelectProject(p); }}
-                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#5A5A5A] text-[#5c3a62] border border-[#ceadd4] hover:bg-white transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white border border-[#91569c] hover:bg-[#5c3a62] transition-colors"
                       >
                         Open
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
-                        className="p-1.5 rounded-lg text-[#3a3a3a]/40 hover:text-red-500 transition-colors"
+                        className="p-1.5 rounded-lg text-[#ceadd4] hover:text-red-500 transition-colors"
                       >
                         <i className="fa-solid fa-trash text-xs"></i>
                       </button>
-                      <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[#3a3a3a]/40 text-xs`}></i>
+                      <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'} text-[#ceadd4] text-xs`}></i>
                     </div>
                   </div>
 
                   {isExpanded && (
-                    <div className="px-4 pb-4 border-t border-[#e0d6e3]/40 pt-3 space-y-3">
+                    <div className="px-4 pb-4 border-t border-[#e0d6e3] pt-3 space-y-3">
                       {p.description && (
-                        <p className="text-[11px] text-[#3a3a3a]/80">{p.description}</p>
+                        <p className="text-[11px] text-[#3a3a3a]">{p.description}</p>
                       )}
                       <div className="grid grid-cols-3 gap-3">
                         <AssetGroup label="Characters" icon="fa-user" items={charNames as string[]} />
@@ -137,9 +137,9 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
                         <Stat label="Videos" count={p.videoIds?.length || 0} icon="fa-video" />
                       </div>
                       {p.notes && (
-                        <div className="bg-[#5A5A5A]/30 rounded-lg p-3">
-                          <p className="text-[10px] text-[#3a3a3a]/60 font-bold uppercase tracking-wider mb-1">Notes</p>
-                          <p className="text-[11px] text-[#3a3a3a]/80 whitespace-pre-wrap">{p.notes}</p>
+                        <div className="bg-[#f6f0f8] rounded-lg p-3">
+                          <p className="text-[10px] text-[#5c3a62] font-bold uppercase tracking-wider mb-1">Notes</p>
+                          <p className="text-[11px] text-[#3a3a3a] whitespace-pre-wrap">{p.notes}</p>
                         </div>
                       )}
                     </div>
@@ -155,16 +155,16 @@ export const ProjectsScreen: React.FC<ProjectsScreenProps> = ({ onSelectProject,
 };
 
 const AssetGroup: React.FC<{ label: string; icon: string; items: string[] }> = ({ label, icon, items }) => (
-  <div className="bg-[#5A5A5A]/20 rounded-lg p-2.5">
-    <p className="text-[9px] font-bold text-[#3a3a3a]/50 uppercase tracking-wider flex items-center gap-1 mb-1.5">
-      <i className={`fa-solid ${icon} text-[#91569c]/70`}></i> {label}
+  <div className="bg-[#f6f0f8] rounded-lg p-2.5">
+    <p className="text-[9px] font-bold text-[#5c3a62] uppercase tracking-wider flex items-center gap-1 mb-1.5">
+      <i className={`fa-solid ${icon} text-[#91569c]`}></i> {label}
     </p>
     {items.length === 0 ? (
-      <p className="text-[10px] text-[#3a3a3a]/30 italic">None</p>
+      <p className="text-[10px] text-[#ceadd4] italic">None</p>
     ) : (
       <div className="flex flex-wrap gap-1">
         {items.map((name, i) => (
-          <span key={i} className="text-[9px] bg-[#5A5A5A]/40 text-[#5c3a62] px-1.5 py-0.5 rounded font-medium">{name}</span>
+          <span key={i} className="text-[9px] bg-[#eadcef] text-[#5c3a62] px-1.5 py-0.5 rounded font-medium">{name}</span>
         ))}
       </div>
     )}
@@ -172,9 +172,9 @@ const AssetGroup: React.FC<{ label: string; icon: string; items: string[] }> = (
 );
 
 const Stat: React.FC<{ label: string; count: number; icon: string }> = ({ label, count, icon }) => (
-  <div className="bg-[#5A5A5A]/20 rounded-lg p-2">
-    <i className={`fa-solid ${icon} text-[#91569c]/50 text-sm`}></i>
+  <div className="bg-[#f6f0f8] rounded-lg p-2">
+    <i className={`fa-solid ${icon} text-[#91569c] text-sm`}></i>
     <p className="text-lg font-bold text-[#5c3a62] mt-1">{count}</p>
-    <p className="text-[9px] text-[#3a3a3a]/50 uppercase tracking-wider font-bold">{label}</p>
+    <p className="text-[9px] text-[#888] uppercase tracking-wider font-bold">{label}</p>
   </div>
 );
