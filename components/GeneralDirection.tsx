@@ -622,7 +622,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         <div className="p-4 border-b border-[#ceadd4] flex-shrink-0 flex items-center justify-between">
           <h2 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
             <i className={`fa-solid ${finetuneMode ? 'fa-wand-magic-sparkles' : 'fa-lightbulb'} text-[#91569c]`}></i>
-            {finetuneMode ? 'Finetuning' : 'Idea Factory'}
+            {finetuneMode ? 'Review Concept' : 'Idea Factory'}
           </h2>
           {finetuneMode && (
             <button
@@ -630,7 +630,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
               className="text-[9px] font-bold uppercase tracking-wider text-[#888]/60 hover:text-[#91569c] transition-colors flex items-center gap-1"
             >
               <i className="fa-solid fa-arrow-left text-[8px]"></i>
-              Back to Ideas
+              Back to Concept
             </button>
           )}
         </div>
@@ -677,7 +677,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
-                    {isSaving ? 'Saving & Creating...' : 'Save & Create Script'}
+                    {isSaving ? 'Creating Screenplay...' : 'Create Screenplay'}
                   </button>
                 </div>
               </div>
@@ -872,7 +872,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] active:scale-[0.98]"
                   >
                     <i className="fa-solid fa-check"></i>
-                    Accept & Create Script
+                    Accept Concept
                   </button>
                 </div>
                 </>);
