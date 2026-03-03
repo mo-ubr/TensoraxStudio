@@ -417,9 +417,25 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
               <i className="fa-solid fa-file-export text-xs"></i>
             </button>
             <button
-              onClick={() => onChange(TEST_DIRECTION)}
+              onClick={() => {
+                try { localStorage.setItem('tensorax_saved_direction', JSON.stringify(value)); } catch { /* ignore */ }
+                alert('Saved as test data. Click "Load test" to restore.');
+              }}
               className="px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider bg-[#91569c]/10 text-[#91569c]/70 hover:text-[#91569c] hover:bg-[#91569c]/20 border border-[#91569c]/20 transition-colors"
-              title="Load test data"
+              title="Save current data as test preset"
+            >
+              Save test
+            </button>
+            <button
+              onClick={() => {
+                try {
+                  const saved = localStorage.getItem('tensorax_saved_direction');
+                  if (saved) { onChange(JSON.parse(saved)); return; }
+                } catch { /* ignore */ }
+                onChange(TEST_DIRECTION);
+              }}
+              className="px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider bg-[#91569c]/10 text-[#91569c]/70 hover:text-[#91569c] hover:bg-[#91569c]/20 border border-[#91569c]/20 transition-colors"
+              title="Load saved or default test data"
             >
               Load test
             </button>
