@@ -2,7 +2,7 @@ import { Chat, GoogleGenAI } from "@google/genai";
 import { AspectRatio, ImageSize } from "../types";
 import { ANALYSIS_INSTRUCTION, ASSISTANT_SYSTEM_INSTRUCTION, COPY_INSTRUCTION } from "./promptConstants";
 
-const CHAT_MODEL = "gemini-2.0-flash";
+const CHAT_MODEL = "gemini-2.5-flash";
 /** Gemini image models (generateContent) – same path as Google AI Studio. */
 const GEMINI_IMAGE_MODELS = ["gemini-2.5-flash-image", "gemini-2.5-flash", "gemini-3-pro-image-preview"];
 /** Imagen models (generateImages). */
@@ -543,10 +543,14 @@ Reply with only the single description.`;
 
   ASSISTANT_SYSTEM_INSTRUCTION,
 
-  createChat(): Chat {
+  hasApiKey(): boolean {
+    return !!getSavedApiKey() || !!normalizeApiKey(process.env.GEMINI_API_KEY || process.env.API_KEY);
+  },
+
+  createChat(model?: string): Chat {
     const ai = createClient();
     return ai.chats.create({
-      model: CHAT_MODEL,
+      model: model || CHAT_MODEL,
       config: {
         temperature: 0.7,
         systemInstruction: GeminiService.ASSISTANT_SYSTEM_INSTRUCTION,

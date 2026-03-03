@@ -4,106 +4,52 @@ import { GeminiService } from '../services/geminiService';
 import { ChatMessage } from '../types';
 import { Chat } from '@google/genai';
 
-const ASSISTANT_INSTRUCTIONS = (
-  <>
-    <p className="font-black text-[#3a3a3a] mb-2">Role</p>
-    <p className="text-[#3a3a3a] text-[11px] leading-relaxed mb-3">
-      Award-winning trailer director + cinematographer + storyboard artist. You guide the full AI video production pipeline &mdash; from reference images through frame composition to final video generation.
-    </p>
-    <p className="font-black text-[#3a3a3a] mb-1">Non-negotiable rules</p>
-    <ol className="list-decimal list-inside text-[#3a3a3a] text-[10px] leading-relaxed space-y-1 mb-3">
-      <li>Analyse ALL subjects &amp; spatial relationships.</li>
-      <li>Do NOT guess identities, locations, or brands.</li>
-      <li>Strict continuity: same subjects, wardrobe, environment, lighting across all outputs.</li>
-      <li>Realistic DOF (deep in wides, shallow in close-ups). One consistent colour grade.</li>
-      <li>Never introduce new characters/objects not in the references.</li>
-    </ol>
-
-    <div className="border-t border-[#ceadd4]/40 pt-2 mt-2 mb-2">
-      <p className="font-black text-[#3a3a3a] text-[10px] uppercase tracking-wider mb-1">Phase 1 &mdash; Frame Composition</p>
-    </div>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-1">
-      Generate a 3&times;3 Cinematic Contact Sheet (9 keyframes):
-    </p>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-0.5 font-semibold">Row 1 (Establishing):</p>
-    <ul className="list-none text-[#3a3a3a] text-[10px] leading-relaxed space-y-0 mb-1.5 pl-0">
-      <li>1. ELS &ndash; subject(s) small in vast environment</li>
-      <li>2. LS &ndash; full subject head to toe</li>
-      <li>3. MLS &ndash; knees up or 3/4 view</li>
-    </ul>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-0.5 font-semibold">Row 2 (Core coverage):</p>
-    <ul className="list-none text-[#3a3a3a] text-[10px] leading-relaxed space-y-0 mb-1.5 pl-0">
-      <li>4. MS &ndash; waist up, interaction/action</li>
-      <li>5. MCU &ndash; chest up, intimate</li>
-      <li>6. CU &ndash; face(s) or front of object</li>
-    </ul>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-0.5 font-semibold">Row 3 (Details &amp; angles):</p>
-    <ul className="list-none text-[#3a3a3a] text-[10px] leading-relaxed space-y-0 mb-2 pl-0">
-      <li>7. ECU &ndash; macro detail (eyes, hands, logo)</li>
-      <li>8. Low angle &ndash; looking up, imposing</li>
-      <li>9. High angle &ndash; looking down</li>
-    </ul>
-
-    <div className="border-t border-[#ceadd4]/40 pt-2 mt-1 mb-2">
-      <p className="font-black text-[#3a3a3a] text-[10px] uppercase tracking-wider mb-1">Phase 2 &mdash; Video Generation</p>
-    </div>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-1">
-      Select keyframes as Start/Mid/End &rarr; write motion prompts:
-    </p>
-    <ul className="list-none text-[#3a3a3a] text-[10px] leading-relaxed space-y-0.5 mb-1.5 pl-0">
-      <li>&bull; Veo: 3&ndash;4 keyframes, interpolated motion (5s/10s)</li>
-      <li>&bull; Kling: Start + End frame + optional motion ref (5s/10s)</li>
-    </ul>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-0.5 font-semibold">Video prompt structure:</p>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed mb-1.5 italic">
-      [Camera move]. [Subject action]. [Environment motion]. [Lighting]. [Tempo]. [Style].
-    </p>
-    <ul className="list-none text-[#3a3a3a] text-[10px] leading-relaxed space-y-0.5 mb-2 pl-0">
-      <li>&bull; Describe <strong>motion</strong>, not static composition</li>
-      <li>&bull; Camera: dolly, pan, tilt, track, crane, static lock</li>
-      <li>&bull; Tempo: slow-mo, real-time, time-lapse</li>
-      <li>&bull; Ambient: wind, fabric, leaves, light shifts</li>
-      <li>&bull; Keep under 80 words, cinematic &amp; technical</li>
-    </ul>
-    <p className="text-[#3a3a3a] text-[10px] leading-relaxed">
-      Consistency across all frames &amp; video segments. Match exit frame of segment N with entry of N+1. Audio/SFX added in post.
-    </p>
-  </>
-);
-
-const LogoSvg = ({ className = "w-6 h-6" }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="currentColor">
-    <path d="M0 40 L50 10 L100 40 L100 55 L50 25 L0 55 Z" />
-    <path d="M0 60 L33 60 L33 90 L0 90 Z" />
-    <path d="M40 45 L60 45 L60 85 L50 95 L40 85 Z" />
-    <path d="M67 60 L100 60 L100 90 L67 90 Z" />
-  </svg>
-);
-const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
-  const [imgFailed, setImgFailed] = useState(false);
-  if (imgFailed) return <LogoSvg className={className} />;
-  return <img src="/logo.png" alt="TensorAx" className={className} onError={() => setImgFailed(true)} />;
-};
+const CHAT_MODELS = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+];
 
 export const ChatBot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState(CHAT_MODELS[0].id);
+  const [hasKey, setHasKey] = useState(false);
   const chatRef = useRef<Chat | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chatRef.current) {
-      chatRef.current = GeminiService.createChat();
-    }
+    setHasKey(GeminiService.hasApiKey());
   }, []);
+
+  useEffect(() => {
+    if (hasKey && !chatRef.current) {
+      try { chatRef.current = GeminiService.createChat(model); } catch { /* key invalid */ }
+    }
+  }, [hasKey, model]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, loading]);
 
+  const handleModelChange = (newModel: string) => {
+    setModel(newModel);
+    chatRef.current = null;
+    setMessages([]);
+    try { chatRef.current = GeminiService.createChat(newModel); } catch { /* ignore */ }
+  };
+
   const sendMessage = async () => {
-    if (!input.trim() || loading || !chatRef.current) return;
+    if (!input.trim() || loading) return;
+
+    if (!chatRef.current) {
+      try { chatRef.current = GeminiService.createChat(model); } catch { /* ignore */ }
+      if (!chatRef.current) {
+        setMessages(prev => [...prev, { role: 'model', text: 'No API key configured. Set one in Project Settings.' }]);
+        return;
+      }
+    }
 
     const userMsg = input.trim();
     setInput('');
@@ -115,33 +61,67 @@ export const ChatBot: React.FC = () => {
       setMessages(prev => [...prev, { role: 'model', text: response.text || "No response" }]);
     } catch (err) {
       console.error("Chat error:", err);
-      setMessages(prev => [...prev, { role: 'model', text: "Error connecting to AI assistant." }]);
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessages(prev => [...prev, { role: 'model', text: `Error: ${msg.length > 120 ? msg.slice(0, 117) + '...' : msg}` }]);
     } finally {
       setLoading(false);
     }
   };
 
+  if (!hasKey) {
+    return (
+      <div className="flex flex-col h-full bg-white border border-[#e0d6e3] rounded-xl w-full overflow-hidden items-center justify-center p-6 text-center">
+        <i className="fa-solid fa-robot text-3xl text-[#ceadd4] mb-3"></i>
+        <p className="text-xs text-[#888] font-bold uppercase tracking-wider mb-2">Assistant</p>
+        <p className="text-[11px] text-[#888] mb-4">Set a Gemini API key to enable the chat assistant</p>
+        <button
+          onClick={() => {
+            const key = prompt('Enter your Gemini API key:');
+            if (key?.trim()) {
+              GeminiService.setApiKey(key.trim());
+              setHasKey(true);
+            }
+          }}
+          className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors"
+        >
+          <i className="fa-solid fa-key mr-1.5"></i>Set API Key
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full bg-[#edecec] border border-[#e0d6e3] rounded-xl w-full overflow-hidden">
-      <div className="p-4 border-b border-[#ceadd4]">
-        <h2 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
+    <div className="flex flex-col h-full bg-white border border-[#e0d6e3] rounded-xl w-full overflow-hidden">
+      <div className="p-3 border-b border-[#e0d6e3] flex items-center justify-between">
+        <h2 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
           <i className="fa-solid fa-comments text-[#91569c]"></i>
-          Tensorax Assistant
+          Assistant
         </h2>
+        <select
+          value={model}
+          onChange={(e) => handleModelChange(e.target.value)}
+          className="text-[9px] bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1 text-[#5c3a62] font-bold outline-none cursor-pointer"
+        >
+          {CHAT_MODELS.map(m => (
+            <option key={m.id} value={m.id}>{m.label}</option>
+          ))}
+        </select>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
-          <div className="text-[#888] mt-6 px-2 space-y-4">
-            <div className="bg-white rounded-lg p-3 text-left">
-              {ASSISTANT_INSTRUCTIONS}
-            </div>
+          <div className="text-center py-8 opacity-50">
+            <i className="fa-solid fa-wand-magic-sparkles text-2xl text-[#ceadd4] mb-2 block"></i>
+            <p className="text-[10px] text-[#888] font-bold uppercase tracking-wider">Ask me anything</p>
+            <p className="text-[9px] text-[#ceadd4] mt-1">I can help with concepts, prompts, characters, and more</p>
           </div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] rounded-xl px-3 py-2.5 text-xs leading-relaxed ${
-              m.role === 'user' ? 'bg-white text-[#3a3a3a]' : 'bg-white text-[#3a3a3a] border border-[#ceadd4]'
+            <div className={`max-w-[90%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
+              m.role === 'user'
+                ? 'bg-[#91569c] text-white'
+                : 'bg-[#f6f0f8] text-[#3a3a3a] border border-[#e0d6e3]'
             }`}>
               {m.text}
             </div>
@@ -149,26 +129,27 @@ export const ChatBot: React.FC = () => {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-white/80 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest animate-pulse text-[#3a3a3a] border border-[#ceadd4]">
-              Processing...
+            <div className="bg-[#f6f0f8] rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider animate-pulse text-[#91569c] border border-[#e0d6e3]">
+              Thinking...
             </div>
           </div>
         )}
       </div>
 
-      <div className="p-4 border-t border-[#ceadd4] bg-[#edecec]">
+      <div className="p-3 border-t border-[#e0d6e3]">
         <div className="relative">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), sendMessage())}
-            placeholder="Input instructions..."
-            className="w-full bg-white/80 border border-[#ceadd4] rounded-lg py-2.5 pl-3 pr-10 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#91569c]/50 text-[#3a3a3a] placeholder:text-[#3a3a3a]/70"
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } e.stopPropagation(); }}
+            placeholder="Ask the assistant..."
+            className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg py-2.5 pl-3 pr-10 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#91569c]/50 text-[#3a3a3a] placeholder:text-[#ceadd4]"
           />
           <button
             onClick={sendMessage}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#3a3a3a] hover:text-[#91569c] transition-colors p-1.5"
+            disabled={loading || !input.trim()}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#ceadd4] hover:text-[#91569c] transition-colors p-1 disabled:opacity-30"
           >
             <i className="fa-solid fa-paper-plane text-sm"></i>
           </button>
