@@ -1,6 +1,24 @@
 {
   "version": 1,
-  "projects": [],
+  "projects": [
+    {
+      "id": "1772540928318-8d4oig",
+      "name": "NEXT Gift Card",
+      "slug": "NEXT_Gift_Card",
+      "status": "active",
+      "brandId": "next-default",
+      "description": "Gift card promotion for NEXT featuring a grandmother character giving a gift card to a child. Warm, emotional tone targeting parents.",
+      "createdAt": "2026-03-03T12:28:48.318Z",
+      "updatedAt": "2026-03-03T12:28:48.318Z",
+      "characterIds": [],
+      "sceneryIds": [],
+      "clothingIds": [],
+      "conceptIds": [],
+      "imageIds": [],
+      "videoIds": [],
+      "notes": "Scope: video"
+    }
+  ],
   "characters": [],
   "scenery": [],
   "clothing": [],

@@ -10,6 +10,7 @@ import { GridImage, ImageSize, AspectRatio, GridTheme, ReferenceInput, VideoStat
 import { BrandSelector } from './components/BrandSelector';
 import { loadBrands, saveBrands, getActiveBrandId, setActiveBrandId } from './services/brandData';
 import { DB, type Project } from './services/projectDB';
+import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -77,26 +78,13 @@ interface LandingPageProps {
   onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects') => void;
   activeProject: Project | null;
   allProjects: Project[];
-  onCreateProject: (name: string) => void;
+  brands: BrandProfile[];
+  onCreateProject: (data: NewProjectData) => void;
   onSelectProject: (p: Project) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, onCreateProject, onSelectProject }) => {
-  const [showNewProject, setShowNewProject] = useState(false);
-  const [projectName, setProjectName] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (showNewProject && inputRef.current) inputRef.current.focus();
-  }, [showNewProject]);
-
-  const handleCreate = () => {
-    const name = projectName.trim();
-    if (!name) return;
-    onCreateProject(name);
-    setProjectName('');
-    setShowNewProject(false);
-  };
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject }) => {
+  const [showWizard, setShowWizard] = useState(false);
 
   const pipelineSteps = [
     { id: 'concept', label: 'Copy', icon: 'fa-pen-nib', description: 'Brief, Ideas & Finetuning' },
@@ -106,6 +94,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
   ];
 
   if (!activeProject) {
+    if (showWizard) {
+      return <NewProjectWizard brands={brands} onComplete={onCreateProject} onCancel={() => setShowWizard(false)} />;
+    }
+
     return (
       <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
         <div className="w-full max-w-md space-y-6 animate-fade-in">
@@ -149,38 +141,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
 
           <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
 
-          {/* Create new project */}
-          {showNewProject ? (
-            <div className="bg-white border border-[#ceadd4] rounded-xl p-5 shadow-sm space-y-3 animate-fade-in">
-              <label className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider block">New project</label>
-              <div className="flex items-center gap-2">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setShowNewProject(false); setProjectName(''); } }}
-                  placeholder="Project name..."
-                  className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
-                />
-                <button
-                  onClick={handleCreate}
-                  disabled={!projectName.trim()}
-                  className="px-5 py-3 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowNewProject(true)}
-              className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
-            >
-              <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
-              <span className="font-black uppercase tracking-wider text-xs">Start New Project</span>
-            </button>
-          )}
+          {/* Start new project — opens wizard */}
+          <button
+            onClick={() => setShowWizard(true)}
+            className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
+          >
+            <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
+            <span className="font-black uppercase tracking-wider text-xs">Start New Project</span>
+          </button>
         </div>
       </div>
     );
@@ -347,11 +315,24 @@ const App: React.FC = () => {
     else localStorage.removeItem('tensorax_active_project');
   };
 
-  const handleCreateProject = async (name: string) => {
+  const handleCreateProject = async (data: NewProjectData | string) => {
     try {
-      const project = await DB.createProject({ name, status: 'active', brandId: activeBrandId, description: '', characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: '' });
+      const isWizard = typeof data !== 'string';
+      const name = isWizard ? data.name : data;
+      const brandId = isWizard ? data.brandId : activeBrandId;
+      const description = isWizard ? data.brief : '';
+      const notes = isWizard && data.scope ? `Scope: ${data.scope}` : '';
+
+      const project = await DB.createProject({ name, status: 'active', brandId, description, characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes });
       persistProject(project);
       setAllProjects(prev => [...prev, project]);
+
+      if (isWizard) {
+        setActiveBrandIdState(data.brandId);
+        setActiveBrandId(data.brandId);
+        const route = getScopeRoute(data.scope);
+        setCurrentScreen(route);
+      }
     } catch (e) {
       console.error('[App] Create project failed:', e);
       alert('Failed to create project. Is the backend running?');
@@ -857,6 +838,7 @@ const App: React.FC = () => {
             onNavigate={(screen) => setCurrentScreen(screen as any)}
             activeProject={activeProject}
             allProjects={allProjects}
+            brands={brands}
             onCreateProject={handleCreateProject}
             onSelectProject={handleSelectProject}
           />
