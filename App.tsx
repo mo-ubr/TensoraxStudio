@@ -5,12 +5,31 @@ import { generateImageWithCurrentProvider } from './services/imageProvider';
 import { ChatBot } from './components/ChatBot';
 import { ConceptScreen } from './components/ConceptScreen';
 import { ImagesScreen } from './components/ImagesScreen';
+import { ProjectsScreen } from './components/ProjectsScreen';
 import { GridImage, ImageSize, AspectRatio, GridTheme, ReferenceInput, VideoState, BrandProfile } from './types';
 import { BrandSelector } from './components/BrandSelector';
 import { loadBrands, saveBrands, getActiveBrandId, setActiveBrandId } from './services/brandData';
+import { DB, type Project } from './services/projectDB';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+
+class ChatBotBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#5A5A5A] border border-[#9A9A9A] rounded-xl">
+          <i className="fa-solid fa-robot text-3xl text-[#D7D7D7]/30 mb-3"></i>
+          <p className="text-[10px] text-[#D7D7D7]/50 uppercase tracking-wider font-bold">Chat unavailable</p>
+          <p className="text-[9px] text-[#D7D7D7]/30 mt-1">Set an API key to enable the assistant</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /** 9 cinematic shot types for the 3×3 contact sheet (row-major order). */
 const SHOT_SPECS: { label: string; instruction: string }[] = [
@@ -52,17 +71,39 @@ const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
   );
 };
 
-const LandingPage: React.FC<{ onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video') => void }> = ({ onNavigate }) => {
-  const menuItems = [
-    { id: 'concept', label: 'Concept', icon: 'fa-lightbulb', active: true, description: 'Brief, Ideas & Finetuning' },
-    { id: 'images', label: 'Images', icon: 'fa-image', active: true, description: 'Characters & Key Visuals' },
-    { id: 'scenes', label: 'Scenes', icon: 'fa-clapperboard', active: true, description: 'Frame Composition' },
-    { id: 'video', label: 'Video', icon: 'fa-video', active: true, description: 'Video Generation' },
+interface LandingPageProps {
+  onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects') => void;
+  activeProject: Project | null;
+  onCreateProject: (name: string) => void;
+}
+
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, onCreateProject }) => {
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showNewProject && inputRef.current) inputRef.current.focus();
+  }, [showNewProject]);
+
+  const handleCreate = () => {
+    const name = projectName.trim();
+    if (!name) return;
+    onCreateProject(name);
+    setProjectName('');
+    setShowNewProject(false);
+  };
+
+  const pipelineSteps = [
+    { id: 'concept', label: 'Copy', icon: 'fa-pen-nib', description: 'Brief, Ideas & Finetuning' },
+    { id: 'images', label: 'Images', icon: 'fa-image', description: 'Characters & Key Visuals' },
+    { id: 'scenes', label: 'Frames', icon: 'fa-clapperboard', description: 'Frame Composition' },
+    { id: 'video', label: 'Video', icon: 'fa-video', description: 'Video Generation' },
   ];
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[#5A5A5A] p-6 overflow-y-auto">
-      <div className="mb-16 text-center animate-fade-in">
+      <div className="mb-10 text-center animate-fade-in">
         <div className="w-24 h-24 mx-auto mb-6 text-[#E6C01F]/80">
           <LogoIcon className="w-full h-full" />
         </div>
@@ -73,40 +114,108 @@ const LandingPage: React.FC<{ onNavigate: (screen: 'concept' | 'images' | 'scene
         <p className="text-[#D7D7D7] uppercase tracking-[0.3em] text-[10px] font-black">Creative Design Suite</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 w-full max-w-2xl">
-        {menuItems.map((item) => (
+      {/* Active project banner or create new */}
+      <div className="w-full max-w-2xl mb-8">
+        {activeProject ? (
+          <div className="bg-[#484848] border border-[#E6C01F]/30 rounded-xl px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+              <div>
+                <p className="text-[10px] text-[#D7D7D7]/60 uppercase tracking-wider font-bold">Active Project</p>
+                <p className="text-sm font-bold text-white uppercase tracking-wide">{activeProject.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNavigate('projects')}
+                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#5A5A5A] text-[#D7D7D7] border border-[#6A6A6A] hover:bg-[#585858] hover:text-white transition-colors"
+              >
+                <i className="fa-solid fa-folder-open mr-1.5"></i>All Projects
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            {showNewProject ? (
+              <div className="flex-1 flex items-center gap-2 bg-[#484848] border border-[#E6C01F]/30 rounded-xl px-4 py-2.5 animate-fade-in">
+                <i className="fa-solid fa-folder-plus text-[#E6C01F] text-sm"></i>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewProject(false); }}
+                  placeholder="Enter project name..."
+                  className="flex-1 bg-transparent text-white text-sm font-bold placeholder:text-[#D7D7D7]/40 outline-none uppercase tracking-wide"
+                />
+                <button
+                  onClick={handleCreate}
+                  disabled={!projectName.trim()}
+                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#E6C01F] text-black hover:bg-[#E6C01F]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setShowNewProject(false)}
+                  className="px-2 py-1.5 text-[#D7D7D7]/60 hover:text-white transition-colors"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowNewProject(true)}
+                  className="flex-1 h-14 rounded-xl border-2 border-dashed border-[#6A6A6A] hover:border-[#E6C01F]/50 bg-[#484848]/50 hover:bg-[#484848] text-[#D7D7D7] hover:text-[#E6C01F] transition-all flex items-center justify-center gap-3 group"
+                >
+                  <i className="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
+                  <span className="font-black uppercase tracking-wider text-xs">New Project</span>
+                </button>
+                <button
+                  onClick={() => onNavigate('projects')}
+                  className="h-14 px-5 rounded-xl border border-[#6A6A6A] bg-[#484848]/50 hover:bg-[#484848] text-[#D7D7D7] hover:text-white transition-all flex items-center gap-2"
+                >
+                  <i className="fa-solid fa-folder-open text-sm"></i>
+                  <span className="font-black uppercase tracking-wider text-[10px]">Projects</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Pipeline steps */}
+      <div className="grid grid-cols-4 gap-4 w-full max-w-2xl">
+        {pipelineSteps.map((item, idx) => (
           <button
             key={item.id}
-            onClick={() => {
-              if (item.active) onNavigate(item.id as any);
-            }}
-            className={`group relative h-48 rounded-[2rem] border transition-all duration-300 flex flex-col items-center justify-center gap-4 ${
-              item.active
-                ? 'bg-[#B0B0B0] border-gray-600 hover:border-[#E6C01F]/50 hover:bg-[#5a5a5a] shadow-xl'
-                : 'bg-[#B0B0B0]/40 border-gray-600/50 opacity-40 cursor-not-allowed'
-            }`}
+            onClick={() => onNavigate(item.id as any)}
+            className="group relative h-40 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center justify-center gap-3 bg-[#B0B0B0] border-gray-600 hover:border-[#E6C01F]/50 hover:bg-[#5a5a5a] shadow-xl"
           >
-            <div className={`text-4xl transition-transform duration-300 group-hover:scale-110 ${item.active ? 'text-[#E6C01F]' : 'text-[#D7D7D7]'}`}>
+            <div className="absolute top-3 left-4 text-[10px] font-black text-[#0d0d0d]/30 uppercase">{idx + 1}</div>
+            <div className="text-3xl transition-transform duration-300 group-hover:scale-110 text-[#E6C01F]">
               <i className={`fa-solid ${item.icon}`}></i>
             </div>
-            <span className={`font-black uppercase tracking-[0.2em] text-xs transition-colors ${item.active ? 'text-[#D7D7D7] group-hover:text-[#E6C01F]' : 'text-[#D7D7D7]'}`}>
+            <span className="font-black uppercase tracking-[0.2em] text-xs text-[#D7D7D7] group-hover:text-[#E6C01F] transition-colors">
               {item.label}
             </span>
-            {item.active && item.description && (
-              <span className="text-[9px] text-[#D7D7D7]/60 uppercase tracking-wider font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                {item.description}
-              </span>
+            <span className="text-[8px] text-[#D7D7D7]/60 uppercase tracking-wider font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+              {item.description}
+            </span>
+            {idx < pipelineSteps.length - 1 && (
+              <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-[#6A6A6A] z-10 hidden sm:block">
+                <i className="fa-solid fa-chevron-right text-xs"></i>
+              </div>
             )}
-            {item.active && (
-              <div className="absolute top-6 right-6 w-2 h-2 bg-[#E6C01F] rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]"></div>
-            )}
+            <div className="absolute top-3 right-3 w-2 h-2 bg-[#E6C01F] rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]"></div>
           </button>
         ))}
       </div>
-      <div className="mt-20 text-[#D7D7D7] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
+
+      <div className="mt-16 text-[#D7D7D7] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
         <span>© 2024 TensorAx Studio</span>
         <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-        <span>Version 3.1.0</span>
+        <span>Version 4.0.0</span>
       </div>
     </div>
   );
@@ -184,8 +293,43 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects'>('landing');
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [limitCooldownRemaining, setLimitCooldownRemaining] = useState(0);
+
+  // ─── Project state ───────────────────────────────────────────────────────
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('tensorax_active_project');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setActiveProject(parsed);
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  const persistProject = (p: Project | null) => {
+    setActiveProject(p);
+    if (p) localStorage.setItem('tensorax_active_project', JSON.stringify(p));
+    else localStorage.removeItem('tensorax_active_project');
+  };
+
+  const handleCreateProject = async (name: string) => {
+    try {
+      const project = await DB.createProject({ name, status: 'active', brandId: activeBrandId, description: '', characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: '' });
+      persistProject(project);
+    } catch (e) {
+      console.error('[App] Create project failed:', e);
+      alert('Failed to create project. Is the backend running?');
+    }
+  };
+
+  const handleSelectProject = (p: Project) => {
+    persistProject(p);
+    setCurrentScreen('landing');
+  };
 
   // Video provider: 'veo' | 'kling'
   const [videoProvider, setVideoProvider] = useState<'veo' | 'kling'>('veo');
@@ -538,6 +682,16 @@ const App: React.FC = () => {
     if (successfulImages.length === 0) return;
     setIsZipping(true);
     try {
+      // Save each frame to the active project folder
+      if (activeProject) {
+        for (const img of successfulImages) {
+          if (img.url) {
+            const filename = `frame-${img.id.split('-')[1]}.png`;
+            await DB.saveProjectFile(activeProject.id, filename, img.url, 'frames').catch(e => console.warn('[Frames] Save failed:', e));
+          }
+        }
+      }
+
       const JSZipModule = await import('jszip');
       const JSZip = (JSZipModule as any).default || JSZipModule;
       const zip = new JSZip();
@@ -551,7 +705,7 @@ const App: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `tensorax-export.zip`;
+      link.download = activeProject ? `${activeProject.slug}-frames.zip` : `tensorax-export.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -644,6 +798,23 @@ const App: React.FC = () => {
     }
   };
 
+  if (currentScreen === 'projects') {
+    return (
+      <div className="flex flex-col h-screen bg-[#5A5A5A]">
+        <header className="h-14 bg-[#B0B0B0] border-b border-gray-600 flex items-center justify-between px-6 z-20 shadow-lg">
+          <div className="flex items-center gap-3">
+            <LogoIcon className="w-5 h-5 text-[#E6C01F]/80" />
+            <h1 className="text-lg font-heading font-black tracking-tighter uppercase text-white flex items-center gap-0">
+              Tensor<span className="text-[#E6C01F]">ax</span>
+            </h1>
+          </div>
+          <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
+        </header>
+        <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+      </div>
+    );
+  }
+
   if (currentScreen === 'landing') {
     return (
       <div className="flex flex-col h-screen bg-[#5A5A5A]">
@@ -656,7 +827,11 @@ const App: React.FC = () => {
             </div>
             <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
           </header>
-          <LandingPage onNavigate={(screen) => setCurrentScreen(screen as any)} />
+          <LandingPage
+            onNavigate={(screen) => setCurrentScreen(screen as any)}
+            activeProject={activeProject}
+            onCreateProject={handleCreateProject}
+          />
       </div>
     );
   }
@@ -677,13 +852,18 @@ const App: React.FC = () => {
               Tensor<span className="text-[#E6C01F]">ax</span>
               <span className="text-base font-light text-white ml-1.5">Studio</span>
             </h1>
+            {activeProject && (
+              <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#E6C01F]/70 bg-[#E6C01F]/10 px-2 py-0.5 rounded">
+                {activeProject.name}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#D7D7D7]/60">Pre-Production</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#D7D7D7]/60">Copy</span>
           </div>
         </header>
-        <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} />
+        <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
 
         {apiKeyModalType && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={closeApiKeyModal}>
@@ -728,7 +908,7 @@ const App: React.FC = () => {
   }
 
   if (currentScreen === 'images') {
-    return <ImagesScreen onBack={() => setCurrentScreen('landing')} brands={brands} activeBrandId={activeBrandId} />;
+    return <ImagesScreen onBack={() => setCurrentScreen('landing')} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />;
   }
 
   return (
@@ -746,6 +926,11 @@ const App: React.FC = () => {
             Tensor<span className="text-[#E6C01F]">ax</span>
             <span className="text-base font-light text-white ml-1.5">Studio</span>
           </h1>
+          {activeProject && (
+            <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#E6C01F]/70 bg-[#E6C01F]/10 px-2 py-0.5 rounded">
+              {activeProject.name}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
@@ -1272,7 +1457,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
           </>
         )}
         <aside className={`flex-shrink-0 mt-0 mb-2 mx-2 ${currentScreen === 'scenes' ? 'w-[18%] min-w-[240px] max-w-[320px] block' : 'hidden 2xl:block w-80'}`}>
-          <ChatBot />
+          <ChatBotBoundary><ChatBot /></ChatBotBoundary>
         </aside>
       </div>
 

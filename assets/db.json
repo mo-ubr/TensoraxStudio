@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "projects": [
+    {
+      "id": "1772531341761-cwc6bt",
+      "name": "NEXT Gift Card",
+      "slug": "NEXT_Gift_Card",
+      "status": "active",
+      "brandId": "next-default",
+      "description": "",
+      "createdAt": "2026-03-03T09:49:01.760Z",
+      "updatedAt": "2026-03-03T09:49:01.760Z",
+      "characterIds": [],
+      "sceneryIds": [],
+      "clothingIds": [],
+      "conceptIds": [],
+      "imageIds": [],
+      "videoIds": [],
+      "notes": ""
+    }
+  ],
+  "characters": [],
+  "scenery": [],
+  "clothing": [],
+  "assets": []
+}

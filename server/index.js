@@ -22,6 +22,7 @@ import { generateWithDalle } from "./openai_imagen.js";
 import { runAutoGeneratePrompts } from "./prompt_api.js";
 import { generateKlingVideo } from "./klingService.js";
 import { listFiles, getFileMetadata, downloadFile, uploadFile, createFolder } from "./driveService.js";
+import dbRouter from "./dbService.js";
 
 const app = express();
 const PORT = process.env.PORT || 5182;
@@ -37,6 +38,8 @@ function resolveKeyPath() {
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+
+app.use("/api/db", dbRouter);
 
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";

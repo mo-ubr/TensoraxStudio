@@ -4,6 +4,7 @@ import { CharacterBuilder } from './CharacterBuilder';
 import { CharacterProfile, loadCharacters, saveCharacters, buildPromptFromTraits } from './characterUtils';
 import { generateImageWithCurrentProvider } from '../services/imageProvider';
 import { getApiKeyForType } from '../services/geminiService';
+import { DB, type Project } from '../services/projectDB';
 
 const saveToProject = async (filename: string, data: string, folder?: string): Promise<string> => {
   const res = await fetch('http://localhost:5182/api/save-file', {
@@ -40,6 +41,7 @@ interface ImagesScreenProps {
   onBack: () => void;
   brands: BrandProfile[];
   activeBrandId: string;
+  activeProject?: Project | null;
 }
 
 const STORAGE_KEY = 'tensorax_image_assets';
@@ -81,7 +83,7 @@ const extractCharactersFromScreenplay = (scenes: { title: string; scene: string;
   return Array.from(found);
 };
 
-export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, activeBrandId }) => {
+export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, activeBrandId, activeProject }) => {
   const [step, setStep] = useState<ImageStep>('characters');
   const [assets, setAssets] = useState<GeneratedAsset[]>(loadAssets);
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -496,7 +498,15 @@ ${rawTraits}`,
                               onClick={async () => {
                                 const proj = (() => { try { return JSON.parse(localStorage.getItem('tensorax_general_direction') || '{}').projectName || 'Project'; } catch { return 'Project'; } })().replace(/\s+/g, '_');
                                 const filename = `${proj}_${asset.label.replace(/\s+/g, '_')}.png`;
-                                try { const path = await saveToProject(filename, asset.imageUrl!, `output/${proj}/images`); alert(`Saved: ${path}`); }
+                                try {
+                                  if (activeProject) {
+                                    const path = await DB.saveProjectFile(activeProject.id, filename, asset.imageUrl!, 'images').then(r => r.path);
+                                    alert(`Saved to project: ${path}`);
+                                  } else {
+                                    const path = await saveToProject(filename, asset.imageUrl!, `output/${proj}/images`);
+                                    alert(`Saved: ${path}`);
+                                  }
+                                }
                                 catch { const a = document.createElement('a'); a.href = asset.imageUrl!; a.download = filename; a.click(); }
                               }}
                               className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-[#0d0d0d]/60 flex items-center justify-center text-[#E6C01F] hover:bg-[#0d0d0d]/80 transition-colors" title="Save image">

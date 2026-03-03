@@ -6,6 +6,7 @@ import { IdeaFactory } from './IdeaFactory';
 import { IdeaFinetune } from './IdeaFinetune';
 import { GeneralDirection, emptyDirection, GENERAL_DIRECTION_SYSTEM_PROMPT, SINGLE_IDEA_REGEN_PROMPT, getIdeaFactoryModel, getIdeaFactoryApiKey } from './GeneralDirection';
 import { isClaudeModel } from '../services/claudeService';
+import { DB, type Project } from '../services/projectDB';
 
 type ConceptStep = 'direction' | 'ideas' | 'screenplay';
 
@@ -112,9 +113,10 @@ interface ConceptScreenProps {
   onOpenApiKeyModal: (type: 'analysis' | 'copy' | 'image') => void;
   brands: BrandProfile[];
   activeBrandId: string;
+  activeProject?: Project | null;
 }
 
-export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId }) => {
+export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject }) => {
   const [step, setStep] = useState<ConceptStep>('direction');
   const [generalDirection, setGeneralDirection] = useState<GeneralDirectionType>(() => {
     try {
@@ -143,6 +145,12 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
   const handleSaveAndCreateScript = async (title: string, concept: string, directions: string) => {
     setIsSavingConcept(true);
     try {
+      // Save to project folder on disk
+      if (activeProject) {
+        const conceptText = `${title}\n${'='.repeat(title.length)}\n\n${concept}\n${directions ? `\nDirections: ${directions}` : ''}\n\nGenerated: ${new Date().toISOString().split('T')[0]}`;
+        await DB.saveProjectFile(activeProject.id, `${title.replace(/[^a-zA-Z0-9 _-]/g, '')}.txt`, conceptText, 'concepts').catch(e => console.warn('[ConceptScreen] Project file save failed:', e));
+      }
+
       const res = await fetch('/api/save-concept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
