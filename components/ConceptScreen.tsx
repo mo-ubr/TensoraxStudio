@@ -185,18 +185,15 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
         await DB.saveProjectFile(activeProject.id, `${title.replace(/[^a-zA-Z0-9 _-]/g, '')}.txt`, conceptText, 'concepts').catch(e => console.warn('[ConceptScreen] Project file save failed:', e));
       }
 
-      const res = await fetch('/api/save-concept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName: generalDirection.projectName || 'Untitled Project',
-          title,
-          concept,
-          parentFolderId: '1yUTinGkhgp8sGx-WchFfNfx3VrGMa6IM',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Save failed');
+      // Save locally (skip Drive)
+      try {
+        const filename = `${(generalDirection.projectName || 'Project').replace(/\s+/g, '_')}_Concept.txt`;
+        await fetch('/api/save-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, data: `${title}\n\n${concept}\n${directions ? `\nDirections: ${directions}` : ''}`, folder: 'assets/2. Screenplays' }),
+        });
+      } catch { /* continue even if save fails */ }
 
       const apiKey = getAiKey();
       const model = getAiModel();
