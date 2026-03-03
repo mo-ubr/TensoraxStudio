@@ -20,10 +20,10 @@ class ChatBotBoundary extends React.Component<{ children: React.ReactNode }, { h
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#2d2633] border border-[#6b5873] rounded-xl">
-          <i className="fa-solid fa-robot text-3xl text-[#d4cdd7]/30 mb-3"></i>
-          <p className="text-[10px] text-[#d4cdd7]/50 uppercase tracking-wider font-bold">Chat unavailable</p>
-          <p className="text-[9px] text-[#d4cdd7]/30 mt-1">Set an API key to enable the assistant</p>
+        <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-[#edecec] border border-[#e0d6e3] rounded-xl">
+          <i className="fa-solid fa-robot text-3xl text-[#888]/30 mb-3"></i>
+          <p className="text-[10px] text-[#888]/50 uppercase tracking-wider font-bold">Chat unavailable</p>
+          <p className="text-[9px] text-[#888]/30 mt-1">Set an API key to enable the assistant</p>
         </div>
       );
     }
@@ -104,32 +104,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
   ];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[#2d2633] p-6 overflow-y-auto">
+    <div className="flex-1 flex flex-col items-center justify-center bg-[#edecec] p-6 overflow-y-auto">
       <div className="mb-10 text-center animate-fade-in">
-        <div className="w-24 h-24 mx-auto mb-6 text-[#91569c]/80">
-          <LogoIcon className="w-full h-full" />
-        </div>
-        <h1 className="text-5xl font-black tracking-[0.15em] text-[#666] mb-1">
-          Tensor<span className="text-[#91569c]">Ax</span>
-        </h1>
-        <p className="text-[#91569c] uppercase tracking-[0.3em] text-lg font-black">Studio</p>
+        <img src="/logo-main.png" alt="TensorAx Studio" className="h-20 mx-auto mb-4" />
       </div>
 
       {/* Active project banner or create new */}
       <div className="w-full max-w-2xl mb-8">
         {activeProject ? (
-          <div className="bg-[#484848] border border-[#91569c]/30 rounded-xl px-5 py-3 flex items-center justify-between">
+          <div className="bg-white border border-[#ceadd4] rounded-xl px-5 py-3 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
               <div>
-                <p className="text-[10px] text-[#d4cdd7]/60 uppercase tracking-wider font-bold">Active Project</p>
-                <p className="text-sm font-bold text-white uppercase tracking-wide">{activeProject.name}</p>
+                <p className="text-[10px] text-[#888] uppercase tracking-wider font-bold">Active Project</p>
+                <p className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onNavigate('projects')}
-                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#2d2633] text-[#d4cdd7] border border-[#4a3a52] hover:bg-[#585858] hover:text-white transition-colors"
+                className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#f6f0f8] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors"
               >
                 <i className="fa-solid fa-folder-open mr-1.5"></i>All Projects
               </button>
@@ -138,7 +132,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
         ) : (
           <div className="flex items-center gap-3">
             {showNewProject ? (
-              <div className="flex-1 flex items-center gap-2 bg-[#484848] border border-[#91569c]/30 rounded-xl px-4 py-2.5 animate-fade-in">
+              <div className="flex-1 flex items-center gap-2 bg-white border border-[#ceadd4] rounded-xl px-4 py-2.5 shadow-sm animate-fade-in">
                 <i className="fa-solid fa-folder-plus text-[#91569c] text-sm"></i>
                 <input
                   ref={inputRef}
@@ -147,18 +141,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
                   onChange={(e) => setProjectName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setShowNewProject(false); }}
                   placeholder="Enter project name..."
-                  className="flex-1 bg-transparent text-white text-sm font-bold placeholder:text-[#d4cdd7]/40 outline-none uppercase tracking-wide"
+                  className="flex-1 bg-transparent text-[#5c3a62] text-sm font-bold placeholder:text-[#ceadd4] outline-none uppercase tracking-wide"
                 />
                 <button
                   onClick={handleCreate}
                   disabled={!projectName.trim()}
-                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-black hover:bg-[#91569c]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-[#5c3a62] hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowNewProject(false)}
-                  className="px-2 py-1.5 text-[#d4cdd7]/60 hover:text-white transition-colors"
+                  className="px-2 py-1.5 text-[#888] hover:text-[#5c3a62] transition-colors"
                 >
                   <i className="fa-solid fa-xmark"></i>
                 </button>
@@ -167,14 +161,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
               <>
                 <button
                   onClick={() => setShowNewProject(true)}
-                  className="flex-1 h-14 rounded-xl border-2 border-dashed border-[#4a3a52] hover:border-[#91569c]/50 bg-[#484848]/50 hover:bg-[#484848] text-[#d4cdd7] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group"
+                  className="flex-1 h-14 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
                 >
                   <i className="fa-solid fa-plus text-lg group-hover:scale-110 transition-transform"></i>
                   <span className="font-black uppercase tracking-wider text-xs">New Project</span>
                 </button>
                 <button
                   onClick={() => onNavigate('projects')}
-                  className="h-14 px-5 rounded-xl border border-[#4a3a52] bg-[#484848]/50 hover:bg-[#484848] text-[#d4cdd7] hover:text-white transition-all flex items-center gap-2"
+                  className="h-14 px-5 rounded-xl border border-[#ceadd4] bg-white/50 hover:bg-white text-[#888] hover:text-[#5c3a62] transition-all flex items-center gap-2 shadow-sm"
                 >
                   <i className="fa-solid fa-folder-open text-sm"></i>
                   <span className="font-black uppercase tracking-wider text-[10px]">Projects</span>
@@ -191,31 +185,31 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, on
           <button
             key={item.id}
             onClick={() => onNavigate(item.id as any)}
-            className="group relative h-40 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center justify-center gap-3 bg-[#3d3444] border-gray-600 hover:border-[#91569c]/50 hover:bg-[#5a5a5a] shadow-xl"
+            className="group relative h-40 rounded-[1.5rem] border transition-all duration-300 flex flex-col items-center justify-center gap-3 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm hover:shadow-md"
           >
-            <div className="absolute top-3 left-4 text-[10px] font-black text-[#edecec]/30 uppercase">{idx + 1}</div>
+            <div className="absolute top-3 left-4 text-[10px] font-black text-[#ceadd4] uppercase">{idx + 1}</div>
             <div className="text-3xl transition-transform duration-300 group-hover:scale-110 text-[#91569c]">
               <i className={`fa-solid ${item.icon}`}></i>
             </div>
-            <span className="font-black uppercase tracking-[0.2em] text-xs text-[#d4cdd7] group-hover:text-[#91569c] transition-colors">
+            <span className="font-black uppercase tracking-[0.2em] text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">
               {item.label}
             </span>
-            <span className="text-[8px] text-[#d4cdd7]/60 uppercase tracking-wider font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[8px] text-[#888] uppercase tracking-wider font-bold opacity-0 group-hover:opacity-100 transition-opacity">
               {item.description}
             </span>
             {idx < pipelineSteps.length - 1 && (
-              <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-[#4a3a52] z-10 hidden sm:block">
+              <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-[#ceadd4] z-10 hidden sm:block">
                 <i className="fa-solid fa-chevron-right text-xs"></i>
               </div>
             )}
-            <div className="absolute top-3 right-3 w-2 h-2 bg-[#91569c] rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]"></div>
+            <div className="absolute top-3 right-3 w-2 h-2 bg-[#91569c] rounded-full animate-pulse shadow-[0_0_8px_rgba(145,86,156,0.5)]"></div>
           </button>
         ))}
       </div>
 
-      <div className="mt-16 text-[#d4cdd7] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
+      <div className="mt-16 text-[#888] text-[10px] font-black uppercase tracking-widest flex items-center gap-4">
         <span>© 2026 TensorAx Studio</span>
-        <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+        <span className="w-1 h-1 bg-[#ceadd4] rounded-full"></span>
         <span>Version 4.0.0</span>
       </div>
     </div>
@@ -243,32 +237,32 @@ const ReferenceInputSection: React.FC<ReferenceInputSectionProps> = ({
 }) => {
   const slots = [value.images[0], value.images[1], value.images[2]];
   return (
-    <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-3">
-      <div className="bg-[#3d3444] rounded-t-lg py-1">
-        <label className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+    <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl space-y-3">
+      <div className="bg-white rounded-t-lg py-1">
+        <label className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
           <i className={`fa-solid ${icon} text-[#91569c]`}></i>
           {title}
         </label>
         {description && (
-          <p className="text-[#edecec] text-[11px] leading-relaxed mt-1.5">{description}</p>
+          <p className="text-[#3a3a3a] text-[11px] leading-relaxed mt-1.5">{description}</p>
         )}
       </div>
       <div className="grid grid-cols-3 gap-2">
         {[0, 1, 2].map((i) => (
           <div key={i} className="relative aspect-square">
             <input type="file" id={`upload-${type}-${i}`} className="hidden" accept="image/*" onChange={(e) => onFileUpload(e, type, i)} />
-            <label htmlFor={`upload-${type}-${i}`} className="flex flex-col items-center justify-center w-full h-full bg-[#3d3444] border-2 border-dashed border-[#4a3a52] rounded-lg cursor-pointer hover:border-[#91569c]/40 transition-all overflow-hidden group">
+            <label htmlFor={`upload-${type}-${i}`} className="flex flex-col items-center justify-center w-full h-full bg-white border-2 border-dashed border-[#ceadd4] rounded-lg cursor-pointer hover:border-[#91569c]/40 transition-all overflow-hidden group">
               {slots[i] ? (
                 <img src={slots[i]} className="w-full h-full object-cover" alt="" />
               ) : (
-                <i className="fa-solid fa-plus text-[#edecec] text-xl group-hover:text-[#91569c]/70 transition-colors"></i>
+                <i className="fa-solid fa-plus text-[#3a3a3a] text-xl group-hover:text-[#91569c]/70 transition-colors"></i>
               )}
             </label>
             {slots[i] && (
               <button
                 type="button"
                 onClick={() => onRemoveImage(type, i)}
-                className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/90 rounded flex items-center justify-center text-white text-[10px] hover:bg-red-500"
+                className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500/90 rounded flex items-center justify-center text-[#5c3a62] text-[10px] hover:bg-red-500"
               >
                 ×
               </button>
@@ -801,14 +795,9 @@ const App: React.FC = () => {
 
   if (currentScreen === 'projects') {
     return (
-      <div className="flex flex-col h-screen bg-[#2d2633]">
-        <header className="h-14 bg-[#3d3444] border-b border-gray-600 flex items-center justify-between px-6 z-20 shadow-lg">
-          <div className="flex items-center gap-3">
-            <LogoIcon className="w-5 h-5 text-[#91569c]/80" />
-            <h1 className="text-lg font-heading font-black tracking-tighter uppercase text-white flex items-center gap-0">
-              Tensor<span className="text-[#91569c]">Ax</span>
-            </h1>
-          </div>
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-6 z-20 shadow-sm">
+          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8" />
           <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
         </header>
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
@@ -818,14 +807,9 @@ const App: React.FC = () => {
 
   if (currentScreen === 'landing') {
     return (
-      <div className="flex flex-col h-screen bg-[#2d2633]">
-         <header className="h-14 bg-[#3d3444] border-b border-gray-600 flex items-center justify-between px-6 z-20 shadow-lg">
-            <div className="flex items-center gap-3">
-              <LogoIcon className="w-5 h-5 text-[#91569c]/80" />
-              <h1 className="text-lg font-heading font-black tracking-tighter uppercase text-white flex items-center gap-0">
-                Tensor<span className="text-[#91569c]">Ax</span>
-              </h1>
-            </div>
+      <div className="flex flex-col h-screen bg-[#edecec]">
+         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-6 z-20 shadow-sm">
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-8" />
             <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
           </header>
           <LandingPage
@@ -839,8 +823,8 @@ const App: React.FC = () => {
 
   if (currentScreen === 'concept') {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-[#2d2633]">
-        <header className="h-12 flex-shrink-0 bg-[#2d2633] border-b border-gray-600/60 flex items-center justify-between px-5 z-20">
+      <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
+        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-5 z-20 shadow-sm">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentScreen('landing')}
@@ -848,56 +832,52 @@ const App: React.FC = () => {
             >
               <i className="fa-solid fa-arrow-left text-sm"></i>
             </button>
-            <LogoIcon className="w-5 h-5 text-[#91569c]/80" />
-            <h1 className="text-base font-heading font-black tracking-tight uppercase text-white flex items-center gap-0">
-              Tensor<span className="text-[#91569c]">Ax</span>
-              <span className="text-base font-light text-white ml-1.5">Studio</span>
-            </h1>
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6" />
             {activeProject && (
-              <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c]/70 bg-[#91569c]/10 px-2 py-0.5 rounded">
+              <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c] bg-[#eadcef] px-2 py-0.5 rounded">
                 {activeProject.name}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             <BrandSelector brands={brands} activeBrandId={activeBrandId} onSelectBrand={handleSelectBrand} onAddBrand={handleAddBrand} onDeleteBrand={handleDeleteBrand} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#d4cdd7]/60">Copy</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
           </div>
         </header>
         <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
 
         {apiKeyModalType && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={closeApiKeyModal}>
-            <div className="bg-[#2d2633] border border-[#5c4a63] rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
-              <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide mb-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={closeApiKeyModal}>
+            <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+              <h3 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide mb-3">
                 {apiKeyModalType.charAt(0).toUpperCase() + apiKeyModalType.slice(1)} API Key
               </h3>
               <div className="mb-3">
-                <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1.5">Model</label>
+                <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">Model</label>
                 <input
                   type="text"
                   value={apiKeyModalModel}
                   onChange={(e) => setApiKeyModalModel(e.target.value)}
                   placeholder="e.g. claude-opus-4-6, claude-sonnet-4-6, gemini-2.0-flash"
-                  className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] text-[#edecec] placeholder:text-[#edecec]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1.5">API Key</label>
-                <p className="text-[9px] text-[#edecec]/70 mb-1">Claude → Anthropic key. Gemini → Google AI key.</p>
+                <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">API Key</label>
+                <p className="text-[9px] text-[#888] mb-1">Claude → Anthropic key. Gemini → Google AI key.</p>
                 <input
                   type="password"
                   value={apiKeyModalValue}
                   onChange={(e) => setApiKeyModalValue(e.target.value)}
                   placeholder="Enter your API key..."
-                  className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] text-[#edecec] placeholder:text-[#edecec]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button onClick={closeApiKeyModal} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#3d3444] text-white border border-[#5c4a63] hover:bg-[#6b5873] transition-colors">
+                <button onClick={closeApiKeyModal} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors">
                   Cancel
                 </button>
-                <button onClick={saveApiKeyFromModal} disabled={!apiKeyModalValue.trim()} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={saveApiKeyFromModal} disabled={!apiKeyModalValue.trim()} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-[#5c3a62] border border-[#91569c] hover:bg-[#5c3a62] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                   Save
                 </button>
               </div>
@@ -913,8 +893,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#2d2633]">
-      <header className="h-12 flex-shrink-0 bg-[#2d2633] border-b border-gray-600/60 flex items-center justify-between px-5 z-20">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
+      <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center justify-between px-5 z-20 shadow-sm">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setCurrentScreen('landing')}
@@ -922,13 +902,9 @@ const App: React.FC = () => {
           >
             <i className="fa-solid fa-arrow-left text-sm"></i>
           </button>
-          <LogoIcon className="w-5 h-5 text-[#91569c]/80" />
-          <h1 className="text-base font-heading font-black tracking-tight uppercase text-white flex items-center gap-0">
-            Tensor<span className="text-[#91569c]">Ax</span>
-            <span className="text-base font-light text-white ml-1.5">Studio</span>
-          </h1>
+          <img src="/logo-main.png" alt="TensorAx Studio" className="h-6" />
           {activeProject && (
-            <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c]/70 bg-[#91569c]/10 px-2 py-0.5 rounded">
+            <span className="ml-3 text-[10px] font-bold uppercase tracking-wider text-[#91569c] bg-[#eadcef] px-2 py-0.5 rounded">
               {activeProject.name}
             </span>
           )}
@@ -939,7 +915,7 @@ const App: React.FC = () => {
             <button
               onClick={downloadAllImages}
               disabled={isZipping}
-              className="flex items-center gap-2 bg-[#3d3444]/60 hover:bg-[#3d3444] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-[#5c4a63] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 bg-[#f6f0f8] hover:bg-[#eadcef] text-[#5c3a62] text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-[#ceadd4] transition-all active:scale-95 disabled:opacity-50"
             >
               <i className={`fa-solid ${isZipping ? 'fa-spinner fa-spin' : 'fa-file-zipper'}`}></i>
               {isZipping ? 'Zipping...' : 'Download Zip'}
@@ -951,16 +927,16 @@ const App: React.FC = () => {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {currentScreen === 'scenes' ? (
           <>
-            <aside className="w-[25%] min-w-[280px] max-w-[360px] h-full min-h-0 max-h-full bg-[#2d2633] border border-[#6b5873] rounded-xl flex flex-col overflow-hidden flex-shrink-0 mx-2 mt-0 mb-2">
-              <div className="p-4 border-b border-[#5c4a63] flex-shrink-0 flex items-center justify-between">
-                <h2 className="text-lg font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <aside className="w-[25%] min-w-[280px] max-w-[360px] h-full min-h-0 max-h-full bg-[#edecec] border border-[#e0d6e3] rounded-xl flex flex-col overflow-hidden flex-shrink-0 mx-2 mt-0 mb-2">
+              <div className="p-4 border-b border-[#ceadd4] flex-shrink-0 flex items-center justify-between">
+                <h2 className="text-lg font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
                   <i className="fa-solid fa-sliders text-[#91569c]"></i>
                   SCENE CONFIGURATION
                 </h2>
                 <button
                   type="button"
                   onClick={loadTestData}
-                  className="text-[9px] font-black uppercase text-[#91569c] hover:text-[#91569c]/80 border border-[#5c4a63] hover:border-[#91569c]/50 rounded px-2 py-1 transition-colors"
+                  className="text-[9px] font-black uppercase text-[#91569c] hover:text-[#91569c]/80 border border-[#ceadd4] hover:border-[#91569c]/50 rounded px-2 py-1 transition-colors"
                 >
                   Load test
                 </button>
@@ -994,9 +970,9 @@ const App: React.FC = () => {
                   onRemoveImage={removeReferenceImage}
                 />
 
-                <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-3">
+                <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                    <label className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
                       <i className="fa-solid fa-film text-[#91569c]"></i>
                       PROMPT
                     </label>
@@ -1006,14 +982,14 @@ const App: React.FC = () => {
                     onChange={(e) => setScenePrompt(e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                     rows={3}
-                    className="w-full min-h-[4.5rem] resize-y bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec] placeholder:text-[#edecec]/70"
+                    className="w-full min-h-[4.5rem] resize-y bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70"
                     placeholder="Enter your prompt..."
                   />
                   <button
                     type="button"
                     onClick={autoGeneratePrompts}
                     disabled={isAutoGeneratingPrompts}
-                    className="w-full bg-[#2d2633] hover:bg-[#585858] text-white font-black uppercase text-[10px] tracking-wider py-2.5 rounded-lg border border-[#4a3a52] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[#edecec] hover:bg-[#585858] text-[#5c3a62] font-black uppercase text-[10px] tracking-wider py-2.5 rounded-lg border border-[#ceadd4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isAutoGeneratingPrompts ? (
                       <span><i className="fa-solid fa-spinner fa-spin mr-2"></i>Generating...</span>
@@ -1023,18 +999,18 @@ const App: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-3">
-                  <label className="block text-sm font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl space-y-3">
+                  <label className="block text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
                     <i className="fa-solid fa-gear text-[#91569c]"></i>
                     SETTINGS
                   </label>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[11px] font-heading font-bold text-[#edecec] uppercase tracking-wide mb-1">Style</label>
+                      <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Style</label>
                       <select
                         value={theme}
                         onChange={(e) => setTheme(e.target.value)}
-                        className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec]"
+                        className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a]"
                       >
                         {Object.entries(GridTheme).map(([key, val]) => (
                           <option key={key} value={val}>{key.replace('_', ' ')}</option>
@@ -1042,13 +1018,13 @@ const App: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-heading font-bold text-[#edecec] uppercase tracking-wide mb-2">API Keys</label>
+                      <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-2">API Keys</label>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => openApiKeyModal('analysis')}
                           title="Analysis API Key"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
                         >
                           <i className="fa-solid fa-eye"></i>
                         </button>
@@ -1056,7 +1032,7 @@ const App: React.FC = () => {
                           type="button"
                           onClick={() => openApiKeyModal('copy')}
                           title="Copy API Key"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
                         >
                           <i className="fa-solid fa-pen"></i>
                         </button>
@@ -1064,20 +1040,20 @@ const App: React.FC = () => {
                           type="button"
                           onClick={() => openApiKeyModal('image')}
                           title="Image API Key (Imagen / Vertex)"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
                         >
                           <i className="fa-solid fa-image"></i>
                         </button>
                       </div>
-                      <p className="mt-1 text-[9px] text-[#edecec]/70">Image button: Imagen (Vertex) API key for generation.</p>
+                      <p className="mt-1 text-[9px] text-[#3a3a3a]/70">Image button: Imagen (Vertex) API key for generation.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-heading font-bold text-[#edecec] uppercase tracking-wide mb-1">Resolution</label>
+                        <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Resolution</label>
                         <select
                           value={imageSize}
                           onChange={(e) => setImageSize(e.target.value as ImageSize)}
-                          className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] outline-none text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50"
+                          className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] outline-none text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50"
                         >
                           <option value="1K">1K</option>
                           <option value="2K">2K</option>
@@ -1085,11 +1061,11 @@ const App: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-heading font-bold text-[#edecec] uppercase tracking-wide mb-1">Aspect</label>
+                        <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Aspect</label>
                         <select
                           value={aspectRatio}
                           onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                          className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] outline-none text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50"
+                          className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] outline-none text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50"
                         >
                           <option value="9:16">9:16</option>
                           <option value="1:1">1:1</option>
@@ -1100,14 +1076,14 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="p-4 border-t border-gray-600/60 bg-[#2d2633]">
-                <p className="text-[10px] text-[#edecec] text-center mb-2">Generate each image in the grid below (one at a time).</p>
+              <div className="p-4 border-t border-[#e0d6e3]/60 bg-[#edecec]">
+                <p className="text-[10px] text-[#3a3a3a] text-center mb-2">Generate each image in the grid below (one at a time).</p>
               </div>
             </aside>
-            <main className="flex-1 flex flex-col min-h-0 bg-[#2d2633] pt-0 pb-2 px-2 min-w-0 overflow-hidden">
-               <div className="flex-1 min-h-0 flex flex-col overflow-hidden mx-auto max-w-4xl w-full bg-[#2d2633] border border-[#6b5873] rounded-xl">
-                 <div className="flex-shrink-0 p-2 sm:p-4 border-b border-[#5c4a63]">
-                   <h2 className="text-sm sm:text-base md:text-lg font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <main className="flex-1 flex flex-col min-h-0 bg-[#edecec] pt-0 pb-2 px-2 min-w-0 overflow-hidden">
+               <div className="flex-1 min-h-0 flex flex-col overflow-hidden mx-auto max-w-4xl w-full bg-[#edecec] border border-[#e0d6e3] rounded-xl">
+                 <div className="flex-shrink-0 p-2 sm:p-4 border-b border-[#ceadd4]">
+                   <h2 className="text-sm sm:text-base md:text-lg font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
                      <i className="fa-solid fa-th-large text-[#91569c]"></i>
                      Frames
                    </h2>
@@ -1115,16 +1091,16 @@ const App: React.FC = () => {
                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-1.5 sm:p-3">
                  <div className="grid grid-cols-3 gap-1 sm:gap-2">
                  {images.map((img, idx) => (
-                   <div key={img.id} className="aspect-[9/16] bg-[#3d3444] relative rounded-lg overflow-hidden group flex flex-col border border-[#4a3a52]">
+                   <div key={img.id} className="aspect-[9/16] bg-white relative rounded-lg overflow-hidden group flex flex-col border border-[#ceadd4]">
                      {img.loading ? (
-                       <div className="absolute inset-0 flex flex-col items-center justify-center animate-pulse text-[#91569c]/30 gap-2 z-10 bg-[#3d3444]">
+                       <div className="absolute inset-0 flex flex-col items-center justify-center animate-pulse text-[#91569c]/30 gap-2 z-10 bg-white">
                          <i className="fa-solid fa-spinner fa-spin text-xl sm:text-2xl md:text-3xl text-[#91569c]"></i>
-                         <span className="text-[9px] sm:text-[10px] md:text-xs uppercase text-[#edecec]">Generating {idx + 1}</span>
+                         <span className="text-[9px] sm:text-[10px] md:text-xs uppercase text-[#3a3a3a]">Generating {idx + 1}</span>
                        </div>
                      ) : img.error ? (
-                       <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500/60 gap-2 p-2 z-10 bg-[#3d3444]">
+                       <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500/60 gap-2 p-2 z-10 bg-white">
                          <i className="fa-solid fa-triangle-exclamation text-base sm:text-lg md:text-xl"></i>
-                         <span className="text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-wider text-center text-[#edecec]">{img.error}</span>
+                         <span className="text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-wider text-center text-[#3a3a3a]">{img.error}</span>
                          <button
                            type="button"
                            onClick={() => generateSingleImage(idx)}
@@ -1136,7 +1112,7 @@ const App: React.FC = () => {
                        </div>
                      ) : img.url ? (
                        <>
-                         <div className="flex-1 min-h-0 relative rounded-lg m-1.5 overflow-hidden bg-[#3d3444]">
+                         <div className="flex-1 min-h-0 relative rounded-lg m-1.5 overflow-hidden bg-white">
                            <img src={img.url} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" alt="" />
                            {/* Use as video keyframe overlay */}
                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex justify-center gap-1 p-1">
@@ -1145,7 +1121,7 @@ const App: React.FC = () => {
                                  key={slot}
                                  type="button"
                                  onClick={() => useImageAsVideoFrame(img.url!, slot)}
-                                 className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-[#91569c] text-[#edecec] hover:bg-white transition-colors"
+                                 className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-[#91569c] text-[#3a3a3a] hover:bg-white transition-colors"
                                >
                                  {slot}
                                </button>
@@ -1159,7 +1135,7 @@ const App: React.FC = () => {
                                onChange={(e) => setShotPrompts(prev => { const n = [...prev]; n[idx] = e.target.value; return n; })}
                                onKeyDown={(e) => e.stopPropagation()}
                                rows={2}
-className="w-full min-h-[2rem] sm:min-h-[2.5rem] resize-y bg-[#3d3444] border-2 border-dashed border-[#4a3a52] rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-[10px] md:text-[11px] outline-none text-[#edecec] placeholder:text-[#edecec]/70 hover:border-[#91569c]/40 focus:border-[#91569c] transition-all"
+className="w-full min-h-[2rem] sm:min-h-[2.5rem] resize-y bg-white border-2 border-dashed border-[#ceadd4] rounded-lg px-2 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-[10px] md:text-[11px] outline-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70 hover:border-[#91569c]/40 focus:border-[#91569c] transition-all"
                              placeholder={`Prompt for shot ${idx + 1}...`}
                            />
                            </div>
@@ -1168,15 +1144,15 @@ className="w-full min-h-[2rem] sm:min-h-[2.5rem] resize-y bg-[#3d3444] border-2 
                        </>
                      ) : (
                        <>
-                         <div className="text-[9px] sm:text-[10px] md:text-xs font-bold text-[#edecec] uppercase flex-shrink-0 px-1.5 sm:px-2 pt-1 sm:pt-1.5 min-h-[2em] sm:min-h-[2.5em] leading-tight w-full">{SHOT_SPECS[idx].label}</div>
-                         <div className="flex-1 min-h-0 rounded-lg mx-1 sm:mx-2 flex flex-col p-1.5 sm:p-2 gap-1.5 sm:gap-2 bg-[#3d3444] overflow-hidden">
+                         <div className="text-[9px] sm:text-[10px] md:text-xs font-bold text-[#3a3a3a] uppercase flex-shrink-0 px-1.5 sm:px-2 pt-1 sm:pt-1.5 min-h-[2em] sm:min-h-[2.5em] leading-tight w-full">{SHOT_SPECS[idx].label}</div>
+                         <div className="flex-1 min-h-0 rounded-lg mx-1 sm:mx-2 flex flex-col p-1.5 sm:p-2 gap-1.5 sm:gap-2 bg-white overflow-hidden">
                            <div className="relative flex-1 min-h-0 flex flex-col">
                              <textarea
                                value={shotPrompts[idx] ?? ''}
                                onChange={(e) => setShotPrompts(prev => { const n = [...prev]; n[idx] = e.target.value; return n; })}
                                onKeyDown={(e) => e.stopPropagation()}
                                rows={3}
-                               className="w-full min-h-0 flex-1 resize-y bg-[#3d3444] border-2 border-dashed border-[#4a3a52] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] md:text-[11px] outline-none text-[#edecec] placeholder:text-[#edecec]/70 hover:border-[#91569c]/40 focus:border-[#91569c] transition-all"
+                               className="w-full min-h-0 flex-1 resize-y bg-white border-2 border-dashed border-[#ceadd4] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-[10px] md:text-[11px] outline-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70 hover:border-[#91569c]/40 focus:border-[#91569c] transition-all"
                                placeholder={`Prompt for shot ${idx + 1}...`}
                              />
                            </div>
@@ -1184,7 +1160,7 @@ className="w-full min-h-[2rem] sm:min-h-[2.5rem] resize-y bg-[#3d3444] border-2 
                              type="button"
                              onClick={() => generateSingleImage(idx)}
                              disabled={isGenerating}
-className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:text-xs md:text-base font-black uppercase tracking-wider bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] hover:border-[#5c4a63] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:text-xs md:text-base font-black uppercase tracking-wider bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:border-[#ceadd4] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             Generate {idx + 1}
                            </button>
@@ -1200,16 +1176,16 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
           </>
         ) : (
           <>
-            <aside className="w-80 bg-[#2d2633] border-r border-gray-600 flex flex-col overflow-hidden flex-shrink-0">
-              <div className="p-4 border-b border-gray-600 bg-[#3d3444]/50">
-                <h2 className="text-lg font-heading font-bold text-white uppercase tracking-wide">Video Configuration</h2>
+            <aside className="w-80 bg-[#edecec] border-r border-[#e0d6e3] flex flex-col overflow-hidden flex-shrink-0">
+              <div className="p-4 border-b border-[#e0d6e3] bg-white/50">
+                <h2 className="text-lg font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Configuration</h2>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
                 {/* Video Provider Toggle */}
-                <div className="bg-[#3d3444]/80 border border-[#5c4a63] p-4 rounded-2xl space-y-3">
-                  <label className="text-sm font-heading font-bold text-white uppercase tracking-wide">Video Engine</label>
-                  <div className="flex rounded-xl overflow-hidden border border-[#5c4a63]">
+                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
+                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Engine</label>
+                  <div className="flex rounded-xl overflow-hidden border border-[#ceadd4]">
                     {(['veo', 'kling'] as const).map(p => (
                       <button
                         key={p}
@@ -1217,8 +1193,8 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                         onClick={() => setVideoProvider(p)}
                         className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wide transition-colors ${
                           videoProvider === p
-                            ? 'bg-[#91569c] text-[#edecec]'
-                            : 'bg-[#2d2633] text-white/60 hover:text-white'
+                            ? 'bg-[#91569c] text-[#3a3a3a]'
+                            : 'bg-[#edecec] text-[#5c3a62]/60 hover:text-[#5c3a62]'
                         }`}
                       >
                         {p === 'veo' ? 'Veo 3.1' : 'Kling v2'}
@@ -1228,7 +1204,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                   {videoProvider === 'kling' && (
                     <div className="space-y-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-[#edecec] uppercase tracking-wide mb-1">fal.ai API Key</label>
+                        <label className="block text-[10px] font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">fal.ai API Key</label>
                         <input
                           type="password"
                           value={klingApiKey}
@@ -1237,11 +1213,11 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                             localStorage.setItem('tensorax_kling_key', e.target.value);
                           }}
                           placeholder="Get key at fal.ai/dashboard/keys"
-                          className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2 text-[10px] text-[#edecec] placeholder:text-[#edecec]/60 outline-none focus:ring-1 focus:ring-[#91569c]"
+                          className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/60 outline-none focus:ring-1 focus:ring-[#91569c]"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold text-[#edecec] uppercase tracking-wide mb-1">Motion Reference Video <span className="font-normal normal-case text-[#edecec]/60">(optional)</span></label>
+                        <label className="block text-[10px] font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Motion Reference Video <span className="font-normal normal-case text-[#3a3a3a]/60">(optional)</span></label>
                         <div className="flex items-center gap-2">
                           <input
                             type="file"
@@ -1261,7 +1237,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                               e.target.value = '';
                             }}
                           />
-                          <label htmlFor="kling-motion-video" className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed cursor-pointer text-[10px] transition-colors ${(videoState as any).motionVideo ? 'border-[#91569c] bg-[#91569c]/10 text-[#edecec]' : 'border-[#5c4a63] bg-[#3d3444] text-[#edecec]/60 hover:border-[#91569c]/50'}`}>
+                          <label htmlFor="kling-motion-video" className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed cursor-pointer text-[10px] transition-colors ${(videoState as any).motionVideo ? 'border-[#91569c] bg-[#91569c]/10 text-[#3a3a3a]' : 'border-[#ceadd4] bg-white text-[#3a3a3a]/60 hover:border-[#91569c]/50'}`}>
                             <i className={`fa-solid ${(videoState as any).motionVideo ? 'fa-video text-[#91569c]' : 'fa-film'}`}></i>
                             {(videoState as any).motionVideo ? 'Motion video set ✓' : 'Upload motion reference video'}
                           </label>
@@ -1269,24 +1245,24 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                             <button type="button" onClick={() => setVideoState(v => { const n = { ...v }; delete (n as any).motionVideo; return n; })} className="text-[10px] text-red-500 hover:text-red-400 px-1">✕</button>
                           )}
                         </div>
-                        <p className="text-[9px] text-[#edecec]/60 mt-1">When set → Kling motion control mode: your Start frame as character style, video as motion guide.</p>
+                        <p className="text-[9px] text-[#3a3a3a]/60 mt-1">When set → Kling motion control mode: your Start frame as character style, video as motion guide.</p>
                       </div>
                     </div>
                   )}
                   {videoProvider === 'veo' && (
-                    <p className="text-[9px] text-[#edecec]/60">Veo 3.1 via Gemini API. Supports Start, Mid and End frames.</p>
+                    <p className="text-[9px] text-[#3a3a3a]/60">Veo 3.1 via Gemini API. Supports Start, Mid and End frames.</p>
                   )}
                 </div>
 
                 {/* Generation Prompt */}
-                <div className="bg-[#3d3444]/80 border border-[#5c4a63] p-4 rounded-2xl space-y-3">
+                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-heading font-bold text-white uppercase tracking-wide">Generation Prompt</label>
+                    <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Generation Prompt</label>
                     <button 
                       onClick={enhancePrompt}
                       disabled={isEnhancing || !videoState.prompt}
                       title="Enhance Prompt"
-                      className={`text-sm transition-all p-1.5 rounded-lg border ${isEnhancing ? 'bg-[#3d3444] border-[#5c4a63] text-[#edecec]' : 'bg-[#3d3444] border-[#5c4a63] text-[#91569c]/70 hover:text-[#91569c] hover:border-[#91569c]/30 active:scale-95'}`}
+                      className={`text-sm transition-all p-1.5 rounded-lg border ${isEnhancing ? 'bg-white border-[#ceadd4] text-[#3a3a3a]' : 'bg-white border-[#ceadd4] text-[#91569c]/70 hover:text-[#91569c] hover:border-[#91569c]/30 active:scale-95'}`}
                     >
                       <i className={`fa-solid ${isEnhancing ? 'fa-wand-magic-sparkles fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
                     </button>
@@ -1295,15 +1271,15 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                     value={videoState.prompt} 
                     onChange={(e) => setVideoState(v => ({ ...v, prompt: e.target.value }))} 
                     placeholder="Describe the cinematic scene..."
-                    className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-24 resize-none text-[#edecec] placeholder:text-[#edecec]/70"
+                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-24 resize-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70"
                   />
                 </div>
 
                 {/* Key Frame Sequence */}
-                <div className="bg-[#3d3444]/80 border border-[#5c4a63] p-4 rounded-2xl space-y-4">
-                  <label className="text-sm font-heading font-bold text-white uppercase tracking-wide">Key Frame Sequence</label>
+                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-4">
+                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Key Frame Sequence</label>
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-[#edecec] tracking-wider">Upload key frame images</p>
+                    <p className="text-[10px] font-black uppercase text-[#3a3a3a] tracking-wider">Upload key frame images</p>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { id: 'start', label: 'Start' },
@@ -1312,13 +1288,13 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                       ].map(slot => (
                         <div key={slot.id} className="relative aspect-square">
                           <input type="file" id={`upload-${slot.id}`} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, slot.id as any)} />
-                          <label htmlFor={`upload-${slot.id}`} className="flex flex-col items-center justify-center w-full h-full bg-[#3d3444] border border-[#5c4a63] border-dashed rounded-lg cursor-pointer hover:border-[#91569c]/30 transition-all overflow-hidden group">
+                          <label htmlFor={`upload-${slot.id}`} className="flex flex-col items-center justify-center w-full h-full bg-white border border-[#ceadd4] border-dashed rounded-lg cursor-pointer hover:border-[#91569c]/30 transition-all overflow-hidden group">
                             { (videoState as any)[`${slot.id}Image`] ? (
                               <img src={(videoState as any)[`${slot.id}Image`]} className="w-full h-full object-cover" />
                             ) : (
                               <div className="flex flex-col items-center gap-1">
-                                <i className="fa-solid fa-cloud-arrow-up text-white text-lg group-hover:text-[#91569c]/50 transition-colors"></i>
-                                <span className="text-xs font-black uppercase text-[#edecec]">{slot.label}</span>
+                                <i className="fa-solid fa-cloud-arrow-up text-[#5c3a62] text-lg group-hover:text-[#91569c]/50 transition-colors"></i>
+                                <span className="text-xs font-black uppercase text-[#3a3a3a]">{slot.label}</span>
                               </div>
                             )}
                           </label>
@@ -1329,16 +1305,16 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                 </div>
 
                 {/* Movement Path */}
-                <div className="bg-[#3d3444]/80 border border-[#5c4a63] p-4 rounded-2xl space-y-4">
-                  <label className="text-sm font-heading font-bold text-white uppercase tracking-wide">Movement Path</label>
+                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-4">
+                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Movement Path</label>
                   <textarea 
                     value={videoState.movementDescription} 
                     onChange={(e) => setVideoState(v => ({ ...v, movementDescription: e.target.value }))} 
                     placeholder="Describe specific movements (e.g. camera zooms in)..."
-                    className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-20 resize-none text-[#edecec] placeholder:text-[#edecec]/70" 
+                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-20 resize-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70" 
                   />
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-[#edecec] tracking-wider">Upload movement video</p>
+                    <p className="text-[10px] font-black uppercase text-[#3a3a3a] tracking-wider">Upload movement video</p>
                     <div className="relative">
                       <input 
                         type="file" 
@@ -1349,10 +1325,10 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                       />
                       <label 
                         htmlFor="upload-movement-video" 
-                        className={`flex items-center gap-3 w-full p-3 rounded-xl border border-dashed transition-all cursor-pointer ${videoState.movementVideo ? 'border-[#91569c]/50 bg-[#91569c]/5' : 'border-[#5c4a63] bg-[#3d3444] hover:border-[#91569c]/30'}`}
+                        className={`flex items-center gap-3 w-full p-3 rounded-xl border border-dashed transition-all cursor-pointer ${videoState.movementVideo ? 'border-[#91569c]/50 bg-[#91569c]/5' : 'border-[#ceadd4] bg-white hover:border-[#91569c]/30'}`}
                       >
-                        <i className={`fa-solid ${videoState.movementVideo ? 'fa-video text-[#91569c]' : 'fa-film text-white text-lg'}`}></i>
-                        <span className={`text-xs font-black uppercase ${videoState.movementVideo ? 'text-[#edecec]' : 'text-[#edecec]'}`}>
+                        <i className={`fa-solid ${videoState.movementVideo ? 'fa-video text-[#91569c]' : 'fa-film text-[#5c3a62] text-lg'}`}></i>
+                        <span className={`text-xs font-black uppercase ${videoState.movementVideo ? 'text-[#3a3a3a]' : 'text-[#3a3a3a]'}`}>
                           {videoState.movementVideo ? 'Video Attached' : 'Select Reference Video'}
                         </span>
                       </label>
@@ -1361,12 +1337,12 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                 </div>
 
                 {/* Select Duration */}
-                <div className="bg-[#3d3444]/80 border border-[#5c4a63] p-4 rounded-2xl space-y-3">
-                  <label className="text-sm font-heading font-bold text-white uppercase tracking-wide">Select Duration</label>
+                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
+                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Select Duration</label>
                   <select 
                     value={videoState.duration}
                     onChange={(e) => setVideoState(v => ({ ...v, duration: e.target.value as '5s' | '10s' }))}
-                    className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-xl p-3 text-[11px] outline-none text-[#edecec] focus:ring-1 focus:ring-[#91569c] appearance-none cursor-pointer"
+                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] outline-none text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c] appearance-none cursor-pointer"
                   >
                     <option value="5s">5 Seconds Clip</option>
                     <option value="10s">10 Seconds Clip</option>
@@ -1374,13 +1350,13 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                 </div>
               </div>
 
-              <div className="p-4 border-t border-[#5c4a63] bg-[#3d3444]">
+              <div className="p-4 border-t border-[#ceadd4] bg-white">
                 <button 
                   onClick={startVideoGeneration} 
                   disabled={videoState.isGenerating} 
                   className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-lg active:scale-95 ${
                     videoState.isGenerating 
-                      ? 'bg-[#3d3444] text-[#edecec] cursor-not-allowed' 
+                      ? 'bg-white text-[#3a3a3a] cursor-not-allowed' 
                       : 'bg-[#91569c] hover:bg-[#91569c]/90 text-black'
                   }`}
                 >
@@ -1392,11 +1368,11 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                 </button>
               </div>
             </aside>
-            <main className="flex-1 bg-[#2d2633] p-6 flex flex-col items-center justify-center relative">
+            <main className="flex-1 bg-[#edecec] p-6 flex flex-col items-center justify-center relative">
                {!videoState.resultUrl && !videoState.isGenerating && (
                  <div className="text-center space-y-6 opacity-20">
-                    <i className="fa-solid fa-clapperboard text-[120px] text-[#d4cdd7]"></i>
-                    <p className="font-black uppercase tracking-[0.3em] text-[#d4cdd7]">Video Studio Idle</p>
+                    <i className="fa-solid fa-clapperboard text-[120px] text-[#888]"></i>
+                    <p className="font-black uppercase tracking-[0.3em] text-[#888]">Video Studio Idle</p>
                  </div>
                )}
 
@@ -1409,15 +1385,15 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                        </div>
                     </div>
                     <div className="space-y-4">
-                      <p className="text-lg font-black uppercase tracking-widest text-[#d4cdd7]">{videoState.progressMessage}</p>
-                      <p className="text-[10px] text-[#d4cdd7] uppercase tracking-[0.4em] font-bold">This typically takes 2-4 minutes</p>
+                      <p className="text-lg font-black uppercase tracking-widest text-[#888]">{videoState.progressMessage}</p>
+                      <p className="text-[10px] text-[#888] uppercase tracking-[0.4em] font-bold">This typically takes 2-4 minutes</p>
                     </div>
                  </div>
                )}
 
                {videoState.resultUrl && !videoState.isGenerating && (
                  <div className="w-full max-w-4xl animate-fade-in space-y-6">
-                    <div className="relative rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-[#5c4a63] bg-black">
+                    <div className="relative rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-[#ceadd4] bg-black">
                        <video 
                          src={videoState.resultUrl} 
                          controls 
@@ -1429,7 +1405,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                          <a 
                            href={videoState.resultUrl} 
                            download="tensorax-veo.mp4"
-                           className="w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-xl"
+                           className="w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-[#5c3a62] hover:bg-white/20 transition-all shadow-xl"
                          >
                            <i className="fa-solid fa-download"></i>
                          </a>
@@ -1437,17 +1413,17 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                     </div>
                     <div className="flex justify-between items-center px-4">
                        <div className="flex gap-4 items-center">
-                          <div className="w-10 h-10 bg-[#3d3444] border border-[#5c4a63] rounded-xl flex items-center justify-center">
-                             <LogoIcon className="w-5 h-5 text-[#d4cdd7]" />
+                          <div className="w-10 h-10 bg-white border border-[#ceadd4] rounded-xl flex items-center justify-center">
+                             <LogoIcon className="w-5 h-5 text-[#888]" />
                           </div>
                           <div>
-                            <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide">Veo Cinematic Generation</h3>
-                            <p className="text-[10px] text-[#d4cdd7] uppercase font-bold">Processed at 720p • Motion Consistent</p>
+                            <h3 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Veo Cinematic Generation</h3>
+                            <p className="text-[10px] text-[#888] uppercase font-bold">Processed at 720p • Motion Consistent</p>
                           </div>
                        </div>
                        <button 
                          onClick={() => setVideoState(v => ({ ...v, resultUrl: undefined }))}
-                         className="text-[10px] font-black text-[#d4cdd7] uppercase hover:text-red-500 transition-colors"
+                         className="text-[10px] font-black text-[#888] uppercase hover:text-red-500 transition-colors"
                        >
                          Discard Session
                        </button>
@@ -1464,36 +1440,36 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
 
       {apiKeyModalType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={closeApiKeyModal}>
-          <div className="bg-[#2d2633] border border-[#5c4a63] rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-heading font-bold text-white uppercase tracking-wide mb-3">
+          <div className="bg-[#edecec] border border-[#ceadd4] rounded-xl p-6 w-full max-w-md mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide mb-3">
               {apiKeyModalType.charAt(0).toUpperCase() + apiKeyModalType.slice(1)} API Key
             </h3>
             <div className="mb-3">
-              <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1.5">Model</label>
+              <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">Model</label>
               <input
                 type="text"
                 value={apiKeyModalModel}
                 onChange={(e) => setApiKeyModalModel(e.target.value)}
                 placeholder="e.g. claude-opus-4-6, claude-sonnet-4-6, gemini-2.0-flash"
-                className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] text-[#edecec] placeholder:text-[#edecec]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
               />
             </div>
             <div className="mb-4">
-              <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1.5">API Key</label>
-              <p className="text-[9px] text-[#edecec]/70 mb-1">Claude → Anthropic key. Gemini → Google AI key. Auto Generate: set model in Copy (or Analysis) so the same model sees your ref images.</p>
+              <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5">API Key</label>
+              <p className="text-[9px] text-[#3a3a3a]/70 mb-1">Claude → Anthropic key. Gemini → Google AI key. Auto Generate: set model in Copy (or Analysis) so the same model sees your ref images.</p>
               <input
                 type="password"
                 value={apiKeyModalValue}
                 onChange={(e) => setApiKeyModalValue(e.target.value)}
                 placeholder="Enter your API key..."
-                className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] text-[#edecec] placeholder:text-[#edecec]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/70 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
               />
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={closeApiKeyModal} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#3d3444] text-white border border-[#5c4a63] hover:bg-[#6b5873] transition-colors">
+              <button onClick={closeApiKeyModal} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-[#5c3a62] border border-[#ceadd4] hover:bg-[#6b5873] transition-colors">
                 Cancel
               </button>
-              <button onClick={saveApiKeyFromModal} disabled={!apiKeyModalValue.trim()} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button onClick={saveApiKeyFromModal} disabled={!apiKeyModalValue.trim()} className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 Save
               </button>
             </div>

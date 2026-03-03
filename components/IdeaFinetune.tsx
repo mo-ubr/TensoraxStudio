@@ -53,9 +53,9 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
         {/* Selected Idea Header */}
-        <div className="bg-[#3d3444] border border-[#91569c]/30 p-4 rounded-xl">
+        <div className="bg-white border border-[#91569c]/30 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
               <i className="fa-solid fa-star text-[#91569c]"></i>
               Selected Concept
             </h3>
@@ -66,43 +66,43 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
               <i className="fa-solid fa-arrow-left mr-1"></i> Back to Ideas
             </button>
           </div>
-          <h4 className="text-xs font-heading font-bold text-white uppercase tracking-wide mb-1">
+          <h4 className="text-xs font-heading font-bold text-[#5c3a62] uppercase tracking-wide mb-1">
             {selectedIdea.title}
           </h4>
-          <p className="text-[10px] text-[#edecec] leading-relaxed">{selectedIdea.summary}</p>
+          <p className="text-[10px] text-[#3a3a3a] leading-relaxed">{selectedIdea.summary}</p>
         </div>
 
         {/* Editable Concept */}
-        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-2">
+        <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
               <i className="fa-solid fa-file-pen text-[#91569c]"></i>
               Refined Concept
             </h3>
-            <span className="text-[9px] text-[#edecec]/60 font-bold uppercase">Editable</span>
+            <span className="text-[9px] text-[#3a3a3a]/60 font-bold uppercase">Editable</span>
           </div>
           <textarea
             value={refinedConcept}
             onChange={(e) => onUpdateConcept(e.target.value)}
             onKeyDown={(e) => e.stopPropagation()}
             rows={8}
-            className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec] placeholder:text-[#edecec]/50 resize-y min-h-[8rem]"
+            className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 resize-y min-h-[8rem]"
             placeholder="The refined concept will appear here..."
           />
         </div>
 
         {/* Refinement Chat */}
-        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl space-y-3">
-          <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+        <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl space-y-3">
+          <h3 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
             <i className="fa-solid fa-comments text-[#91569c]"></i>
             Refinement Chat
           </h3>
-          <p className="text-[9px] text-[#edecec]/60">
+          <p className="text-[9px] text-[#3a3a3a]/60">
             Give directions to refine the concept. The AI will update based on your feedback.
           </p>
 
           {messages.length > 0 && (
-            <div className="space-y-2 max-h-64 overflow-y-auto rounded-lg bg-[#2d2633]/30 p-3">
+            <div className="space-y-2 max-h-64 overflow-y-auto rounded-lg bg-[#edecec]/30 p-3">
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -111,8 +111,8 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
                   <div
                     className={`max-w-[85%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#91569c]/20 text-[#edecec] border border-[#91569c]/30'
-                        : 'bg-[#2d2633] text-[#d4cdd7] border border-[#4a3a52]'
+                        ? 'bg-[#91569c]/20 text-[#3a3a3a] border border-[#91569c]/30'
+                        : 'bg-[#edecec] text-[#888] border border-[#ceadd4]'
                     }`}
                   >
                     <div className="flex items-center gap-1 mb-1">
@@ -131,7 +131,7 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
               ))}
               {isRefining && (
                 <div className="flex justify-start">
-                  <div className="bg-[#2d2633] text-[#d4cdd7] border border-[#4a3a52] rounded-xl px-3 py-2 text-[11px]">
+                  <div className="bg-[#edecec] text-[#888] border border-[#ceadd4] rounded-xl px-3 py-2 text-[11px]">
                     <i className="fa-solid fa-spinner fa-spin mr-1 text-[#91569c]"></i> Refining...
                   </div>
                 </div>
@@ -152,13 +152,13 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
                 }
               }}
               rows={2}
-              className="flex-1 bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#edecec] placeholder:text-[#edecec]/50 resize-none"
+              className="flex-1 bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 resize-none"
               placeholder="e.g. Make the tone more playful, add a scene with the baby crawling..."
             />
             <button
               onClick={handleSubmitDirection}
               disabled={!direction.trim() || isRefining}
-              className="self-end px-4 py-2.5 rounded-lg text-[10px] font-black uppercase bg-[#2d2633] text-white border border-[#4a3a52] hover:bg-[#585858] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="self-end px-4 py-2.5 rounded-lg text-[10px] font-black uppercase bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <i className="fa-solid fa-paper-plane"></i>
             </button>
@@ -166,14 +166,14 @@ export const IdeaFinetune: React.FC<IdeaFinetuneProps> = ({
         </div>
       </div>
 
-      <div className="p-4 border-t border-gray-600/60 bg-[#2d2633] flex-shrink-0">
+      <div className="p-4 border-t border-[#e0d6e3]/60 bg-[#edecec] flex-shrink-0">
         <button
           onClick={onFinalize}
           disabled={!refinedConcept.trim()}
           className={`w-full py-3 rounded-xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-lg active:scale-95 ${
             refinedConcept.trim()
               ? 'bg-[#91569c] hover:bg-[#91569c]/90 text-black'
-              : 'bg-[#3d3444]/50 text-[#edecec]/40 cursor-not-allowed'
+              : 'bg-white/50 text-[#3a3a3a]/40 cursor-not-allowed'
           }`}
         >
           <i className="fa-solid fa-check-double mr-2"></i>

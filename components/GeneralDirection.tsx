@@ -186,8 +186,8 @@ ${brand ? `- Integrate the ${brand.name} brand naturally` : ''}`;
 const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: GeneralDirectionType) => void }> = ({ value, onChange }) => {
   return (
     <div className="mt-2.5">
-      <label className="block text-[9px] font-bold text-[#d4cdd7]/80 uppercase tracking-wide mb-1.5">
-        Style Inspirations <span className="text-[#d4cdd7]/40 font-normal">(up to 3)</span>
+      <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1.5">
+        Style Inspirations <span className="text-[#888]/40 font-normal">(up to 3)</span>
       </label>
       {(value.styleVideos || []).map((sv, i) => (
         <div key={i} className="mb-2 flex items-center gap-1.5">
@@ -201,7 +201,7 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
               onChange({ ...value, styleVideos: updated });
             }}
             placeholder="Paste video URL (YouTube, Drive, etc.)..."
-            className="flex-1 bg-[#3d3444] border border-[#5c4a63] rounded px-2 py-1.5 text-[9px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+            className="flex-1 bg-white border border-[#ceadd4] rounded px-2 py-1.5 text-[9px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
           />
           <button
             onClick={() => {
@@ -221,7 +221,7 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
             const updated = [...(value.styleVideos || []), { url: '', file: '' }];
             onChange({ ...value, styleVideos: updated });
           }}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-[#5c4a63] text-[9px] font-bold text-[#d4cdd7]/60 hover:text-[#91569c] hover:border-[#91569c]/40 transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-[#ceadd4] text-[9px] font-bold text-[#888]/60 hover:text-[#91569c] hover:border-[#91569c]/40 transition-colors"
         >
           <i className="fa-solid fa-plus text-[8px]"></i>
           Add Style Inspiration
@@ -359,9 +359,9 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
   return (
     <div className="flex gap-3 h-full min-h-0">
       {/* LEFT: Form */}
-      <aside className="w-[38%] min-w-[280px] max-w-[420px] h-full bg-[#2d2633] border border-[#6b5873] rounded-xl flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-[#5c4a63] flex-shrink-0 flex items-center justify-between">
-          <h2 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+      <aside className="w-[38%] min-w-[280px] max-w-[420px] h-full bg-[#edecec] border border-[#e0d6e3] rounded-xl flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-[#ceadd4] flex-shrink-0 flex items-center justify-between">
+          <h2 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
             <i className="fa-solid fa-compass text-[#91569c]"></i>
             General Direction
           </h2>
@@ -376,7 +376,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
             </button>
             <button
               onClick={() => setShowPromptPreview(!showPromptPreview)}
-              className={`p-1.5 rounded-lg transition-colors ${showPromptPreview ? 'bg-[#91569c]/20 text-[#91569c]' : 'text-[#d4cdd7]/60 hover:text-[#d4cdd7]'}`}
+              className={`p-1.5 rounded-lg transition-colors ${showPromptPreview ? 'bg-[#91569c]/20 text-[#91569c]' : 'text-[#888]/60 hover:text-[#888]'}`}
               title="Preview system prompt"
             >
               <i className="fa-solid fa-eye text-xs"></i>
@@ -392,7 +392,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                 a.click();
                 URL.revokeObjectURL(url);
               }}
-              className="p-1.5 rounded-lg text-[#d4cdd7]/60 hover:text-[#d4cdd7] transition-colors"
+              className="p-1.5 rounded-lg text-[#888]/60 hover:text-[#888] transition-colors"
               title="Export as JSON"
             >
               <i className="fa-solid fa-download text-xs"></i>
@@ -408,35 +408,35 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         </div>
 
         {showKeyModal && (
-          <div className="p-3 border-b border-[#5c4a63] bg-[#4A4A4A] flex-shrink-0 space-y-2">
+          <div className="p-3 border-b border-[#ceadd4] bg-[#4A4A4A] flex-shrink-0 space-y-2">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]">
                 <i className="fa-solid fa-robot text-[8px] mr-1"></i>
                 Idea Factory AI
               </span>
-              <button onClick={() => setShowKeyModal(false)} className="text-[#d4cdd7]/40 hover:text-[#d4cdd7] transition-colors">
+              <button onClick={() => setShowKeyModal(false)} className="text-[#888]/40 hover:text-[#888] transition-colors">
                 <i className="fa-solid fa-xmark text-[10px]"></i>
               </button>
             </div>
             <div>
-              <label className="block text-[8px] font-bold text-[#d4cdd7]/70 uppercase tracking-wide mb-0.5">Model</label>
+              <label className="block text-[8px] font-bold text-[#888]/70 uppercase tracking-wide mb-0.5">Model</label>
               <input
                 type="text"
                 value={ideaModel}
                 onChange={(e) => setIdeaModel(e.target.value)}
                 placeholder="claude-sonnet-4-6"
-                className="w-full bg-[#3d3444] border border-[#5c4a63] rounded px-2.5 py-1.5 text-[10px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
               />
             </div>
             <div>
-              <label className="block text-[8px] font-bold text-[#d4cdd7]/70 uppercase tracking-wide mb-0.5">API Key</label>
-              <p className="text-[7px] text-[#d4cdd7]/40 mb-0.5">Separate from Scenes — Claude key for creative text, Gemini key for image analysis.</p>
+              <label className="block text-[8px] font-bold text-[#888]/70 uppercase tracking-wide mb-0.5">API Key</label>
+              <p className="text-[7px] text-[#888]/40 mb-0.5">Separate from Scenes — Claude key for creative text, Gemini key for image analysis.</p>
               <input
                 type="password"
                 value={ideaApiKey}
                 onChange={(e) => setIdeaApiKey(e.target.value)}
                 placeholder="Enter your Anthropic API key..."
-                className="w-full bg-[#3d3444] border border-[#5c4a63] rounded px-2.5 py-1.5 text-[10px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
               />
             </div>
             <button
@@ -445,7 +445,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                 localStorage.setItem(IDEA_APIKEY_KEY, ideaApiKey);
                 setShowKeyModal(false);
               }}
-              className="w-full py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[#91569c] text-[#edecec] hover:bg-[#d4af1c] transition-all flex items-center justify-center gap-1.5"
+              className="w-full py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] transition-all flex items-center justify-center gap-1.5"
             >
               <i className="fa-solid fa-floppy-disk text-[8px]"></i>
               Save
@@ -462,7 +462,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Project Name */}
           <div>
-            <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
               <i className="fa-solid fa-folder-open text-[#91569c] text-[9px]"></i>
               Project Name
             </label>
@@ -471,53 +471,53 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
               value={value.projectName}
               onChange={(e) => update('projectName', e.target.value)}
               placeholder="e.g. NEXT Summer Campaign 2026"
-              className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2 text-[11px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+              className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none"
             />
           </div>
 
           {/* Project Aim */}
           <div>
-            <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1 flex items-center gap-1.5">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1 flex items-center gap-1.5">
               <i className="fa-solid fa-bullseye text-[#91569c] text-[9px]"></i>
               Project Aim
             </label>
-            <p className="text-[#d4cdd7]/60 text-[9px] mb-1.5">Define the overarching goal: what should the video achieve?</p>
+            <p className="text-[#888]/60 text-[9px] mb-1.5">Define the overarching goal: what should the video achieve?</p>
             <textarea
               value={value.aim}
               onChange={(e) => update('aim', e.target.value)}
               placeholder="e.g. Create a 90-second brand video showcasing the new kidswear collection with consistent characters across all scenes..."
               rows={8}
-              className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2 text-[11px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+              className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
             />
           </div>
 
           {/* CTA & Target Audience */}
           <div>
-            <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1 flex items-center gap-1.5">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1 flex items-center gap-1.5">
               <i className="fa-solid fa-bullhorn text-[#91569c] text-[9px]"></i>
               Call to Action
             </label>
-            <input type="text" value={value.cta} onChange={(e) => update('cta', e.target.value)} placeholder="e.g. Visit our stores, Shop now, Sign up for loyalty card" className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2 text-[11px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
+            <input type="text" value={value.cta} onChange={(e) => update('cta', e.target.value)} placeholder="e.g. Visit our stores, Shop now, Sign up for loyalty card" className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-1 flex items-center gap-1.5">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-1 flex items-center gap-1.5">
               <i className="fa-solid fa-users text-[#91569c] text-[9px]"></i>
               Target Audience
             </label>
-            <input type="text" value={value.targetAudience} onChange={(e) => update('targetAudience', e.target.value)} placeholder="e.g. Parents of kids 0-10, expecting parents" className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-3 py-2 text-[11px] text-[#edecec] placeholder:text-[#edecec]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
+            <input type="text" value={value.targetAudience} onChange={(e) => update('targetAudience', e.target.value)} placeholder="e.g. Parents of kids 0-10, expecting parents" className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
           </div>
 
           {/* Settings */}
-          <div className="border-t border-[#5c4a63]/40 pt-3">
-            <label className="block text-[10px] font-bold text-white uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+          <div className="border-t border-[#ceadd4]/40 pt-3">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
               <i className="fa-solid fa-sliders text-[#91569c] text-[9px]"></i>
               Settings
             </label>
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[9px] font-bold text-[#d4cdd7]/80 uppercase tracking-wide mb-1">Video Type</label>
-                <select value={value.videoType} onChange={(e) => update('videoType', e.target.value)} className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-2.5 py-1.5 text-[10px] text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
+                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Video Type</label>
+                <select value={value.videoType} onChange={(e) => update('videoType', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
                   <option value="explainer">Explainer</option>
                   <option value="promo">Promo / Ad</option>
                   <option value="tutorial">Tutorial</option>
@@ -527,23 +527,23 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-[#d4cdd7]/80 uppercase tracking-wide mb-1">Format</label>
-                <select value={value.format} onChange={(e) => update('format', e.target.value)} className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-2.5 py-1.5 text-[10px] text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
+                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Format</label>
+                <select value={value.format} onChange={(e) => update('format', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
                   <option value="9:16">9:16 (YT Short, TT, IG)</option>
                   <option value="16:9">16:9 (YT, Website)</option>
                   <option value="1:1">1:1 (Square)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-[#d4cdd7]/80 uppercase tracking-wide mb-1">Duration</label>
-                <select value={value.duration} onChange={(e) => update('duration', e.target.value)} className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-2.5 py-1.5 text-[10px] text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
+                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Duration</label>
+                <select value={value.duration} onChange={(e) => update('duration', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
                   <option value="1.5min">1.5 min (Short form)</option>
                   <option value="3min">3 min (Long form)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-bold text-[#d4cdd7]/80 uppercase tracking-wide mb-1">Tone</label>
-                <select value={value.tone} onChange={(e) => update('tone', e.target.value)} className="w-full bg-[#3d3444] border border-[#5c4a63] rounded-lg px-2.5 py-1.5 text-[10px] text-[#edecec] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
+                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Tone</label>
+                <select value={value.tone} onChange={(e) => update('tone', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
                   <option value="warm">Warm &amp; Emotional</option>
                   <option value="energetic">Energetic</option>
                   <option value="professional">Professional</option>
@@ -559,11 +559,11 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
         </div>
 
         {/* Generate Button */}
-        <div className="p-4 border-t border-[#5c4a63] flex-shrink-0">
+        <div className="p-4 border-t border-[#ceadd4] flex-shrink-0">
           <button
             onClick={() => handleGenerate()}
             disabled={isGenerating || !hasContent || finetuneMode}
-            className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#edecec] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+            className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-lightbulb'}`}></i>
             {isGenerating ? 'Generating Ideas...' : 'Generate 5 Ideas'}
@@ -572,16 +572,16 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
       </aside>
 
       {/* RIGHT: Idea Factory / Finetune */}
-      <main className="flex-1 min-w-0 h-full bg-[#2d2633] border border-[#6b5873] rounded-xl flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-[#5c4a63] flex-shrink-0 flex items-center justify-between">
-          <h2 className="text-base font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+      <main className="flex-1 min-w-0 h-full bg-[#edecec] border border-[#e0d6e3] rounded-xl flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-[#ceadd4] flex-shrink-0 flex items-center justify-between">
+          <h2 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
             <i className={`fa-solid ${finetuneMode ? 'fa-wand-magic-sparkles' : 'fa-lightbulb'} text-[#91569c]`}></i>
             {finetuneMode ? 'Finetuning' : 'Idea Factory'}
           </h2>
           {finetuneMode && (
             <button
               onClick={() => setFinetuneMode(false)}
-              className="text-[9px] font-bold uppercase tracking-wider text-[#d4cdd7]/60 hover:text-[#91569c] transition-colors flex items-center gap-1"
+              className="text-[9px] font-bold uppercase tracking-wider text-[#888]/60 hover:text-[#91569c] transition-colors flex items-center gap-1"
             >
               <i className="fa-solid fa-arrow-left text-[8px]"></i>
               Back to Ideas
@@ -593,13 +593,13 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
           {finetuneMode ? (
             <div className="space-y-4">
               <div className="bg-[#4A4A4A] border border-[#91569c]/30 rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#4a3a52]">
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#edecec] text-xs font-black"><i className="fa-solid fa-check text-[9px]"></i></span>
+                <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#ceadd4]">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-xs font-black"><i className="fa-solid fa-check text-[9px]"></i></span>
                   <input
                     type="text"
                     value={finetuneTitle}
                     onChange={(e) => setFinetuneTitle(e.target.value)}
-                    className="flex-1 bg-transparent text-[13px] font-bold text-white outline-none border-b border-transparent focus:border-[#91569c]/40"
+                    className="flex-1 bg-transparent text-[13px] font-bold text-[#5c3a62] outline-none border-b border-transparent focus:border-[#91569c]/40"
                   />
                 </div>
                 <div className="p-4">
@@ -607,28 +607,28 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     value={finetuneText}
                     onChange={(e) => setFinetuneText(e.target.value)}
                     rows={16}
-                    className="w-full bg-[#3A3A3A] border border-[#4a3a52] rounded-lg p-3 text-[11px] text-[#d4cdd7] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                    className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                   />
                 </div>
               </div>
 
-              <div className="bg-[#4A4A4A] border border-[#4a3a52] rounded-xl p-4">
-                <label className="block text-[10px] font-bold text-white uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <div className="bg-[#4A4A4A] border border-[#ceadd4] rounded-xl p-4">
+                <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wide mb-2 flex items-center gap-1.5">
                   <i className="fa-solid fa-pen text-[#91569c] text-[9px]"></i>
-                  Additional Directions <span className="font-normal text-[#d4cdd7]/40">(optional)</span>
+                  Additional Directions <span className="font-normal text-[#888]/40">(optional)</span>
                 </label>
                 <textarea
                   value={finetuneDirection}
                   onChange={(e) => setFinetuneDirection(e.target.value)}
                   placeholder="e.g. Make the ending more emotional, add a scene in a NEXT store, change the character to a grandmother..."
                   rows={2}
-                  className="w-full bg-[#3A3A3A] border border-[#4a3a52] rounded-lg p-3 text-[11px] text-[#d4cdd7] placeholder:text-[#5c4a63] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
+                  className="w-full bg-[#3A3A3A] border border-[#ceadd4] rounded-lg p-3 text-[11px] text-[#888] placeholder:text-[#5c4a63] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-none"
                 />
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => onSaveAndCreateScript?.(finetuneTitle, finetuneText, finetuneDirection)}
                     disabled={isSaving || isGenerating || !finetuneText.trim()}
-                    className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#edecec] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                    className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
                     {isSaving ? 'Saving & Creating...' : 'Save & Create Script'}
@@ -674,7 +674,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
 
                 return (<>
                 {rejectionLog.length > 0 && (
-                  <div className="bg-[#3A3A3A] border border-[#4a3a52] rounded-lg px-3 py-2 mb-1">
+                  <div className="bg-[#3A3A3A] border border-[#ceadd4] rounded-lg px-3 py-2 mb-1">
                     <span className="text-[8px] font-black uppercase tracking-wider text-red-400/60">
                       <i className="fa-solid fa-ban text-[7px] mr-1"></i>
                       {rejectionLog.length} idea{rejectionLog.length > 1 ? 's' : ''} rejected (AI will avoid these)
@@ -692,10 +692,10 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   }
                   const hasStructured = parsed.length > 0;
                   return (
-                    <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isKept ? 'border-[#91569c]/40 ring-1 ring-[#91569c]/20' : 'border-[#4a3a52] hover:border-[#91569c]/30'}`}>
-                      <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#4a3a52]">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#edecec] text-xs font-black">{isKept ? <i className="fa-solid fa-heart text-[10px]"></i> : idea.num}</span>
-                        <h3 className="flex-1 text-[13px] font-bold text-white leading-snug">{idea.title || `Idea ${idea.num}`}</h3>
+                    <div key={i} className={`bg-[#4A4A4A] border rounded-xl overflow-hidden transition-colors ${isKept ? 'border-[#91569c]/40 ring-1 ring-[#91569c]/20' : 'border-[#ceadd4] hover:border-[#91569c]/30'}`}>
+                      <div className="flex items-center gap-3 px-4 py-3 bg-[#3A3A3A] border-b border-[#ceadd4]">
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-xs font-black">{isKept ? <i className="fa-solid fa-heart text-[10px]"></i> : idea.num}</span>
+                        <h3 className="flex-1 text-[13px] font-bold text-[#5c3a62] leading-snug">{idea.title || `Idea ${idea.num}`}</h3>
                         {isKept && <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c]/60 bg-[#91569c]/10 px-1.5 py-0.5 rounded">kept</span>}
                         <button
                           onClick={() => {
@@ -712,7 +712,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           className={`p-1 rounded transition-colors ${
                             editingIdea === idea.num
                               ? 'text-green-400 bg-green-400/10 hover:bg-green-400/20'
-                              : 'text-[#d4cdd7]/40 hover:text-[#91569c]'
+                              : 'text-[#888]/40 hover:text-[#91569c]'
                           }`}
                           title={editingIdea === idea.num ? 'Save edits' : 'Edit idea'}
                         >
@@ -732,7 +732,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                             value={editedBodies[idea.num] ?? idea.body}
                             onChange={(e) => setEditedBodies(prev => ({ ...prev, [idea.num]: e.target.value }))}
                             rows={14}
-                            className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded-lg p-3 text-[11px] text-[#d4cdd7] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
+                            className="w-full bg-[#3A3A3A] border border-[#91569c]/30 rounded-lg p-3 text-[11px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y font-sans"
                             autoFocus
                           />
                         ) : hasStructured ? (
@@ -740,15 +740,15 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                             {parsed.map((sec, j) => (
                               <div key={j}>
                                 <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]/70">{sec.label}</span>
-                                <p className="text-[11px] text-[#d4cdd7] leading-relaxed mt-0.5">{sec.content}</p>
+                                <p className="text-[11px] text-[#888] leading-relaxed mt-0.5">{sec.content}</p>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <pre className="text-[11px] text-[#d4cdd7]/80 whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
+                          <pre className="text-[11px] text-[#888]/80 whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
-                      <div className="px-4 py-2.5 bg-[#3A3A3A] border-t border-[#4a3a52] space-y-2">
+                      <div className="px-4 py-2.5 bg-[#3A3A3A] border-t border-[#ceadd4] space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             {([
@@ -776,7 +776,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                                 comment: feedbackNotes[idea.num],
                               })}
                               disabled={isGenerating || (regeneratingIdeaNum != null)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all text-[#d4cdd7]/40 hover:text-[#91569c] hover:bg-[#4A4A4A] disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all text-[#888]/40 hover:text-[#91569c] hover:bg-[#4A4A4A] disabled:opacity-30 disabled:cursor-not-allowed"
                               title="Regenerate this idea"
                             >
                               <i className={`fa-solid ${regeneratingIdeaNum === idea.num ? 'fa-spinner fa-spin' : 'fa-rotate-right'} text-[10px]`}></i>
@@ -790,7 +790,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                               setFinetuneDirection(feedbackNotes[idea.num] || '');
                               setFinetuneMode(true);
                             }}
-                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#2d2633] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10"
+                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all bg-[#edecec] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10"
                           >
                             <i className="fa-solid fa-hand-pointer text-[8px] mr-1"></i>
                             Select
@@ -801,7 +801,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           value={feedbackNotes[idea.num] || ''}
                           onChange={(e) => setFeedbackNotes(prev => ({ ...prev, [idea.num]: e.target.value }))}
                           placeholder="Feedback on this idea..."
-                          className="w-full bg-[#4A4A4A] border border-[#4a3a52] rounded px-2.5 py-1.5 text-[10px] text-[#d4cdd7] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+                          className="w-full bg-[#4A4A4A] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#888] placeholder:text-[#5c4a63] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
                         />
                       </div>
                     </div>
@@ -812,7 +812,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   <button
                     onClick={() => handleGenerate(buildFeedbackPrompt(ideaBlocks), ideaBlocks)}
                     disabled={isGenerating}
-                    className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#4A4A4A] text-[#91569c] hover:bg-[#2d2633] border border-[#91569c]/30 hover:border-[#91569c]/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
+                    className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#4A4A4A] text-[#91569c] hover:bg-[#edecec] border border-[#91569c]/30 hover:border-[#91569c]/60 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] mt-2"
                   >
                     <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-rotate-right'}`}></i>
                     {isGenerating ? 'Regenerating...' : 'Regenerate with Feedback'}
@@ -824,14 +824,14 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <i className="fa-solid fa-lightbulb text-5xl text-[#5c4a63] mb-4"></i>
-              <p className="text-[#d4cdd7]/60 text-sm font-bold uppercase tracking-widest mb-2">Idea Factory</p>
-              <p className="text-[#d4cdd7]/40 text-xs max-w-md leading-relaxed">
+              <p className="text-[#888]/60 text-sm font-bold uppercase tracking-widest mb-2">Idea Factory</p>
+              <p className="text-[#888]/40 text-xs max-w-md leading-relaxed">
                 Fill in the project details and click "Generate 5 Ideas". The AI will create 5 unique video concept ideas based on your brief, brand, and style inspirations.
               </p>
               {activeBrand && (
-                <div className="mt-4 flex items-center gap-2 bg-[#3A3A3A] px-3 py-1.5 rounded-lg border border-[#4a3a52]">
+                <div className="mt-4 flex items-center gap-2 bg-[#3A3A3A] px-3 py-1.5 rounded-lg border border-[#ceadd4]">
                   <i className="fa-solid fa-tag text-[#91569c] text-[10px]"></i>
-                  <span className="text-[10px] text-[#d4cdd7]">Brand: <strong className="text-white">{activeBrand.name}</strong></span>
+                  <span className="text-[10px] text-[#888]">Brand: <strong className="text-[#5c3a62]">{activeBrand.name}</strong></span>
                 </div>
               )}
             </div>

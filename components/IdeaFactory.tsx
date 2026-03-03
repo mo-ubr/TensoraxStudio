@@ -20,17 +20,17 @@ const IdeaCard: React.FC<{
 
   return (
     <div
-      className={`bg-[#3d3444] border rounded-xl overflow-hidden transition-all duration-300 ${
+      className={`bg-white border rounded-xl overflow-hidden transition-all duration-300 ${
         idea.status === 'rejected'
           ? 'border-red-500/30 opacity-40'
           : idea.status === 'accepted'
           ? 'border-[#91569c] shadow-[0_0_20px_rgba(230,192,31,0.15)]'
-          : 'border-gray-600/80 hover:border-[#91569c]/30'
+          : 'border-[#e0d6e3]/80 hover:border-[#91569c]/30'
       }`}
     >
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <h4 className="text-sm font-heading font-bold text-white uppercase tracking-wide leading-tight flex-1">
+          <h4 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide leading-tight flex-1">
             {idea.title}
           </h4>
           {idea.status === 'accepted' && (
@@ -45,17 +45,17 @@ const IdeaCard: React.FC<{
           )}
         </div>
 
-        <p className="text-[11px] text-[#edecec] leading-relaxed">{idea.summary}</p>
+        <p className="text-[11px] text-[#3a3a3a] leading-relaxed">{idea.summary}</p>
 
         {expanded && (
-          <div className="space-y-2 pt-2 border-t border-[#5c4a63]/50 animate-fade-in">
+          <div className="space-y-2 pt-2 border-t border-[#ceadd4]/50 animate-fade-in">
             <div>
-              <span className="text-[9px] font-black uppercase tracking-wider text-[#edecec]/60">Key Scenes</span>
-              <p className="text-[11px] text-[#edecec] leading-relaxed mt-0.5">{idea.keyScenes}</p>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#3a3a3a]/60">Key Scenes</span>
+              <p className="text-[11px] text-[#3a3a3a] leading-relaxed mt-0.5">{idea.keyScenes}</p>
             </div>
             <div>
-              <span className="text-[9px] font-black uppercase tracking-wider text-[#edecec]/60">Visual Style</span>
-              <p className="text-[11px] text-[#edecec] leading-relaxed mt-0.5">{idea.visualStyle}</p>
+              <span className="text-[9px] font-black uppercase tracking-wider text-[#3a3a3a]/60">Visual Style</span>
+              <p className="text-[11px] text-[#3a3a3a] leading-relaxed mt-0.5">{idea.visualStyle}</p>
             </div>
           </div>
         )}
@@ -72,7 +72,7 @@ const IdeaCard: React.FC<{
             <>
               <button
                 onClick={onReject}
-                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-[#2d2633] text-[#d4cdd7] border border-[#4a3a52] hover:border-red-500/50 hover:text-red-400 transition-colors"
+                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-[#edecec] text-[#888] border border-[#ceadd4] hover:border-red-500/50 hover:text-red-400 transition-colors"
               >
                 <i className="fa-solid fa-xmark mr-1"></i> Reject
               </button>
@@ -107,9 +107,9 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
         {/* Brief Summary */}
-        <div className="bg-[#3d3444] border border-gray-600/80 p-4 rounded-xl">
+        <div className="bg-white border border-[#e0d6e3]/80 p-4 rounded-xl">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
               <i className="fa-solid fa-file-lines text-[#91569c]"></i>
               Brief Summary
             </h3>
@@ -120,23 +120,23 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
               <i className="fa-solid fa-pen mr-1"></i> Edit Brief
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-[#edecec]">
-            <div><span className="font-bold uppercase text-[#edecec]/60">Type:</span> {brief.videoType}</div>
-            <div><span className="font-bold uppercase text-[#edecec]/60">Format:</span> {brief.format}</div>
-            <div><span className="font-bold uppercase text-[#edecec]/60">Duration:</span> {brief.duration}</div>
-            <div><span className="font-bold uppercase text-[#edecec]/60">Tone:</span> {brief.tone}</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-[#3a3a3a]">
+            <div><span className="font-bold uppercase text-[#3a3a3a]/60">Type:</span> {brief.videoType}</div>
+            <div><span className="font-bold uppercase text-[#3a3a3a]/60">Format:</span> {brief.format}</div>
+            <div><span className="font-bold uppercase text-[#3a3a3a]/60">Duration:</span> {brief.duration}</div>
+            <div><span className="font-bold uppercase text-[#3a3a3a]/60">Tone:</span> {brief.tone}</div>
           </div>
-          <p className="text-[10px] text-[#edecec]/80 mt-2 line-clamp-2">{brief.videoConcept}</p>
+          <p className="text-[10px] text-[#3a3a3a]/80 mt-2 line-clamp-2">{brief.videoConcept}</p>
         </div>
 
         {/* Status */}
         {ideas.length === 0 && !isGenerating && (
           <div className="text-center py-12 space-y-4 opacity-40">
-            <i className="fa-solid fa-lightbulb text-6xl text-[#d4cdd7]"></i>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#d4cdd7]">
+            <i className="fa-solid fa-lightbulb text-6xl text-[#888]"></i>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#888]">
               Ready to generate ideas
             </p>
-            <p className="text-[10px] text-[#d4cdd7] max-w-xs mx-auto">
+            <p className="text-[10px] text-[#888] max-w-xs mx-auto">
               AI will create 5 unique video concepts based on your brief. Accept the one you like or generate more.
             </p>
           </div>
@@ -145,10 +145,10 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
         {isGenerating && (
           <div className="text-center py-12 space-y-4 animate-pulse">
             <i className="fa-solid fa-gears fa-spin text-5xl text-[#91569c]"></i>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#d4cdd7]">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#888]">
               Generating concepts...
             </p>
-            <p className="text-[10px] text-[#d4cdd7]">Multiple AI models are brainstorming ideas</p>
+            <p className="text-[10px] text-[#888]">Multiple AI models are brainstorming ideas</p>
           </div>
         )}
 
@@ -156,12 +156,12 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
         {ideas.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-heading font-bold text-white uppercase tracking-wide">
+              <h3 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">
                 <i className="fa-solid fa-lightbulb text-[#91569c] mr-2"></i>
                 Concepts ({ideas.length})
               </h3>
               {pendingCount > 0 && (
-                <span className="text-[9px] font-bold text-[#edecec]/60 uppercase">
+                <span className="text-[9px] font-bold text-[#3a3a3a]/60 uppercase">
                   {pendingCount} pending
                 </span>
               )}
@@ -179,19 +179,19 @@ export const IdeaFactory: React.FC<IdeaFactoryProps> = ({
 
         {allRejected && !isGenerating && (
           <div className="text-center py-6 space-y-2">
-            <p className="text-[11px] text-[#d4cdd7]">All ideas rejected. Generate 5 more?</p>
+            <p className="text-[11px] text-[#888]">All ideas rejected. Generate 5 more?</p>
           </div>
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-600/60 bg-[#2d2633] flex-shrink-0 space-y-2">
+      <div className="p-4 border-t border-[#e0d6e3]/60 bg-[#edecec] flex-shrink-0 space-y-2">
         {!hasAccepted && (
           <button
             onClick={onGenerateIdeas}
             disabled={isGenerating}
             className={`w-full py-3 rounded-xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-lg active:scale-95 ${
               isGenerating
-                ? 'bg-[#3d3444]/50 text-[#edecec]/40 cursor-not-allowed'
+                ? 'bg-white/50 text-[#3a3a3a]/40 cursor-not-allowed'
                 : 'bg-[#91569c] hover:bg-[#91569c]/90 text-black'
             }`}
           >
