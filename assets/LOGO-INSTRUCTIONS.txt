@@ -1,0 +1,6 @@
+To use your attached logo:
+1. Copy your logo image file.
+2. Paste/save it as either:
+   - public\logo.png   (recommended), or
+   - assets\logo.png
+The app will load it automatically.

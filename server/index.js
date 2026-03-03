@@ -1,0 +1,317 @@
+/**
+ * Tensorax Studio - Vertex AI Image Generation Backend
+ *
+ * Serves /api/generate-image for Imagen 3 with subject reference support.
+ * Requires GOOGLE_PROJECT_ID and GOOGLE_APPLICATION_CREDENTIALS.
+ */
+
+import dotenv from "dotenv";
+import { resolve, dirname } from "path";
+import { existsSync } from "fs";
+import { fileURLToPath } from "url";
+import express from "express";
+import cors from "cors";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: resolve(process.cwd(), ".env") });
+dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+
+import { generateTensoraxFrame } from "./tensorax_api.js";
+import { generateWithDalle } from "./openai_imagen.js";
+import { runAutoGeneratePrompts } from "./prompt_api.js";
+import { generateKlingVideo } from "./klingService.js";
+import { listFiles, getFileMetadata, downloadFile, uploadFile, createFolder } from "./driveService.js";
+
+const app = express();
+const PORT = process.env.PORT || 5182;
+
+/** Resolve key path: relative paths are from process.cwd() (project root when you run npm run server). */
+function resolveKeyPath() {
+  const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  return resolve(process.cwd(), trimmed);
+}
+
+app.use(cors());
+app.use(express.json({ limit: "50mb" }));
+
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+
+app.post("/api/save-file", async (req, res) => {
+  try {
+    const { filename, data, folder } = req.body;
+    if (!filename || !data) return res.status(400).json({ error: "Missing filename or data." });
+
+    const outputDir = resolve(process.cwd(), folder || "output");
+    await mkdir(outputDir, { recursive: true });
+    const filePath = join(outputDir, filename);
+
+    if (data.startsWith("data:")) {
+      const match = data.match(/^data:[^;]+;base64,(.+)$/);
+      if (match) {
+        await writeFile(filePath, Buffer.from(match[1], "base64"));
+      } else {
+        await writeFile(filePath, data, "utf-8");
+      }
+    } else {
+      await writeFile(filePath, data, "utf-8");
+    }
+
+    console.log(`[Tensorax] Saved: ${filePath}`);
+    res.json({ path: filePath });
+  } catch (err) {
+    console.error("[Tensorax] Save failed:", err);
+    res.status(500).json({ error: err.message || "Save failed." });
+  }
+});
+
+app.post("/api/generate-image", async (req, res) => {
+  try {
+    const { prompt, aspectRatio, referenceImages, size } = req.body;
+
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({ error: "Missing or invalid prompt." });
+    }
+
+    const images = Array.isArray(referenceImages) ? referenceImages : [];
+    const charRef = images.length > 0 ? images[0] : null;
+
+    const dataUrl = await generateTensoraxFrame(
+      prompt,
+      aspectRatio || "9:16",
+      charRef
+    );
+
+    res.json({ dataUrl });
+  } catch (err) {
+    console.error("[Vertex Imagen]", err);
+    res.status(500).json({
+      error: err.message || "Image generation failed.",
+    });
+  }
+});
+
+app.post("/api/generate-image-openai", async (req, res) => {
+  try {
+    const { prompt, aspectRatio } = req.body;
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({ error: "Missing or invalid prompt." });
+    }
+    const dataUrl = await generateWithDalle(prompt, aspectRatio || "9:16");
+    res.json({ dataUrl });
+  } catch (err) {
+    console.error("[OpenAI DALL-E]", err);
+    res.status(500).json({ error: err.message || "Image generation failed." });
+  }
+});
+
+app.post("/api/generate-prompts", async (req, res) => {
+  try {
+    const { apiKey, analysisModel, copyModel, refImages, userNote } = req.body;
+    const result = await runAutoGeneratePrompts({
+      apiKey,
+      analysisModel: analysisModel || null,
+      copyModel: copyModel || null,
+      refImages: refImages || {},
+      userNote: userNote || "",
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("[prompt_api]", err);
+    res.status(500).json({ error: err.message || "Prompt generation failed." });
+  }
+});
+
+app.post("/api/generate-video-kling", async (req, res) => {
+  try {
+    const { apiKey, startImageUrl, endImageUrl, motionVideoUrl, prompt, duration, aspectRatio, generateAudio } = req.body;
+
+    // Fall back to server-side env var if client didn't send key
+    const resolvedApiKey = (apiKey || "").trim() || process.env.KLING_API_KEY || "";
+
+    const videoUrl = await generateKlingVideo({
+      apiKey: resolvedApiKey,
+      startImageUrl,
+      endImageUrl: endImageUrl || null,
+      motionVideoUrl: motionVideoUrl || null,
+      prompt,
+      duration: duration || "5",
+      aspectRatio: aspectRatio || "9:16",
+      generateAudio: !!generateAudio,
+      onProgress: (msg) => { console.log("[Kling]", msg); },
+    });
+    res.json({ videoUrl });
+  } catch (err) {
+    console.error("[Kling API]", err);
+    res.status(500).json({ error: err.message || "Kling video generation failed." });
+  }
+});
+
+// ─── Google Drive (zLibraries) ───────────────────────────────────────────────
+
+app.get("/api/drive/files", async (req, res) => {
+  try {
+    const { folderId, mimeType } = req.query;
+    const files = await listFiles(folderId || undefined, mimeType || undefined);
+    res.json({ files });
+  } catch (err) {
+    console.error("[Drive]", err);
+    res.status(500).json({ error: err.message || "Failed to list files." });
+  }
+});
+
+app.get("/api/drive/files/:fileId", async (req, res) => {
+  try {
+    const meta = await getFileMetadata(req.params.fileId);
+    res.json(meta);
+  } catch (err) {
+    console.error("[Drive]", err);
+    res.status(500).json({ error: err.message || "Failed to get file metadata." });
+  }
+});
+
+app.get("/api/drive/files/:fileId/download", async (req, res) => {
+  try {
+    const { exportMime } = req.query;
+    const content = await downloadFile(req.params.fileId, exportMime || undefined);
+    if (Buffer.isBuffer(content)) {
+      res.set("Content-Type", "application/octet-stream");
+      res.send(content);
+    } else {
+      res.set("Content-Type", exportMime || "text/plain");
+      res.send(content);
+    }
+  } catch (err) {
+    console.error("[Drive]", err);
+    res.status(500).json({ error: err.message || "Failed to download file." });
+  }
+});
+
+app.post("/api/drive/files", async (req, res) => {
+  try {
+    const { name, content, mimeType, folderId } = req.body;
+    if (!name || !content) {
+      return res.status(400).json({ error: "Missing name or content." });
+    }
+    const file = await uploadFile(name, content, mimeType || "text/plain", folderId || undefined);
+    res.json(file);
+  } catch (err) {
+    console.error("[Drive]", err);
+    res.status(500).json({ error: err.message || "Failed to upload file." });
+  }
+});
+
+app.post("/api/drive/folders", async (req, res) => {
+  try {
+    const { name, parentId } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "Missing folder name." });
+    }
+    const folder = await createFolder(name, parentId || undefined);
+    res.json(folder);
+  } catch (err) {
+    console.error("[Drive]", err);
+    res.status(500).json({ error: err.message || "Failed to create folder." });
+  }
+});
+
+// ─── Save Concept to Drive ──────────────────────────────────────────────────
+
+app.post("/api/save-concept", async (req, res) => {
+  try {
+    const { projectName, title, concept, parentFolderId } = req.body;
+    if (!projectName || !concept) {
+      return res.status(400).json({ error: "Missing projectName or concept." });
+    }
+
+    const parent = parentFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const folder = await createFolder(projectName, parent);
+
+    const docContent = [
+      `${projectName}`,
+      `${'='.repeat(projectName.length)}`,
+      '',
+      `Concept: ${title || 'Untitled'}`,
+      `${'-'.repeat(40)}`,
+      '',
+      concept,
+      '',
+      `---`,
+      `Generated by Tensorax Studio`,
+      `Date: ${new Date().toISOString().split('T')[0]}`,
+    ].join('\n');
+
+    const file = await uploadFile(
+      `${projectName} - Concept.txt`,
+      docContent,
+      'text/plain',
+      folder.id
+    );
+
+    res.json({ folder, file });
+  } catch (err) {
+    console.error("[SaveConcept]", err);
+    res.status(500).json({ error: err.message || "Failed to save concept." });
+  }
+});
+
+// ─── Health ──────────────────────────────────────────────────────────────────
+
+app.get("/api/health", (_req, res) => {
+  const hasProject = !!(process.env.GOOGLE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT);
+  const keyPath = resolveKeyPath();
+  const keyFileExists = keyPath ? existsSync(keyPath) : false;
+  const hasCreds = !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const hasDriveFolder = !!process.env.GOOGLE_DRIVE_FOLDER_ID;
+  res.json({
+    ok: hasProject && hasCreds && keyFileExists,
+    vertex: {
+      project: hasProject,
+      credentials: hasCreds,
+      keyFileExists,
+      ...(keyPath && !keyFileExists && { keyPathResolved: keyPath }),
+    },
+    drive: {
+      folderConfigured: hasDriveFolder,
+    },
+  });
+});
+
+// In production, serve the built React frontend (must be after all API routes)
+if (process.env.NODE_ENV === "production") {
+  const distPath = resolve(__dirname, "../dist");
+  app.use(express.static(distPath));
+  app.get("*", (_req, res) => {
+    res.sendFile(resolve(distPath, "index.html"));
+  });
+}
+
+app.listen(PORT, "0.0.0.0", () => {
+  const region = (process.env.GOOGLE_LOCATION || process.env.LOCATION || "us-central1").trim();
+  const keyPath = resolveKeyPath();
+  const keyFileExists = keyPath ? existsSync(keyPath) : false;
+
+  const projectId = process.env.GOOGLE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT;
+  console.log(`[Tensorax] Vertex AI backend running at http://localhost:${PORT}`);
+  console.log(`[Tensorax] Project ID: ${projectId || "(not set)"}`);
+  console.log(`[Tensorax] Region: ${region}`);
+  console.log(`[Tensorax] Key file: ${keyPath || "not set"} ${keyPath && existsSync(keyPath) ? "✓ found" : ""}`);
+  if (!process.env.GOOGLE_PROJECT_ID && !process.env.GOOGLE_CLOUD_PROJECT) {
+    console.warn("[Tensorax] GOOGLE_PROJECT_ID not set - image generation will fail.");
+  }
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    console.warn("[Tensorax] GOOGLE_APPLICATION_CREDENTIALS not set - Vertex image gen will fail.");
+  } else if (!keyFileExists) {
+    console.warn("[Tensorax] JSON key file not found - did you download it and set the path in .env?");
+    console.warn("[Tensorax]   GOOGLE_APPLICATION_CREDENTIALS=" + process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    console.warn("[Tensorax]   Resolved path: " + keyPath);
+    console.warn("[Tensorax]   → Permission Denied is usually a missing key. Create Key in GCP, download JSON, put path in .env.local");
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("[Tensorax] OPENAI_API_KEY not set - DALL-E 3 fallback will not work.");
+  }
+});

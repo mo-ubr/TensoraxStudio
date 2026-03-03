@@ -1,0 +1,8 @@
+{
+  "name": "TensorAx",
+  "description": "A high-end creative suite for generating 3x3 character/scene grids using Gemini 3 Pro and an integrated AI assistant.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

@@ -1,0 +1,111 @@
+---
+description: NEXT brand identity guidelines — logotype, typography, colour, CTAs, and asset references. Apply when generating prompts, building UI, or producing any creative output for the NEXT brand.
+alwaysApply: true
+---
+
+# NEXT Brand Identity
+
+Brand: **NEXT** (Next Plc, est. 1982)
+Guidelines source: https://www.nextguidelines.co.uk
+Contact: creative@next.co.uk
+Last updated: 14.10.24
+
+---
+
+## Logotype
+
+- The NEXT logotype is uppercase, custom-drawn (not typed in a font).
+- Logo font file: `NextLogoFontFinal.ttf` (Drive: BrandIdentity/Fonts/Next Display Fonts).
+- Available in **black on white** and **white on black**.
+- Only approved rotation: **90 degrees clockwise** (retail/carrier bags only; rarely digital).
+- Clear-space padding must always surround the logotype.
+- Never stretch, distort, recolour, add effects, or place on busy backgrounds.
+
+### Logo Files (Drive: BrandIdentity/Logo)
+
+| Variant | Format | File |
+|---------|--------|------|
+| Black on white | PNG | `Next_Logotype_2022_Black.png` |
+| White on black | PNG | `Next_Logotype_2022_White.png` |
+| Black RGB | JPG | `Next_Logotype_2022_FINAL_BLACK_RGB_HEX.jpg` |
+| White RGB | JPG | `Next_Logotype_2022_FINAL_WHITE_RGB_HEX.jpg` |
+| Black RGB | PSD | `Next_Logotype_2022_FINAL_BLACK_RGB_HEX.psd` |
+| White RGB | PSD | `Next_Logotype_2022_FINAL_WHITE_RGB_HEX.psd` |
+
+### Brand Partnerships
+
+- Primary lockup: **"BRAND AVAILABLE AT NEXT"**
+- Secondary lockup: **"SHOP BRAND"**
+
+---
+
+## Typography
+
+### Font Families
+
+| Family | Use | Weights |
+|--------|-----|---------|
+| **Next Display Extended** (sans-serif) | Primary — headings, body, UI | Light, Regular, Book, Medium, Bold, Extrabold |
+| **Next Display** (sans-serif) | Condensed variant | Light, Regular, Book, Medium, Bold, Extrabold |
+| **Next Serif** | Headlines, editorial | Light, Book, Regular, Medium, Bold |
+
+All fonts available in OTF, TTF, WOFF, and WOFF2 (Drive: BrandIdentity/Fonts).
+
+### Type Hierarchy
+
+| Style | Font | Tracking | Line Height |
+|-------|------|----------|-------------|
+| Large Heading | Next Display Extended **Bold** | 5% | 100% |
+| Large Heading Alt | Next Display Extended **Medium** | 2% | 100% |
+| Medium Heading | Next Display Extended **Bold** | 10% | 100% |
+| Medium Heading Alt | Next Display Extended **Regular** | 0% | 150% |
+| Small Heading | Next Display Extended **Medium** | 10% | 150% |
+| Paragraph | Next Display Extended **Regular** | 0% | 150% |
+| Small Paragraph | Next Display Extended **Regular** | 0% | 150% |
+
+### Type Rules
+
+- **Uppercase headings** are standard.
+- Lowercase headings only for conversational/softer messaging, in very small amounts.
+- Scale typography in **140% increments** for consistent spacing.
+- Within a sentence, go up or down **one weight** for emphasis hierarchy.
+
+---
+
+## Colour
+
+Black and white has been the brand bedrock since 1982.
+
+| Name | HEX | RGB | CMYK | Pantone |
+|------|-----|-----|------|---------|
+| **White** | `#FFFFFF` | 255 / 255 / 255 | 0 / 0 / 0 / 0 | Brilliant White |
+| **Black** | `#000000` | 0 / 0 / 0 | 0 / 0 / 0 / 100 | Black |
+
+Logo usage: white on black **or** black on white — no other colour combinations.
+
+---
+
+## Calls to Action (CTAs)
+
+- Box height = **2.5 x font size**
+- Horizontal padding = **1.5em**
+- Font weight: **Medium**
+- Letter-spacing: **2%**
+- Use `text-decoration-skip-ink: auto` for underlined text CTAs.
+
+---
+
+## Asset Locations (Google Drive)
+
+All brand assets live in the shared Drive folder `12WnbWJDY0vSitMdOGwar58McNeCf-b3y`:
+
+| Folder | Contents |
+|--------|----------|
+| `BrandIdentity/Logo/` | Logo files (PNG, JPG, PSD, PDF) and templates |
+| `BrandIdentity/Fonts/` | Next Display, Next Display Extended, NextLogoFont |
+| `BrandIdentity/BrandGuidelines/` | Brand Guidelines PDFs, Advert Examples |
+| `Collections/` | Collection assets |
+| `Examples/` | Reference examples |
+| `VM/` | Visual merchandising |
+
+Corporate imagery: https://media.next.co.uk/section/corporate/corporate-imagery?lang=eng&collection=stores

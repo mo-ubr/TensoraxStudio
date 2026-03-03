@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@source "./*.{tsx,ts,jsx,js}";
+@source "./services/**/*.{tsx,ts}";
+@source "./components/**/*.{tsx,ts}";
+
+@theme {
+  --color-accent: #E6C01F;
+  --font-family-heading: "Poppins", sans-serif;
+  --font-family-body: "Sora", sans-serif;
+}
+
+:root {
+  --accent: #E6C01F;
+  --body-text: #D7D7D7;
+  --bg-dark: #454545;
+  --bg-light: #B0B0B0;
+  --title-color: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: var(--body-text);
+  font-family: "Sora", sans-serif;
+}
+
+.font-heading {
+  font-family: "Poppins", sans-serif;
+  font-weight: 300;
+  color: var(--title-color);
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #B0B0B0; }
+::-webkit-scrollbar-thumb { background: #606060; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #707070; }

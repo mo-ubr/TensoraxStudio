@@ -1,0 +1,12 @@
+---
+description: Check previous chat transcripts at the start of each session for continuity
+alwaysApply: true
+---
+
+# Session Continuity
+
+- At the start of every new session, check the agent transcripts folder for previous chats before doing exploratory work from scratch.
+- Use past transcripts to recall: the project stack, how to run the app, what was worked on, and any decisions made.
+- If the user says "continue", "pick up where we left off", or similar, read the most recent transcript(s) in detail first.
+- Avoid re-discovering things (project structure, ports, commands) that are already known from prior sessions.
+- Key facts for this project: **React + Vite + Tailwind + Express**, dev server on port **5180**, backend on port **5182**, start with `npm run dev` or `npm run dev:full`.

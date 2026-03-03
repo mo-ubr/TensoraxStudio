@@ -1,0 +1,12 @@
+---
+description: Do everything you have access to; MARIELLA TO DO only for things you cannot do (e.g. Google Console); end with DONE
+alwaysApply: true
+---
+
+# Do Everything / MARIELLA TO DO / DONE
+
+- **You do everything you have access to** (commands, servers, builds, installs, file edits, running the app, opening the browser, etc.). The user only does things you cannot do.
+- **Things you don't have access to** (examples: Google Cloud Console, Google AI Studio, signing in to external sites, approving billing, creating API keys in a web UI): when the user must do these, prefix that instruction with the exact line: **MARIELLA TO DO:** (always visible in your reply).
+- When you are ready on your side (nothing left for you to do for the request), end your response with the exact word: **DONE** (always visible in your reply).
+- **Every response must end with either DONE or MARIELLA TO DO:** never finish a reply without one of these. Use DONE when you have completed everything on your side; use MARIELLA TO DO: (followed by the task) when the user must do something you cannot do.
+- Apply this in all sessions and all projects.
