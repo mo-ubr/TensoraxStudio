@@ -15,28 +15,100 @@ import { NewProjectWizard, getScopeRoute, type NewProjectData } from './componen
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
 
+const API_MODELS = [
+  { group: 'Gemini', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-3-flash-preview', 'gemini-3-pro-image-preview'] },
+  { group: 'Claude', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-3-5'] },
+  { group: 'Imagen', models: ['imagen-3.0-capability', 'imagen-4.0-generate-preview'] },
+  { group: 'Video', models: ['veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
+];
+
 const ApiKeyButton: React.FC = () => {
   const [hasKey, setHasKey] = useState(() => GeminiService.hasApiKey());
+  const [open, setOpen] = useState(false);
+  const [key, setKey] = useState('');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    try { return localStorage.getItem('tensorax_active_model') || 'gemini-2.5-flash'; } catch { return 'gemini-2.5-flash'; }
+  });
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const handleSave = () => {
+    if (key.trim()) {
+      GeminiService.setApiKey(key.trim());
+      setHasKey(true);
+    }
+    try { localStorage.setItem('tensorax_active_model', selectedModel); } catch { /* ignore */ }
+    setOpen(false);
+    setKey('');
+    if (key.trim()) window.location.reload();
+  };
+
   return (
-    <button
-      onClick={() => {
-        const key = prompt('Enter your Gemini API key:');
-        if (key?.trim()) {
-          GeminiService.setApiKey(key.trim());
-          setHasKey(true);
-          window.location.reload();
-        }
-      }}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors border ${
-        hasKey
-          ? 'bg-[#f6f0f8] border-[#ceadd4] text-[#91569c] hover:bg-[#eadcef]'
-          : 'bg-[#91569c] border-[#91569c] text-white hover:bg-[#5c3a62] animate-pulse'
-      }`}
-      title={hasKey ? 'API key set — click to change' : 'Set Gemini API key'}
-    >
-      <i className={`fa-solid fa-key text-[8px]`}></i>
-      {hasKey ? 'API' : 'Set Key'}
-    </button>
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors border ${
+          hasKey
+            ? 'bg-[#f6f0f8] border-[#ceadd4] text-[#91569c] hover:bg-[#eadcef]'
+            : 'bg-[#91569c] border-[#91569c] text-white hover:bg-[#5c3a62] animate-pulse'
+        }`}
+        title={hasKey ? 'API settings — click to change' : 'Set API key'}
+      >
+        <i className="fa-solid fa-key text-[8px]"></i>
+        {hasKey ? 'API' : 'Set Key'}
+      </button>
+
+      {open && (
+        <div ref={modalRef} className="absolute top-full right-0 mt-2 w-80 bg-white border border-[#e0d6e3] rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
+          <div className="px-4 py-3 border-b border-[#e0d6e3]">
+            <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide">API Settings</h3>
+          </div>
+          <div className="p-4 space-y-3">
+            <div>
+              <label className="block text-[9px] font-bold text-[#5c3a62] uppercase tracking-wider mb-1">Model</label>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#5c3a62] font-bold outline-none focus:ring-1 focus:ring-[#91569c]/30 cursor-pointer"
+              >
+                {API_MODELS.map(g => (
+                  <optgroup key={g.group} label={g.group}>
+                    {g.models.map(m => <option key={m} value={m}>{m}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <p className="text-[8px] text-[#888] mt-1">Active: <span className="font-bold text-[#91569c]">{selectedModel}</span></p>
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold text-[#5c3a62] uppercase tracking-wider mb-1">API Key</label>
+              <input
+                type="password"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder={hasKey ? '••••••• (already set, enter new to change)' : 'Paste your API key...'}
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#ceadd4] outline-none focus:ring-1 focus:ring-[#91569c]/30"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
+              />
+              <p className="text-[8px] text-[#888] mt-1">Gemini → Google AI key. Claude → Anthropic key.</p>
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
+              <button onClick={() => { setOpen(false); setKey(''); }} className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleSave} className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
