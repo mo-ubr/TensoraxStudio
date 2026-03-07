@@ -44,19 +44,11 @@ interface ImagesScreenProps {
   activeProject?: Project | null;
 }
 
-const STORAGE_KEY = 'tensorax_image_assets';
-const IMAGES_MODEL_KEY = 'tensorax_images_model';
-const IMAGES_APIKEY_KEY = 'tensorax_images_apiKey';
+const loadAssets = (): GeneratedAsset[] => [];
 
-const loadAssets = (): GeneratedAsset[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-};
+type ParsedScreenplay = { scenes: { title: string; scene: string; prompt: string }[] };
 
-const parseScreenplay = (): { scenes: { title: string; scene: string; prompt: string }[] } => {
-  const raw = localStorage.getItem('tensorax_screenplay') || '';
+const parseScreenplayText = (raw: string): ParsedScreenplay => {
   if (!raw) return { scenes: [] };
   const blocks = raw.split(/(?=###\s*Scene\s*\d)/i).filter(b => b.trim());
   return {
@@ -74,21 +66,138 @@ const parseScreenplay = (): { scenes: { title: string; scene: string; prompt: st
 };
 
 const extractCharactersFromScreenplay = (scenes: { title: string; scene: string; prompt: string }[]): string[] => {
-  const characterPatterns = /\b(granny|grandma|grandmother|grandad|grandpa|grandfather|uncle|auntie|aunt|mother|father|parent|child|baby|toddler|newborn)\b/gi;
+  const characterPatterns = /\b(granny|grandma|grandmother|grandad|grandpa|grandfather|uncle|auntie|aunt|mother|father|woman|man|child|children|baby|toddler|newborn|boy|girl|infant|son|daughter|friend)\b/gi;
   const found = new Set<string>();
   scenes.forEach(s => {
     const matches = (s.scene + ' ' + s.prompt).matchAll(characterPatterns);
-    for (const m of matches) found.add(m[1].toLowerCase());
+    for (const m of matches) {
+      let name = m[1].toLowerCase();
+      if (CHILD_VARIANTS.has(name)) name = 'child';
+      if (!SKIP_ROLES.has(name)) found.add(name);
+    }
   });
   return Array.from(found);
+};
+
+interface CharacterDescription {
+  name: string;
+  description: string;
+  scenes: string[];
+}
+
+const CHILD_VARIANTS = new Set(['child', 'baby', 'toddler', 'newborn', 'boy', 'girl', 'infant', 'son', 'daughter', 'children']);
+const SKIP_ROLES = new Set(['teenager', 'teen', 'narrator', 'parent', 'adult']);
+
+const ROLE_PROFILES: Record<string, { age: string; look: string }> = {
+  grandma:      { age: '55-62', look: 'warm, soft features, shoulder-length silver-grey hair with gentle waves, reading glasses on a chain, smile lines around blue eyes, wearing a soft lavender cardigan' },
+  grandmother:  { age: '55-62', look: 'warm, soft features, shoulder-length silver-grey hair, reading glasses, blue eyes, lavender cardigan' },
+  granny:       { age: '55-62', look: 'warm, soft features, silver-grey hair, gentle smile, blue eyes' },
+  grandpa:      { age: '60-68', look: 'distinguished, short grey hair neatly combed, square jaw, brown eyes, kind weathered face, wearing a navy knit jumper over collared shirt' },
+  grandfather:  { age: '60-68', look: 'distinguished, short grey hair, square jaw, brown eyes, weathered face, navy jumper' },
+  grandad:      { age: '60-68', look: 'distinguished, grey hair, brown eyes, kind face, jumper' },
+  aunt:         { age: '30-35', look: 'youthful, stylish, long straight dark-blonde hair, green eyes, high cheekbones, slim build, wearing a fitted denim jacket over white blouse' },
+  auntie:       { age: '30-35', look: 'youthful, long dark-blonde hair, green eyes, slim, denim jacket' },
+  uncle:        { age: '35-42', look: 'friendly, short brown hair, hazel eyes, athletic build, stubble, casual polo shirt' },
+  mother:       { age: '30-35', look: 'warm, medium-length auburn hair in a loose bun, hazel eyes, natural makeup, wearing a cream knit sweater' },
+  mum:          { age: '30-35', look: 'warm, auburn hair, hazel eyes, cream sweater' },
+  father:       { age: '32-38', look: 'dependable, short dark-brown hair, blue-grey eyes, clean-shaven, wearing a casual button-down shirt' },
+  dad:          { age: '32-38', look: 'short dark-brown hair, blue-grey eyes, button-down shirt' },
+  woman:        { age: '30-35', look: 'confident, medium-length chestnut-brown wavy hair, warm brown eyes, natural freckles across nose, wearing an elegant cream blouse' },
+  man:          { age: '35-42', look: 'approachable, sandy-brown hair slightly tousled, light-blue eyes, strong jawline, light stubble, wearing an olive linen shirt with sleeves rolled up' },
+  friend:       { age: '28-35', look: 'energetic, short auburn curly hair, bright hazel eyes, friendly open smile showing teeth, wearing a casual navy zip-up jacket' },
+  child:        { age: 'newborn to 8-10 years', look: 'light-brown hair with subtle blonde highlights, blue eyes, button nose, fair skin with rosy cheeks' },
+};
+
+const extractCharacterDescriptions = (scenes: { title: string; scene: string; prompt: string }[]): CharacterDescription[] => {
+  const charMap = new Map<string, { descriptions: string[]; scenes: string[] }>();
+  const childAgeAppearances: { age: string; sceneTitle: string; description: string }[] = [];
+  const namePatterns = /\b(Grandma|Grandmother|Granny|Grandpa|Grandfather|Grandad|Uncle|Auntie|Aunt|Mother|Father|Mum|Dad|Parent|Woman|Man|Child|Baby|Toddler|Newborn|Teenager|Teen|Boy|Girl|Friend|Narrator|Son|Daughter|Infant)\b/gi;
+  const agePatterns = /\b(?:age[d]?\s*)?(\d{1,2})\s*[-–to]*\s*(\d{1,2})?\s*(?:year|month|week)s?\s*old\b|\bnewborn\b|\btoddler\b|\bpre-?teen\b|\bschool[\s-]?age/gi;
+
+  scenes.forEach(s => {
+    const fullText = s.scene + ' ' + s.prompt;
+    const matches = fullText.matchAll(namePatterns);
+    const namesInScene = new Set<string>();
+    for (const m of matches) {
+      let name = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+      if (SKIP_ROLES.has(name.toLowerCase())) continue;
+      if (CHILD_VARIANTS.has(name.toLowerCase())) name = 'Child';
+      namesInScene.add(name);
+    }
+
+    if (namesInScene.has('Child')) {
+      const ageMatches = fullText.matchAll(agePatterns);
+      for (const am of ageMatches) {
+        const ageStr = am[0].toLowerCase();
+        if (/teen/i.test(ageStr)) continue;
+        const bestSentences = fullText.split(/[.!]\s+/).filter(sent =>
+          sent.includes(am[0]) || /child|baby|toddler|newborn/i.test(sent)
+        ).slice(0, 2).join('. ');
+        childAgeAppearances.push({ age: am[0].trim(), sceneTitle: s.title, description: bestSentences || fullText.slice(0, 300) });
+      }
+    }
+
+    for (const name of namesInScene) {
+      if (name === 'Child') continue;
+      if (!charMap.has(name)) charMap.set(name, { descriptions: [], scenes: [] });
+      const entry = charMap.get(name)!;
+      entry.scenes.push(s.title);
+      const sentences = fullText.split(/[.!]\s+/);
+      for (const sentence of sentences) {
+        if (new RegExp(`\\b${name}\\b`, 'i').test(sentence) && sentence.length > 30) {
+          entry.descriptions.push(sentence.trim());
+        }
+      }
+    }
+  });
+
+  const results: CharacterDescription[] = [];
+
+  for (const [name, data] of charMap) {
+    const bestDesc = data.descriptions.sort((a, b) => b.length - a.length).slice(0, 3).join('. ');
+    const profile = ROLE_PROFILES[name.toLowerCase()];
+    const profileText = profile ? `EXACT APPEARANCE: Age ${profile.age}. ${profile.look}.` : '';
+    const fullDesc = [bestDesc, profileText].filter(Boolean).join('. ');
+    if (fullDesc) results.push({ name, description: fullDesc, scenes: data.scenes });
+  }
+
+  const seenAges = new Set<string>();
+  if (childAgeAppearances.length > 0) {
+    for (const appearance of childAgeAppearances) {
+      const ageKey = appearance.age.replace(/\s+/g, ' ').toLowerCase();
+      if (seenAges.has(ageKey)) continue;
+      seenAges.add(ageKey);
+      results.push({
+        name: `Child — ${appearance.age}`,
+        description: `${appearance.description}. THIS IS THE SAME CHILD at age ${appearance.age}. Generate a portrait showing the child at exactly this age with age-appropriate features, body proportions, and clothing.`,
+        scenes: [appearance.sceneTitle],
+      });
+    }
+  } else {
+    results.push({
+      name: 'Child — newborn',
+      description: 'A newborn baby (0-1 months). THIS IS THE SAME CHILD as all other child images — show age-appropriate newborn features.',
+      scenes: ['Scene 1'],
+    });
+    results.push({
+      name: 'Child — 2-3 years',
+      description: 'A toddler (2-3 years old). THIS IS THE SAME CHILD — show age-appropriate toddler features, walking, curious expression.',
+      scenes: ['Scene 2'],
+    });
+    results.push({
+      name: 'Child — 5-6 years',
+      description: 'A young child (5-6 years old). THIS IS THE SAME CHILD — show age-appropriate features, confident, active.',
+      scenes: ['Scene 3'],
+    });
+  }
+
+  return results;
 };
 
 export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, activeBrandId, activeProject }) => {
   const [step, setStep] = useState<ImageStep>('characters');
   const [assets, setAssets] = useState<GeneratedAsset[]>(loadAssets);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [imgModel, setImgModel] = useState(() => localStorage.getItem(IMAGES_MODEL_KEY) || '');
-  const [imgApiKey, setImgApiKey] = useState(() => localStorage.getItem(IMAGES_APIKEY_KEY) || '');
+  const [charBrief, setCharBrief] = useState('Caucasian family, single character, green screen background');
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptDraft, setPromptDraft] = useState('');
   const [characters, setCharacters] = useState<CharacterProfile[]>(loadCharacters);
@@ -96,14 +205,22 @@ export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, acti
   const assetsRef = React.useRef(assets);
   assetsRef.current = assets;
   const cancelledRef = React.useRef(new Set<string>());
+  const [screenplay, setScreenplay] = useState<ParsedScreenplay>({ scenes: [] });
 
-  const screenplay = parseScreenplay();
+  useEffect(() => {
+    if (!activeProject) return;
+    DB.getMetadata(activeProject.id)
+      .then(meta => {
+        if (meta.screenplay && typeof meta.screenplay === 'string') {
+          setScreenplay(parseScreenplayText(meta.screenplay));
+        }
+      })
+      .catch(() => {});
+  }, [activeProject?.id]);
+
   const activeBrand = brands.find(b => b.id === activeBrandId);
   const detectedCharacters = extractCharactersFromScreenplay(screenplay.scenes);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
-  }, [assets]);
 
   useEffect(() => {
     saveCharacters(characters);
@@ -115,8 +232,8 @@ export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, acti
     stopAllGenerating();
     setIsGeneratingPrompt(true);
     try {
-      const apiKey = imgApiKey || getApiKeyForType('image') || getApiKeyForType('copy') || getApiKeyForType('analysis') || '';
-      if (!apiKey) throw new Error('No Google AI key found. Set one in Scenes (Image, Copy, or Analysis key) or in the Images robot icon.');
+      const apiKey = getApiKeyForType('image') || getApiKeyForType('analysis') || '';
+      if (!apiKey) throw new Error('No Google AI key found. Set one in Project Settings → Image Generation.');
 
       const { GoogleGenAI } = await import('@google/genai');
       const ai = new GoogleGenAI({ apiKey });
@@ -142,6 +259,128 @@ ${rawTraits}`,
     if (!char) return;
     const assetId = addAsset('characters', label || char.name, prompt, charId);
     generateImage(assetId);
+  };
+
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [autoGenProgress, setAutoGenProgress] = useState('');
+
+  const handleAutoGenerateAll = async () => {
+    const charDescs = extractCharacterDescriptions(screenplay.scenes);
+    if (charDescs.length === 0) {
+      alert('No characters found in the screenplay. Generate a screenplay first.');
+      return;
+    }
+
+    const apiKey = getApiKeyForType('image') || getApiKeyForType('analysis') || '';
+    if (!apiKey) {
+      alert('Set a Google AI API key in Project Settings → Image Generation.');
+      return;
+    }
+
+    setIsAutoGenerating(true);
+
+    // Clear old auto-generated assets
+    setAssets(prev => prev.filter(a => a.type !== 'characters'));
+    assetsRef.current = assetsRef.current.filter(a => a.type !== 'characters');
+
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const brief = charBrief.trim();
+
+    // Create/update character profiles
+    const charProfiles: CharacterProfile[] = [];
+    for (const desc of charDescs) {
+      const existing = characters.find(c => c.name.toLowerCase() === desc.name.toLowerCase());
+      if (existing) {
+        charProfiles.push(existing);
+      } else {
+        charProfiles.push({
+          id: `char-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: desc.name, photoUrls: [], wardrobeUrls: [],
+          traits: { gender: '', ageRange: '', ethnicity: '', build: '', faceShape: '', skinTone: '', hairLength: '', hairTexture: '', hairColour: '', eyeShape: '', eyeColour: '', noseShape: '', lipShape: '', distinguishing: '' },
+          source: 'new',
+        });
+      }
+    }
+    setCharacters(charProfiles);
+
+    for (let i = 0; i < charDescs.length; i++) {
+      const desc = charDescs[i];
+      const char = charProfiles[i];
+
+      // Step 1: Generate prompt
+      setAutoGenProgress(`Writing prompt for ${desc.name} (${i + 1}/${charDescs.length})...`);
+      let prompt = '';
+      try {
+        const castingBrief = brief || 'Caucasian family, single character, green screen background';
+        const isChildAge = desc.name.startsWith('Child —');
+        const profile = ROLE_PROFILES[desc.name.toLowerCase()] || (isChildAge ? ROLE_PROFILES['child'] : null);
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: `Write a single AI image generation prompt for a character portrait based on a screenplay.
+
+CHARACTER: ${desc.name}
+SCREENPLAY SCENE: ${desc.scenes.join(', ')}
+${profile ? `\nMANDATORY PHYSICAL APPEARANCE (use EXACTLY these features — do NOT change them):
+Age: ${profile.age}
+Look: ${profile.look}` : ''}
+
+SCREENPLAY CONTEXT (use for clothing, expression, pose ONLY):
+${desc.description}
+
+CASTING DIRECTION: ${castingBrief}
+
+CRITICAL RULES:
+1. Ethnicity: MUST be Caucasian/White European. No exceptions.
+2. Physical features: Use the MANDATORY PHYSICAL APPEARANCE above exactly — hair colour, eye colour, build, distinguishing features. Each character MUST look like a DIFFERENT person.
+3. Only ONE person in frame.
+4. Clothing: From the screenplay description.
+5. Age: ${isChildAge ? `EXACTLY ${desc.name.replace('Child — ', '')}. Correct body proportions for this age.` : profile ? `${profile.age} years old.` : 'As described.'}
+6. Background: ${castingBrief.includes('green screen') ? 'Plain green screen.' : 'As specified.'}
+7. Format: Photorealistic cinematic portrait, 9:16 vertical, high detail face.
+
+Output ONLY the prompt. No explanations.`,
+        });
+        prompt = typeof response.text === 'string' ? response.text.trim() : '';
+      } catch (err: any) {
+        console.error(`Prompt gen failed for ${desc.name}:`, err);
+        const fb = brief || 'Caucasian family, single character, green screen background';
+        prompt = `Photorealistic cinematic portrait of ${desc.name}. ${fb}. Single person only, nobody else in frame. 9:16 vertical format, high detail facial features.`;
+      }
+
+      if (!prompt) {
+        const fb = brief || 'Caucasian family, single character, green screen background';
+        prompt = `Photorealistic cinematic portrait of ${desc.name}. ${fb}. Single person only, nobody else in frame. 9:16 vertical format, high detail facial features.`;
+      }
+
+      // Step 2: Create asset and generate image
+      setAutoGenProgress(`Generating image for ${desc.name} (${i + 1}/${charDescs.length})...`);
+      const assetId = `characters-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setAssets(prev => [...prev, { id: assetId, type: 'characters' as ImageStep, label: char.name, prompt, imageUrl: null, isGenerating: true, charId: char.id }]);
+
+      try {
+        const url = await generateImageWithCurrentProvider({
+          prompt,
+          size: '1024x1024' as any,
+          aspectRatio: '9:16' as any,
+          referenceImages: [],
+        });
+        setAssets(prev => prev.map(a => a.id === assetId ? { ...a, imageUrl: url, isGenerating: false } : a));
+
+        if (activeProject && url) {
+          const filename = `${desc.name.replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')}.png`;
+          DB.saveProjectFile(activeProject.id, filename, url, 'characters').catch(e => console.warn('[AutoGen] Save failed:', e));
+        }
+      } catch (imgErr: any) {
+        console.error(`Image gen failed for ${desc.name}:`, imgErr);
+        setAssets(prev => prev.map(a => a.id === assetId ? { ...a, isGenerating: false } : a));
+      }
+
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    setIsAutoGenerating(false);
+    setAutoGenProgress('');
   };
 
   const addAsset = (type: ImageStep, label: string, prompt: string, charId?: string) => {
@@ -177,6 +416,11 @@ ${rawTraits}`,
       });
       if (cancelledRef.current.has(assetId)) return;
       updateAsset(assetId, { imageUrl: url, isGenerating: false });
+
+      if (activeProject && url) {
+        const filename = `${asset.label.replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')}.png`;
+        DB.saveProjectFile(activeProject.id, filename, url, 'characters').catch(e => console.warn('[Images] Auto-save failed:', e));
+      }
     } catch (err: any) {
       if (cancelledRef.current.has(assetId)) return;
       updateAsset(assetId, { isGenerating: false });
@@ -239,59 +483,19 @@ ${rawTraits}`,
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowKeyModal(!showKeyModal)}
-            className={`p-1.5 rounded-lg transition-colors relative ${imgApiKey ? 'text-[#91569c]' : 'text-red-400/70 hover:text-red-400'}`}
-            title={imgApiKey ? `Image AI: ${imgModel || 'gemini-2.0-flash-exp'}` : 'Set Image AI model & key'}
-          >
-            <i className="fa-solid fa-robot text-xs"></i>
-            {!imgApiKey && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-400 rounded-full"></span>}
-          </button>
+          {(() => {
+            const hasKey = !!(getApiKeyForType('image') || getApiKeyForType('analysis'));
+            const model = (() => { try { return localStorage.getItem('tensorax_image_model')?.trim() || 'gemini-3-flash-image'; } catch { return 'gemini-3-flash-image'; } })();
+            return (
+              <span className={`text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1.5 ${hasKey ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-500 border border-red-200'}`}>
+                <i className={`fa-solid ${hasKey ? 'fa-circle-check' : 'fa-circle-xmark'} text-[7px]`}></i>
+                {model}
+              </span>
+            );
+          })()}
           <span className="text-[10px] font-black uppercase tracking-widest text-[#888]/60">Images</span>
         </div>
       </header>
-
-      {showKeyModal && (
-        <div className="px-5 py-3 border-b border-[#ceadd4] bg-[#f6f0f8] flex-shrink-0">
-          <div className="max-w-lg mx-auto space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] font-black uppercase tracking-wider text-[#91569c]">
-                <i className="fa-solid fa-robot text-[8px] mr-1"></i>
-                Image Generation AI
-              </span>
-              <button onClick={() => setShowKeyModal(false)} className="text-[#888]/40 hover:text-[#888]">
-                <i className="fa-solid fa-xmark text-[10px]"></i>
-              </button>
-            </div>
-            <div>
-              <label className="block text-[8px] font-bold text-[#888]/70 uppercase tracking-wide mb-0.5">Model</label>
-              <input type="text" value={imgModel} onChange={(e) => setImgModel(e.target.value)} placeholder="gemini-2.0-flash-exp" className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
-            </div>
-            <div>
-              <label className="block text-[8px] font-bold text-[#888]/70 uppercase tracking-wide mb-0.5">API Key</label>
-              <p className="text-[7px] text-[#888]/40 mb-0.5">Google AI key. Leave blank to use the same key as Scenes.</p>
-              <input type="password" value={imgApiKey} onChange={(e) => setImgApiKey(e.target.value)} placeholder="Enter your Google AI API key..." className="w-full bg-white border border-[#ceadd4] rounded px-2.5 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/50 focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
-            </div>
-            <button
-              onClick={() => {
-                localStorage.setItem(IMAGES_MODEL_KEY, imgModel);
-                localStorage.setItem(IMAGES_APIKEY_KEY, imgApiKey);
-                setShowKeyModal(false);
-              }}
-              className="w-full mt-2 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] transition-all flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-floppy-disk text-[9px]"></i>
-              Save
-            </button>
-            {imgApiKey && (
-              <div className="flex items-center gap-1.5 pt-1">
-                <i className="fa-solid fa-circle-check text-green-400 text-[8px]"></i>
-                <span className="text-[8px] text-green-400/80">Key saved — {imgModel || 'gemini-2.0-flash-exp'}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <nav className="flex items-center justify-center gap-1 px-4 py-2 flex-shrink-0">
         {STEP_META.map((s, i) => {
@@ -326,6 +530,33 @@ ${rawTraits}`,
                 </h2>
                 <p className="text-[9px] text-[#888]/50 mt-1">Build each character visually or upload a reference photo.</p>
               </div>
+              {screenplay.scenes.length > 0 && (
+                <div className="p-3 border-b border-[#ceadd4] bg-[#f6f0f8]/50 flex-shrink-0 space-y-2">
+                  <div>
+                    <label className="block text-[8px] font-black text-[#888] uppercase tracking-wider mb-1">Character Brief</label>
+                    <input
+                      type="text"
+                      value={charBrief}
+                      onChange={(e) => setCharBrief(e.target.value)}
+                      placeholder="e.g. Caucasian family, diverse cast, Asian family..."
+                      className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#888]/40 outline-none focus:ring-1 focus:ring-[#91569c]/30"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAutoGenerateAll}
+                    disabled={isAutoGenerating}
+                    className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                  >
+                    <i className={`fa-solid ${isAutoGenerating ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[9px]`}></i>
+                    {isAutoGenerating ? autoGenProgress : 'Auto-Generate All Characters'}
+                  </button>
+                  {!isAutoGenerating && (
+                    <p className="text-[8px] text-[#888] text-center">
+                      {extractCharacterDescriptions(screenplay.scenes).length} characters from screenplay — brief applies to all
+                    </p>
+                  )}
+                </div>
+              )}
               <CharacterBuilder
                 characters={characters}
                 onChange={setCharacters}
@@ -479,7 +710,7 @@ ${rawTraits}`,
                         )}
                         <div className="flex items-center gap-1.5 mt-2">
                           <button onClick={() => generateImage(asset.id)} disabled={asset.isGenerating}
-                            className="flex-1 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-wider bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1">
+                            className="flex-1 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1">
                             <i className={`fa-solid ${asset.isGenerating ? 'fa-spinner fa-spin' : asset.imageUrl ? 'fa-rotate-right' : 'fa-bolt'} text-[7px]`}></i>
                             {asset.isGenerating ? 'Working...' : asset.imageUrl ? 'Regen' : 'Generate Image'}
                           </button>

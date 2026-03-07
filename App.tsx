@@ -6,6 +6,7 @@ import { ChatBot } from './components/ChatBot';
 import { ConceptScreen } from './components/ConceptScreen';
 import { ImagesScreen } from './components/ImagesScreen';
 import { ProjectsScreen } from './components/ProjectsScreen';
+import { ProjectSettings } from './components/ProjectSettings';
 import { GridImage, ImageSize, AspectRatio, GridTheme, ReferenceInput, VideoState, BrandProfile } from './types';
 import { BrandSelector } from './components/BrandSelector';
 import { loadBrands, saveBrands, getActiveBrandId, setActiveBrandId } from './services/brandData';
@@ -19,96 +20,39 @@ const API_MODELS = [
   { group: 'Gemini', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-3-flash-preview', 'gemini-3-pro-image-preview'] },
   { group: 'Claude', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-3-5'] },
   { group: 'Imagen', models: ['imagen-3.0-capability', 'imagen-4.0-generate-preview'] },
-  { group: 'Video', models: ['veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
+  { group: 'Video', models: ['seedance-2.0', 'veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
 ];
 
-const ApiKeyButton: React.FC = () => {
-  const [hasKey, setHasKey] = useState(() => GeminiService.hasApiKey());
-  const [open, setOpen] = useState(false);
-  const [key, setKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState(() => {
-    try { return localStorage.getItem('tensorax_active_model') || 'gemini-2.5-flash'; } catch { return 'gemini-2.5-flash'; }
-  });
-  const modalRef = useRef<HTMLDivElement>(null);
+const hasKeyForSlot = (baseKey: string, modelKey: string): boolean => {
+  try {
+    const model = localStorage.getItem(modelKey)?.trim();
+    if (model && localStorage.getItem(`${baseKey}__${model}`)?.trim()) return true;
+    return !!(localStorage.getItem(baseKey)?.trim());
+  } catch { return false; }
+};
 
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [open]);
-
-  const handleSave = () => {
-    if (key.trim()) {
-      GeminiService.setApiKey(key.trim());
-      setHasKey(true);
-    }
-    try { localStorage.setItem('tensorax_active_model', selectedModel); } catch { /* ignore */ }
-    setOpen(false);
-    setKey('');
-    if (key.trim()) window.location.reload();
-  };
+const ApiKeyButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
+  const hasKeys = (() => {
+    try {
+      return hasKeyForSlot('tensorax_analysis_key', 'tensorax_analysis_model')
+          && hasKeyForSlot('tensorax_copy_key', 'tensorax_copy_model')
+          && hasKeyForSlot('tensorax_image_key', 'tensorax_image_model');
+    } catch { return false; }
+  })();
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors border ${
-          hasKey
-            ? 'bg-[#f6f0f8] border-[#ceadd4] text-[#91569c] hover:bg-[#eadcef]'
-            : 'bg-[#91569c] border-[#91569c] text-white hover:bg-[#5c3a62] animate-pulse'
-        }`}
-        title={hasKey ? 'API settings — click to change' : 'Set API key'}
-      >
-        <i className="fa-solid fa-key text-[8px]"></i>
-        {hasKey ? 'API' : 'Set Key'}
-      </button>
-
-      {open && (
-        <div ref={modalRef} className="absolute top-full right-0 mt-2 w-80 bg-white border border-[#e0d6e3] rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in">
-          <div className="px-4 py-3 border-b border-[#e0d6e3]">
-            <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide">API Settings</h3>
-          </div>
-          <div className="p-4 space-y-3">
-            <div>
-              <label className="block text-[9px] font-bold text-[#5c3a62] uppercase tracking-wider mb-1">Model</label>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#5c3a62] font-bold outline-none focus:ring-1 focus:ring-[#91569c]/30 cursor-pointer"
-              >
-                {API_MODELS.map(g => (
-                  <optgroup key={g.group} label={g.group}>
-                    {g.models.map(m => <option key={m} value={m}>{m}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-              <p className="text-[8px] text-[#888] mt-1">Active: <span className="font-bold text-[#91569c]">{selectedModel}</span></p>
-            </div>
-            <div>
-              <label className="block text-[9px] font-bold text-[#5c3a62] uppercase tracking-wider mb-1">API Key</label>
-              <input
-                type="password"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder={hasKey ? '••••••• (already set, enter new to change)' : 'Paste your API key...'}
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] text-[#3a3a3a] placeholder:text-[#ceadd4] outline-none focus:ring-1 focus:ring-[#91569c]/30"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
-              />
-              <p className="text-[8px] text-[#888] mt-1">Gemini → Google AI key. Claude → Anthropic key.</p>
-            </div>
-            <div className="flex gap-2 justify-end pt-1">
-              <button onClick={() => { setOpen(false); setKey(''); }} className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
-                Cancel
-              </button>
-              <button onClick={handleSave} className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors">
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors border ${
+        hasKeys
+          ? 'bg-[#f6f0f8] border-[#ceadd4] text-[#91569c] hover:bg-[#eadcef]'
+          : 'bg-[#91569c] border-[#91569c] text-white hover:bg-[#5c3a62] animate-pulse'
+      }`}
+      title="Configure AI models & API keys"
+    >
+      <i className="fa-solid fa-key text-[8px]"></i>
+      {hasKeys ? 'API' : 'Set Keys'}
+    </button>
   );
 };
 
@@ -175,13 +119,16 @@ interface LandingPageProps {
   onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects') => void;
   activeProject: Project | null;
   allProjects: Project[];
+  assistantContext?: string;
+  onAssistantAction?: (action: import('./components/ChatBot').AssistantAction) => void;
+  chatHistoryRef?: React.MutableRefObject<string>;
   brands: BrandProfile[];
   onCreateProject: (data: NewProjectData) => void;
   onSelectProject: (p: Project) => void;
   onNewProject: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject, onNewProject }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject, onNewProject, assistantContext, onAssistantAction, chatHistoryRef }) => {
   const [showWizard, setShowWizard] = useState(false);
 
   const pipelineSteps = [
@@ -205,22 +152,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
           </div>
 
           {/* Open existing project */}
-          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm space-y-3">
-            <button
-              onClick={() => onNavigate('projects')}
-              className="w-full flex items-center gap-4 px-4 py-3 rounded-lg bg-[#f6f0f8] border border-[#ceadd4] hover:bg-[#eadcef] hover:border-[#91569c] transition-all text-left group"
-            >
-              <i className="fa-solid fa-folder-open text-2xl text-[#91569c]"></i>
-              <div className="flex-1">
-                <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">Open Project</span>
-                <p className="text-[10px] text-[#888] mt-0.5">
-                  {allProjects.length > 0 ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''} available` : 'Browse all projects'}
-                </p>
+          {allProjects.length > 0 && (
+            <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <i className="fa-solid fa-folder-open text-lg text-[#91569c]"></i>
+                <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Open Project</span>
               </div>
-              <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
-            </button>
-
-            {allProjects.length > 0 && (
               <select
                 onChange={(e) => {
                   const p = allProjects.find(x => x.id === e.target.value);
@@ -229,13 +166,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
                 defaultValue=""
                 className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer"
               >
-                <option value="" disabled>Quick select...</option>
+                <option value="" disabled>Select a project...</option>
                 {allProjects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-            )}
-          </div>
+              <p className="text-[10px] text-[#888] mt-2">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''} available</p>
+            </div>
+          )}
 
           <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
 
@@ -257,7 +195,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       {/* Left nav */}
       <div className="flex flex-col gap-3 w-64 flex-shrink-0 p-4 overflow-y-auto">
         <button
-          onClick={() => onNavigate('projects')}
+          onClick={() => onNavigate('project-settings')}
           className="group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm text-left"
         >
           <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
@@ -265,7 +203,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
           </div>
           <div className="flex-1 min-w-0">
             <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">Project</span>
-            <p className="text-[9px] text-[#888] mt-0.5">Settings & Assets</p>
+            <p className="text-[9px] text-[#888] mt-0.5">Settings & Pipeline</p>
           </div>
         </button>
 
@@ -299,7 +237,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
 
       {/* Right — Assistant */}
       <div className="w-80 flex-shrink-0 p-4 pl-0">
-        <ChatBotBoundary><ChatBot /></ChatBotBoundary>
+        <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={onAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
       </div>
     </div>
   );
@@ -377,7 +315,13 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings'>('landing');
+  const [assistantContext, setAssistantContext] = useState('');
+  const conceptActionRef = useRef<((action: import('./components/ChatBot').AssistantAction) => void) | null>(null);
+  const chatHistoryRef = useRef('');
+  const handleAssistantAction = (action: import('./components/ChatBot').AssistantAction) => {
+    conceptActionRef.current?.(action);
+  };
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [limitCooldownRemaining, setLimitCooldownRemaining] = useState(0);
 
@@ -431,12 +375,23 @@ const App: React.FC = () => {
     setCurrentScreen('landing');
   };
 
-  // Video provider: 'veo' | 'kling'
-  const [videoProvider, setVideoProvider] = useState<'veo' | 'kling'>('veo');
-  const [klingApiKey, setKlingApiKey] = useState(() => {
-    try { return localStorage.getItem('tensorax_kling_key') || ''; } catch { /* ignore */ }
-    return process.env.TENSORAX_KLING_KEY || '';
-  });
+  const getVideoModel = (): string => {
+    try { return localStorage.getItem('tensorax_video_model')?.trim() || 'seedance-2.0'; } catch { return 'seedance-2.0'; }
+  };
+  const getVideoProvider = (): 'seedance' | 'veo' | 'kling' => {
+    const m = getVideoModel();
+    if (m.startsWith('seedance')) return 'seedance';
+    if (m.startsWith('kling')) return 'kling';
+    return 'veo';
+  };
+  const getVideoApiKey = (): string => {
+    const model = getVideoModel();
+    try {
+      return localStorage.getItem(`tensorax_video_key__${model}`)?.trim()
+          || localStorage.getItem('tensorax_video_key')?.trim()
+          || '';
+    } catch { return ''; }
+  };
 
   // Video State
   const [videoState, setVideoState] = useState<VideoState & { movementVideo?: string }>({
@@ -521,7 +476,6 @@ const App: React.FC = () => {
   const saveApiKeyFromModal = () => {
     const key = apiKeyModalValue.trim();
     if (key) {
-      GeminiService.setApiKey(key);
       if (apiKeyModalType) {
         try {
           localStorage.setItem(`tensorax_${apiKeyModalType}_key`, key);
@@ -537,23 +491,21 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkKey = async () => {
-      // 1) Rehydrate main key from localStorage/cookie
+      // Check if any Google-provider key is available (for assistant/chat)
       if (GeminiService.hydrateApiKeyFromStorage()) {
         setApiKeySelected(true);
         return;
       }
 
-      // 2) Rehydrate from Analysis or Copy keys if user saved them via modal
+      // Use the analysis key for the assistant if available (read-only, no cross-write)
       const analysisKey = hasStoredKeyForType('analysis') ? getApiKeyForType('analysis') : null;
-      const copyKey = hasStoredKeyForType('copy') ? getApiKeyForType('copy') : null;
-      const keyToUse = analysisKey || copyKey;
-      if (keyToUse) {
-        GeminiService.setApiKey(keyToUse);
+      if (analysisKey) {
+        GeminiService.setApiKey(analysisKey);
         setApiKeySelected(true);
         return;
       }
 
-      // 3) Fallback to env-defined key
+      // Fallback to env-defined key
       const envKey = (process.env.GEMINI_API_KEY || process.env.API_KEY || "").trim();
       const isEnvPlaceholder = /placeholder_api_key|your[_-]?api[_-]?key/i.test(envKey);
       if (envKey && !isEnvPlaceholder) {
@@ -562,7 +514,15 @@ const App: React.FC = () => {
         return;
       }
 
-      // 4) Fallback to IDX/AI Studio environment
+      // Check if at least one slot has a key
+      const hasAnyKey = ['tensorax_analysis_key', 'tensorax_copy_key', 'tensorax_image_key', 'tensorax_video_key'].some(k => {
+        try { return !!(localStorage.getItem(k)?.trim()); } catch { return false; }
+      });
+      if (hasAnyKey) {
+        setApiKeySelected(true);
+        return;
+      }
+
       const aistudio = (window as any).aistudio;
       if (aistudio) {
         const hasKey = await aistudio.hasSelectedApiKey();
@@ -613,10 +573,13 @@ const App: React.FC = () => {
     if (isAutoGeneratingPrompts) return;
 
     const analysisKey = getApiKeyForType('analysis');
-    const copyKey = getApiKeyForType('copy') || analysisKey;
-    const keyToUse = copyKey || analysisKey;
+    const copyKey = getApiKeyForType('copy');
+    const copyModel = getModelForType('copy') || null;
+    const analysisModel = getModelForType('analysis') || null;
+    const isClaude = copyModel?.startsWith('claude') || (!copyModel && analysisModel?.startsWith('claude'));
+    const keyToUse = isClaude ? (copyKey || analysisKey) : (analysisKey || copyKey);
     if (!keyToUse) {
-      alert("Please enter an API key via the Analysis or Copy button (Settings → API Keys).");
+      alert("Please set your API keys in Project Settings.");
       return;
     }
 
@@ -633,8 +596,8 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           apiKey: keyToUse,
-          analysisModel: getModelForType('analysis') || null,
-          copyModel: getModelForType('copy') || null,
+          analysisModel,
+          copyModel,
           refImages,
           userNote: scenePrompt,
         }),
@@ -720,12 +683,44 @@ const App: React.FC = () => {
   const startVideoGeneration = async () => {
     if (videoState.isGenerating || !videoState.prompt) return;
     setVideoState(v => ({ ...v, isGenerating: true, progressMessage: "Initializing..." }));
+    const provider = getVideoProvider();
+    const apiKey = getVideoApiKey();
     try {
       let url: string | undefined;
 
-      if (videoProvider === 'kling') {
-        if (!klingApiKey.trim()) {
-          alert("Please enter your fal.ai API key for Kling generation.");
+      if (provider === 'seedance') {
+        if (!apiKey) {
+          alert("Please set your fal.ai API key in Project Settings → Video Generation.");
+          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
+          return;
+        }
+        if (!videoState.startImage) {
+          alert("Seedance requires a Start frame. Hover over a generated image and click Start.");
+          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
+          return;
+        }
+        const durationSecs = videoState.duration === '10s' ? '10' : '5';
+        const res = await fetch('/api/generate-video-seedance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey,
+            startImageUrl: videoState.startImage,
+            endImageUrl: videoState.endImage || null,
+            prompt: videoState.prompt,
+            duration: durationSecs,
+            aspectRatio,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Seedance request failed: ${res.status}`);
+        }
+        const data = await res.json();
+        url = data.videoUrl;
+      } else if (provider === 'kling') {
+        if (!apiKey) {
+          alert("Please set your fal.ai API key in Project Settings → Video Generation.");
           setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
           return;
         }
@@ -739,7 +734,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            apiKey: klingApiKey.trim(),
+            apiKey,
             startImageUrl: videoState.startImage,
             endImageUrl: videoState.endImage || null,
             motionVideoUrl: (videoState as any).motionVideo || null,
@@ -898,6 +893,44 @@ const App: React.FC = () => {
     }
   };
 
+  if (currentScreen === 'project-settings' && activeProject) {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
+              <i className="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-7 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
+          </div>
+          <div className="mx-auto flex items-center gap-3">
+            <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+            ) : null; })()}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Project Settings</span>
+            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
+          </div>
+        </header>
+        <ProjectSettings
+          project={activeProject}
+          brands={brands}
+          activeBrandId={activeBrandId}
+          onBack={() => setCurrentScreen('landing')}
+          onSwitchProject={() => { persistProject(null); setCurrentScreen('landing'); }}
+          onUpdateProject={(updated) => {
+            persistProject(updated);
+            setAllProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+          }}
+          onNavigate={(screen) => setCurrentScreen(screen as any)}
+          onBrandChange={(brandId) => { setActiveBrandIdState(brandId); setActiveBrandId(brandId); }}
+        />
+      </div>
+    );
+  }
+
   if (currentScreen === 'projects') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
@@ -911,7 +944,7 @@ const App: React.FC = () => {
               ) : null; })()}
             </div>
           )}
-          <ApiKeyButton />
+          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </header>
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
       </div>
@@ -931,7 +964,7 @@ const App: React.FC = () => {
               ) : null; })()}
             </div>
             )}
-            <ApiKeyButton />
+            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </header>
           <LandingPage
             onNavigate={(screen) => setCurrentScreen(screen as any)}
@@ -941,6 +974,9 @@ const App: React.FC = () => {
             onCreateProject={handleCreateProject}
             onSelectProject={handleSelectProject}
             onNewProject={() => persistProject(null)}
+            assistantContext={assistantContext}
+            onAssistantAction={handleAssistantAction}
+            chatHistoryRef={chatHistoryRef}
           />
       </div>
     );
@@ -969,13 +1005,13 @@ const App: React.FC = () => {
           )}
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
-            <ApiKeyButton />
+            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </div>
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+          <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} onNavigateToImages={() => setCurrentScreen('images')} onContextChange={setAssistantContext} actionRef={conceptActionRef} chatHistoryRef={chatHistoryRef} />
           <div className="w-72 flex-shrink-0 p-3 pl-0">
-            <ChatBotBoundary><ChatBot /></ChatBotBoundary>
+            <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
           </div>
         </div>
 
@@ -1027,7 +1063,16 @@ const App: React.FC = () => {
   }
 
   if (currentScreen === 'images') {
-    return <ImagesScreen onBack={() => setCurrentScreen('landing')} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />;
+    return (
+      <div className="flex h-screen overflow-hidden bg-[#edecec]">
+        <div className="flex-1 min-w-0">
+          <ImagesScreen onBack={() => setCurrentScreen('landing')} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+        </div>
+        <aside className="w-72 flex-shrink-0 p-2 pl-0">
+          <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
+        </aside>
+      </div>
+    );
   }
 
   return (
@@ -1061,7 +1106,7 @@ const App: React.FC = () => {
               {isZipping ? 'Zipping...' : 'Download Zip'}
             </button>
           )}
-          <ApiKeyButton />
+          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </div>
       </header>
 
@@ -1323,40 +1368,41 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-                {/* Video Provider Toggle */}
+                {/* Active Video Engine (set in Project Settings) */}
                 <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
-                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Engine</label>
-                  <div className="flex rounded-xl overflow-hidden border border-[#ceadd4]">
-                    {(['veo', 'kling'] as const).map(p => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setVideoProvider(p)}
-                        className={`flex-1 py-2 text-[11px] font-black uppercase tracking-wide transition-colors ${
-                          videoProvider === p
-                            ? 'bg-[#91569c] text-[#3a3a3a]'
-                            : 'bg-[#edecec] text-[#5c3a62]/60 hover:text-[#5c3a62]'
-                        }`}
-                      >
-                        {p === 'veo' ? 'Veo 3.1' : 'Kling v2'}
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Engine</label>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentScreen('project-settings')}
+                      className="text-[9px] font-bold text-[#91569c] hover:text-[#5c3a62] transition-colors flex items-center gap-1"
+                    >
+                      <i className="fa-solid fa-gear text-[8px]"></i> Change in Settings
+                    </button>
                   </div>
-                  {videoProvider === 'kling' && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="block text-[10px] font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">fal.ai API Key</label>
-                        <input
-                          type="password"
-                          value={klingApiKey}
-                          onChange={(e) => {
-                            setKlingApiKey(e.target.value);
-                            localStorage.setItem('tensorax_kling_key', e.target.value);
-                          }}
-                          placeholder="Get key at fal.ai/dashboard/keys"
-                          className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[10px] text-[#3a3a3a] placeholder:text-[#3a3a3a]/60 outline-none focus:ring-1 focus:ring-[#91569c]"
-                        />
-                      </div>
+                  <div className="flex items-center gap-2 bg-[#f6f0f8] rounded-xl px-4 py-2.5 border border-[#e0d6e3]">
+                    <i className="fa-solid fa-video text-[#91569c] text-sm"></i>
+                    <span className="text-[11px] font-black text-[#5c3a62] uppercase tracking-wide">{getVideoModel()}</span>
+                    {!getVideoApiKey() && getVideoProvider() !== 'veo' && (
+                      <span className="ml-auto text-[9px] text-red-500 font-bold flex items-center gap-1">
+                        <i className="fa-solid fa-circle-xmark text-[8px]"></i> No API key
+                      </span>
+                    )}
+                    {(getVideoApiKey() || getVideoProvider() === 'veo') && (
+                      <span className="ml-auto text-[9px] text-green-600 font-bold flex items-center gap-1">
+                        <i className="fa-solid fa-circle-check text-[8px]"></i> Ready
+                      </span>
+                    )}
+                  </div>
+                  {getVideoProvider() === 'seedance' && (
+                    <p className="text-[9px] text-[#3a3a3a]/60">Seedance 2.0 via fal.ai. Supports Start and End frames, up to 1080p.</p>
+                  )}
+                  {getVideoProvider() === 'veo' && (
+                    <p className="text-[9px] text-[#3a3a3a]/60">Veo via Gemini API. Supports Start, Mid and End frames.</p>
+                  )}
+                  {getVideoProvider() === 'kling' && (
+                    <>
+                      <p className="text-[9px] text-[#3a3a3a]/60">Kling via fal.ai. Supports Start and End frames + motion reference video.</p>
                       <div>
                         <label className="block text-[10px] font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Motion Reference Video <span className="font-normal normal-case text-[#3a3a3a]/60">(optional)</span></label>
                         <div className="flex items-center gap-2">
@@ -1386,12 +1432,8 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                             <button type="button" onClick={() => setVideoState(v => { const n = { ...v }; delete (n as any).motionVideo; return n; })} className="text-[10px] text-red-500 hover:text-red-400 px-1">✕</button>
                           )}
                         </div>
-                        <p className="text-[9px] text-[#3a3a3a]/60 mt-1">When set → Kling motion control mode: your Start frame as character style, video as motion guide.</p>
                       </div>
-                    </div>
-                  )}
-                  {videoProvider === 'veo' && (
-                    <p className="text-[9px] text-[#3a3a3a]/60">Veo 3.1 via Gemini API. Supports Start, Mid and End frames.</p>
+                    </>
                   )}
                 </div>
 
@@ -1505,7 +1547,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
                     <span className="flex items-center justify-center gap-2">
                       <i className="fa-solid fa-gear fa-spin"></i> PROCESSING
                     </span>
-                  ) : videoProvider === 'kling' ? 'GENERATE KLING CLIP' : 'GENERATE VEO CLIP'}
+                  ) : getVideoProvider() === 'seedance' ? 'GENERATE SEEDANCE CLIP' : getVideoProvider() === 'kling' ? 'GENERATE KLING CLIP' : 'GENERATE VEO CLIP'}
                 </button>
               </div>
             </aside>
@@ -1575,7 +1617,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
           </>
         )}
         <aside className={`flex-shrink-0 mt-0 mb-2 mx-2 ${currentScreen === 'scenes' ? 'w-[18%] min-w-[240px] max-w-[320px] block' : 'hidden 2xl:block w-80'}`}>
-          <ChatBotBoundary><ChatBot /></ChatBotBoundary>
+          <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
         </aside>
       </div>
 

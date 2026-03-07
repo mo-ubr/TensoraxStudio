@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BrandProfile } from '../types';
 
-export type ProjectScope = 'copy' | 'images' | 'video' | 'full';
+export type ProjectScope = string;
 
 export interface NewProjectData {
   name: string;
@@ -16,11 +16,17 @@ interface NewProjectWizardProps {
   onCancel: () => void;
 }
 
-const SCOPE_OPTIONS: { id: ProjectScope; label: string; icon: string; description: string }[] = [
-  { id: 'copy', label: 'Copy & Screenplay', icon: 'fa-pen-nib', description: 'Write concepts, ideas, and screenplays' },
-  { id: 'images', label: 'Images & Characters', icon: 'fa-image', description: 'Create characters, key visuals, backgrounds' },
-  { id: 'video', label: 'Full Video Production', icon: 'fa-video', description: 'End-to-end: copy, images, frames, and video' },
-  { id: 'full', label: 'Custom / Other', icon: 'fa-wand-magic-sparkles', description: 'Describe what you need and I\'ll guide you' },
+const SCOPE_OPTIONS: { id: string; label: string; icon: string; description: string }[] = [
+  { id: 'explainer-video', label: 'Explainer Video', icon: 'fa-video', description: 'Educational or product explanation video' },
+  { id: 'video-advert', label: 'Video Advert', icon: 'fa-clapperboard', description: 'Promotional video for TV, web, or social' },
+  { id: 'social-video', label: 'Social Media Video', icon: 'fa-mobile-screen', description: 'Short-form video for Instagram, TikTok, etc.' },
+  { id: 'image-advert', label: 'Image Advert', icon: 'fa-rectangle-ad', description: 'Static visual ad for print or digital' },
+  { id: 'presentation', label: 'Presentation', icon: 'fa-display', description: 'Slide deck or pitch presentation' },
+  { id: 'infographic', label: 'Infographic', icon: 'fa-chart-pie', description: 'Data visualisation or informational graphic' },
+  { id: 'blog', label: 'Blog / Article', icon: 'fa-newspaper', description: 'Written content with supporting visuals' },
+  { id: 'image-portfolio', label: 'Image Portfolio', icon: 'fa-images', description: 'Collection of branded images or lookbook' },
+  { id: 'brand-campaign', label: 'Brand Campaign', icon: 'fa-bullhorn', description: 'Multi-format brand campaign' },
+  { id: 'other', label: 'Other', icon: 'fa-wand-magic-sparkles', description: 'Something else — describe in the brief' },
 ];
 
 type WizardStep = 'brief' | 'name' | 'brand' | 'scope';
@@ -199,30 +205,32 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
           </div>
         )}
 
-        {/* Step 4: Scope / Type */}
+        {/* Step 4: Output Type */}
         {step === 'scope' && (
           <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm space-y-5">
             <div>
-              <h3 className="text-lg font-bold text-[#5c3a62] uppercase tracking-wide">What do you want to create?</h3>
-              <p className="text-xs text-[#888] mt-1">Select the project type</p>
+              <h3 className="text-lg font-bold text-[#5c3a62] uppercase tracking-wide">What are you creating?</h3>
+              <p className="text-xs text-[#888] mt-1">Select the type of output</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 max-h-[340px] overflow-y-auto pr-1">
               {SCOPE_OPTIONS.map(opt => (
                 <button
                   key={opt.id}
                   onClick={() => selectScope(opt.id)}
-                  className={`flex flex-col items-center gap-2 px-3 py-4 rounded-xl border transition-all text-center ${
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl border transition-all text-left ${
                     scope === opt.id
                       ? 'bg-[#f6f0f8] border-[#91569c] shadow-sm'
                       : 'bg-white border-[#e0d6e3] hover:border-[#ceadd4] hover:bg-[#f6f0f8]/50'
                   }`}
                 >
-                  <i className={`fa-solid ${opt.icon} text-xl ${scope === opt.id ? 'text-[#91569c]' : 'text-[#ceadd4]'}`}></i>
-                  <span className={`font-bold text-[11px] uppercase tracking-wide ${scope === opt.id ? 'text-[#5c3a62]' : 'text-[#888]'}`}>
-                    {opt.label}
-                  </span>
-                  <span className="text-[9px] text-[#888] leading-tight">{opt.description}</span>
+                  <i className={`fa-solid ${opt.icon} text-lg flex-shrink-0 ${scope === opt.id ? 'text-[#91569c]' : 'text-[#ceadd4]'}`}></i>
+                  <div className="min-w-0">
+                    <span className={`font-bold text-[11px] uppercase tracking-wide block ${scope === opt.id ? 'text-[#5c3a62]' : 'text-[#888]'}`}>
+                      {opt.label}
+                    </span>
+                    <span className="text-[9px] text-[#888] leading-tight block">{opt.description}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -246,11 +254,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ brands, onCo
   );
 };
 
-export function getScopeRoute(scope: ProjectScope): 'concept' | 'images' | 'scenes' | 'video' {
-  switch (scope) {
-    case 'copy': return 'concept';
-    case 'images': return 'images';
-    case 'video': return 'concept';
-    case 'full': return 'concept';
-  }
+export function getScopeRoute(_scope: ProjectScope): 'concept' | 'project-settings' {
+  return 'project-settings';
 }

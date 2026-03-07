@@ -10,6 +10,7 @@ interface GeneralDirectionProps {
   isGenerating: boolean;
   regeneratingIdeaNum?: number | null;
   onSaveAndCreateScript?: (title: string, concept: string, directions: string) => void;
+  onSaveFile?: (filename: string, data: string, subfolder?: string) => Promise<void>;
   isSaving?: boolean;
 }
 
@@ -187,15 +188,29 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
     if (!url.trim()) return;
     setAnalysing(idx);
     try {
-      const apiKey = (() => {
-        try { return localStorage.getItem('gemini_api_key') || ''; } catch { return ''; }
+      const isVideoUrl = /\.(mp4|mov|avi|webm|mkv|m4v)/i.test(url) || url.includes('video');
+      const keyStorageKey = isVideoUrl ? 'tensorax_video_analysis_key' : 'tensorax_analysis_key';
+      const modelStorageKey = isVideoUrl ? 'tensorax_video_analysis_model' : 'tensorax_analysis_model';
+
+      const model = (() => {
+        try { return localStorage.getItem(modelStorageKey)?.trim() || 'gemini-3.1-pro-preview'; } catch { return 'gemini-3.1-pro-preview'; }
       })();
-      if (!apiKey) { alert('Set a Gemini API key first (click API in the header).'); setAnalysing(null); return; }
+
+      const apiKey = (() => {
+        try {
+          return localStorage.getItem(`${keyStorageKey}__${model}`)?.trim()
+              || localStorage.getItem(keyStorageKey)?.trim()
+              || localStorage.getItem(`tensorax_analysis_key__${model}`)?.trim()
+              || localStorage.getItem('tensorax_analysis_key')?.trim()
+              || '';
+        } catch { return ''; }
+      })();
+      if (!apiKey) { alert('Set an Analysis API key in Project Settings first.'); setAnalysing(null); return; }
 
       const res = await fetch('/api/video/analyse-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, apiKey }),
+        body: JSON.stringify({ url, apiKey, model }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Analysis failed');
@@ -284,6 +299,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
   isGenerating,
   regeneratingIdeaNum,
   onSaveAndCreateScript,
+  onSaveFile,
   isSaving,
 }) => {
   const [showPromptPreview, setShowPromptPreview] = useState(false);
@@ -299,6 +315,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
   const [deletedIdeas, setDeletedIdeas] = useState<Set<number>>(new Set());
   const [editingIdea, setEditingIdea] = useState<number | null>(null);
   const [editedBodies, setEditedBodies] = useState<Record<number, string>>({});
+  const [savingWord, setSavingWord] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [ideaModel, setIdeaModel] = useState(() => localStorage.getItem(IDEA_MODEL_KEY) || '');
   const [ideaApiKey, setIdeaApiKey] = useState(() => localStorage.getItem(IDEA_APIKEY_KEY) || '');
@@ -464,14 +481,19 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     const base64 = reader.result as string;
                     const filename = `${(value.projectName || 'Project').replace(/\s+/g, '_')}_Direction.docx`;
                     try {
-                      const res = await fetch('/api/save-file', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename, data: base64, folder: 'assets/2. Screenplays' }),
-                      });
-                      const json = await res.json();
-                      if (res.ok) alert(`Saved: ${json.path}`);
-                      else throw new Error(json.error);
+                      if (onSaveFile) {
+                        await onSaveFile(filename, base64);
+                        alert(`Direction saved to project folder.`);
+                      } else {
+                        const res = await fetch('/api/save-file', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ filename, data: base64, folder: 'output' }),
+                        });
+                        const json = await res.json();
+                        if (res.ok) alert(`Saved: ${json.path}`);
+                        else throw new Error(json.error);
+                      }
                     } catch {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
@@ -765,6 +787,14 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           <i className={`fa-solid ${editingIdea === idea.num ? 'fa-check' : 'fa-pencil'} text-[10px]`}></i>
                         </button>
                         <button
+                          onClick={() => onRegenerateSingleIdea?.(idea.num, visibleIdeas, { rating: ratings[idea.num], comment: feedbackNotes[idea.num] })}
+                          disabled={regeneratingIdeaNum === idea.num || isGenerating}
+                          className="text-[#91569c]/40 hover:text-[#91569c] transition-colors p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Regenerate this idea"
+                        >
+                          <i className={`fa-solid ${regeneratingIdeaNum === idea.num ? 'fa-spinner fa-spin' : 'fa-rotate-right'} text-[10px]`}></i>
+                        </button>
+                        <button
                           onClick={() => { deleteIdea(idea); if (isKept) setKeptIdeas(prev => prev.filter(k => k.num !== idea.num || k.title !== idea.title)); }}
                           className="text-red-400/40 hover:text-red-400 transition-colors p-1"
                           title="Delete — AI will never suggest this again"
@@ -794,15 +824,62 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           <pre className="text-[11px] text-[#3a3a3a] whitespace-pre-wrap font-sans leading-relaxed">{idea.body}</pre>
                         )}
                       </div>
+                      {/* Feedback & Regenerate */}
+                      <div className="px-4 pb-3 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                          {(['like', 'neutral', 'dislike'] as const).map(r => (
+                            <button
+                              key={r}
+                              onClick={() => setRatings(prev => ({ ...prev, [idea.num]: prev[idea.num] === r ? undefined! : r }))}
+                              className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                                ratings[idea.num] === r
+                                  ? r === 'like' ? 'bg-green-50 text-green-600 border-green-300'
+                                    : r === 'dislike' ? 'bg-red-50 text-red-500 border-red-300'
+                                    : 'bg-amber-50 text-amber-600 border-amber-300'
+                                  : 'bg-white text-[#888] border-[#e0d6e3] hover:border-[#ceadd4]'
+                              }`}
+                            >
+                              <i className={`fa-solid ${r === 'like' ? 'fa-thumbs-up' : r === 'dislike' ? 'fa-thumbs-down' : 'fa-minus'} text-[8px] mr-1`}></i>
+                              {r}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={feedbackNotes[idea.num] || ''}
+                            onChange={(e) => setFeedbackNotes(prev => ({ ...prev, [idea.num]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && (feedbackNotes[idea.num]?.trim() || ratings[idea.num])) onRegenerateSingleIdea?.(idea.num, visibleIdeas, { rating: ratings[idea.num], comment: feedbackNotes[idea.num] }); }}
+                            placeholder="Feedback — e.g. 'make it more playful' or 'focus on the unwrapping'"
+                            className="flex-1 bg-white border border-[#e0d6e3] rounded-lg px-3 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#888]/50 outline-none focus:border-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/20"
+                          />
+                          <button
+                            onClick={() => onRegenerateSingleIdea?.(idea.num, visibleIdeas, { rating: ratings[idea.num], comment: feedbackNotes[idea.num] })}
+                            disabled={regeneratingIdeaNum === idea.num || isGenerating}
+                            className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                          >
+                            <i className={`fa-solid ${regeneratingIdeaNum === idea.num ? 'fa-spinner fa-spin' : 'fa-rotate-right'} text-[8px]`}></i>
+                            Regen
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* Saving notification */}
+                {savingWord && (
+                  <div className="flex items-center gap-3 bg-[#91569c]/15 border border-[#91569c]/30 rounded-xl px-4 py-3 mt-3 animate-pulse">
+                    <i className="fa-solid fa-spinner fa-spin text-[#91569c]"></i>
+                    <span className="text-[11px] font-bold text-[#5c3a62]">Saving concept to Word document, please wait...</span>
+                  </div>
+                )}
 
                 {/* Actions for the whole concept */}
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => handleGenerate()}
-                    disabled={isGenerating}
+                    disabled={isGenerating || savingWord}
                     className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-white text-[#91569c] border border-[#ceadd4] hover:bg-[#f6f0f8] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isGenerating ? 'fa-spinner fa-spin' : 'fa-rotate-right'}`}></i>
@@ -810,13 +887,13 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                   </button>
                   <button
                     onClick={async () => {
+                      setSavingWord(true);
                       const title = visibleIdeas[0]?.title || 'Concept';
                       const fullText = visibleIdeas.map(idea => {
                         const body = editedBodies[idea.num] ?? idea.body;
                         return `## ${idea.title || 'Scene ' + idea.num}\n${body}`;
                       }).join('\n\n');
 
-                      // Save as Word doc
                       try {
                         const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
                         const sections = visibleIdeas.map(idea => {
@@ -849,37 +926,21 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           }],
                         });
                         const blob = await Packer.toBlob(doc);
-                        const reader = new FileReader();
-                        reader.onload = async () => {
-                          const filename = `${(value.projectName || 'Project').replace(/\s+/g, '_')}_Approved_Concept.docx`;
-                          try {
-                            await fetch('/api/save-file', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ filename, data: reader.result, folder: 'assets/2. Screenplays' }),
-                            });
-                          } catch { /* fallback: browser download */ }
-                        };
-                        reader.readAsDataURL(blob);
                         const dataUrl = await new Promise<string>(resolve => {
                           const r = new FileReader();
                           r.onload = () => resolve(r.result as string);
                           r.readAsDataURL(blob);
                         });
-                        const filename = `${(value.projectName || 'Project').replace(/\s+/g, '_')}_Approved_Concept.docx`;
-                        await fetch('/api/save-file', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ filename, data: dataUrl, folder: 'assets/2. Screenplays' }),
-                        }).catch(() => {});
                       } catch (e) { console.warn('Word save failed:', e); }
 
+                      setSavingWord(false);
                       onSaveAndCreateScript?.(title, fullText, '');
                     }}
-                    className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] active:scale-[0.98]"
+                    disabled={savingWord || isSaving}
+                    className="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
-                    <i className="fa-solid fa-check"></i>
-                    Accept Concept
+                    <i className={`fa-solid ${savingWord ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
+                    {savingWord ? 'Saving...' : 'Accept Concept'}
                   </button>
                 </div>
                 </>);

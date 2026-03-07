@@ -21,6 +21,7 @@ import { generateTensoraxFrame } from "./tensorax_api.js";
 import { generateWithDalle } from "./openai_imagen.js";
 import { runAutoGeneratePrompts } from "./prompt_api.js";
 import { generateKlingVideo } from "./klingService.js";
+import { generateSeedanceVideo } from "./seedanceService.js";
 import { listFiles, getFileMetadata, downloadFile, uploadFile, createFolder } from "./driveService.js";
 import dbRouter from "./dbService.js";
 import videoAnalysisRouter from "./videoAnalysis.js";
@@ -43,7 +44,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use("/api/db", dbRouter);
 app.use("/api/video", videoAnalysisRouter);
 
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join } from "path";
 
 app.post("/api/save-file", async (req, res) => {
@@ -73,6 +74,34 @@ app.post("/api/save-file", async (req, res) => {
     res.status(500).json({ error: err.message || "Save failed." });
   }
 });
+
+// ─── List local character image files ────────────────────────────────────────
+
+const CHARACTERS_DIR = resolve(process.cwd(), "assets/3. Characters");
+const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
+
+app.get("/api/character-files", async (_req, res) => {
+  try {
+    await mkdir(CHARACTERS_DIR, { recursive: true });
+    const entries = await readdir(CHARACTERS_DIR, { withFileTypes: true });
+    const files = [];
+    for (const e of entries) {
+      if (!e.isFile()) continue;
+      const ext = e.name.slice(e.name.lastIndexOf(".")).toLowerCase();
+      if (!IMAGE_EXTS.has(ext)) continue;
+      const full = join(CHARACTERS_DIR, e.name);
+      const st = await stat(full);
+      files.push({ name: e.name, path: `/character-assets/${encodeURIComponent(e.name)}`, size: st.size, modified: st.mtime.toISOString() });
+    }
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    res.json({ files });
+  } catch (err) {
+    console.error("[CharacterFiles]", err);
+    res.status(500).json({ error: err.message || "Failed to list character files." });
+  }
+});
+
+app.use("/character-assets", express.static(CHARACTERS_DIR));
 
 app.post("/api/generate-image", async (req, res) => {
   try {
@@ -153,6 +182,28 @@ app.post("/api/generate-video-kling", async (req, res) => {
   } catch (err) {
     console.error("[Kling API]", err);
     res.status(500).json({ error: err.message || "Kling video generation failed." });
+  }
+});
+
+app.post("/api/generate-video-seedance", async (req, res) => {
+  try {
+    const { apiKey, startImageUrl, endImageUrl, prompt, duration, aspectRatio } = req.body;
+    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
+
+    const videoUrl = await generateSeedanceVideo({
+      apiKey: resolvedApiKey,
+      startImageUrl,
+      endImageUrl: endImageUrl || null,
+      prompt,
+      duration: duration || "5",
+      aspectRatio: aspectRatio || "auto",
+      resolution: "1080p",
+      onProgress: (msg) => { console.log("[Seedance]", msg); },
+    });
+    res.json({ videoUrl });
+  } catch (err) {
+    console.error("[Seedance API]", err);
+    res.status(500).json({ error: err.message || "Seedance video generation failed." });
   }
 });
 

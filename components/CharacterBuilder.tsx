@@ -1,7 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CharacterProfile, CharacterTraits, emptyTraits, buildPromptFromTraits } from './characterUtils';
 export type { CharacterProfile } from './characterUtils';
 export { buildPromptFromTraits, loadCharacters, saveCharacters } from './characterUtils';
+
+interface CharacterFile { name: string; path: string; size: number; modified: string; }
 
 interface TraitOption { value: string; label: string; colour?: string; svg?: string; }
 
@@ -196,16 +198,44 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
   const [editedPrompt, setEditedPrompt] = useState('');
   const [ageList, setAgeList] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [characterFiles, setCharacterFiles] = useState<CharacterFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+
+  useEffect(() => {
+    setFilesLoading(true);
+    fetch('http://localhost:5182/api/character-files')
+      .then(r => r.json())
+      .then(d => setCharacterFiles(d.files || []))
+      .catch(() => setCharacterFiles([]))
+      .finally(() => setFilesLoading(false));
+  }, []);
 
   const activeChar = characters.find(c => c.id === activeCharId);
 
-  const addCharacter = (name: string) => {
+  const CHILD_KEYWORDS = ['baby', 'newborn', 'toddler', 'child', 'children', 'pre-school', 'pre-schooler', 'pre-school-aged', 'school-aged', 'infant', 'boy', 'girl', 'son', 'daughter', 'teenager', 'teen'];
+  const SCREENPLAY_AGES = '1 month, 2 years, 4 years, 7 years';
+
+  const isChildType = (name: string) => CHILD_KEYWORDS.some(kw => name.toLowerCase().includes(kw));
+
+  const addCharacter = (name: string, source: 'existing' | 'new' = 'new') => {
+    if (!name.trim()) return;
     const id = `char-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const newChar: CharacterProfile = { id, name, photoUrls: [], wardrobeUrls: [], traits: { ...emptyTraits } };
+    const newChar: CharacterProfile = { id, name: name.trim(), photoUrls: [], wardrobeUrls: [], traits: { ...emptyTraits }, source };
     const updated = [...characters, newChar];
     onChange(updated);
     setActiveCharId(id);
     setNameInput('');
+    if (isChildType(name)) {
+      setAgeList(SCREENPLAY_AGES);
+    }
+  };
+
+  const updateCharSource = (charId: string, source: 'existing' | 'new') => {
+    onChange(characters.map(c => c.id === charId ? { ...c, source } : c));
+  };
+
+  const updateExistingImage = (charId: string, url: string) => {
+    onChange(characters.map(c => c.id === charId ? { ...c, existingImageUrl: url, photoUrls: url ? [url] : c.photoUrls } : c));
   };
 
   const updateTrait = (key: keyof CharacterTraits, value: string) => {
@@ -253,32 +283,77 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Character selector */}
-      <div className="p-3 border-b border-[#ceadd4] space-y-2 flex-shrink-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {characters.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setActiveCharId(c.id)}
-              className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all ${
-                activeCharId === c.id
-                  ? 'bg-[#91569c] text-[#3a3a3a]'
-                  : 'bg-[#f6f0f8] text-[#888]/60 hover:text-[#5c3a62] border border-[#ceadd4]'
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
+      {/* Screenplay characters list */}
+      {detectedNames.length > 0 && (
+        <div className="p-3 border-b border-[#ceadd4] flex-shrink-0">
+          <div className="flex items-center gap-1.5 mb-2">
+            <i className="fa-solid fa-scroll text-[8px] text-[#91569c]"></i>
+            <span className="text-[8px] font-black text-[#888]/60 uppercase tracking-wider">Characters from Screenplay</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {detectedNames.map(n => {
+              const existing = characters.find(c => c.name.toLowerCase() === n);
+              return (
+                <button
+                  key={n}
+                  onClick={() => {
+                    if (existing) {
+                      setActiveCharId(existing.id);
+                    } else {
+                      addCharacter(n.charAt(0).toUpperCase() + n.slice(1));
+                    }
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    existing
+                      ? (activeCharId === existing.id
+                        ? 'bg-[#91569c] text-[#3a3a3a]'
+                        : 'bg-[#f6f0f8] text-[#91569c] border border-[#91569c]/30')
+                      : 'bg-[#f6f0f8] text-[#888]/50 border border-dashed border-[#ceadd4] hover:text-[#91569c] hover:border-[#91569c]/40'
+                  }`}
+                >
+                  {existing ? (
+                    <i className="fa-solid fa-circle-check text-[7px]"></i>
+                  ) : (
+                    <i className="fa-solid fa-plus text-[7px]"></i>
+                  )}
+                  {n}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      )}
 
-        {/* Add from detected or custom */}
+      {/* Character selector tabs + custom add */}
+      <div className="p-3 border-b border-[#ceadd4] space-y-2 flex-shrink-0">
+        {characters.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {characters.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setActiveCharId(c.id)}
+                className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                  activeCharId === c.id
+                    ? 'bg-[#91569c] text-[#3a3a3a]'
+                    : 'bg-[#f6f0f8] text-[#888]/60 hover:text-[#5c3a62] border border-[#ceadd4]'
+                }`}
+              >
+                {c.source === 'existing' && c.existingImageUrl && (
+                  <img src={c.existingImageUrl} alt="" className="w-4 h-4 rounded-full object-cover" />
+                )}
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-1.5">
           <input
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && nameInput.trim()) addCharacter(nameInput.trim()); }}
-            placeholder="Character name..."
+            placeholder="Add custom character name..."
             className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded px-2 py-1 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
           />
           <button
@@ -289,29 +364,132 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
             <i className="fa-solid fa-plus text-[7px]"></i>
           </button>
         </div>
-
-        {/* Quick add from screenplay */}
-        {detectedNames.filter(n => !characters.some(c => c.name.toLowerCase() === n)).length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[7px] text-[#888]/40 uppercase tracking-wider">From screenplay:</span>
-            {detectedNames.filter(n => !characters.some(c => c.name.toLowerCase() === n)).map(n => (
-              <button
-                key={n}
-                onClick={() => addCharacter(n.charAt(0).toUpperCase() + n.slice(1))}
-                className="px-1.5 py-0.5 rounded text-[7px] font-bold bg-[#f6f0f8] text-[#888]/60 hover:text-[#91569c] border border-[#ceadd4] hover:border-[#91569c]/30 transition-colors"
-              >
-                + {n}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Character detail */}
       {activeChar ? (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {/* Mode toggle + delete */}
-          <div className="flex items-center justify-between px-3 pt-3 pb-1">
+          {/* Source toggle: Select Existing / Create New */}
+          <div className="px-3 pt-3 pb-1 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex bg-[#f6f0f8] rounded-lg p-0.5 border border-[#ceadd4]/50">
+                <button
+                  onClick={() => updateCharSource(activeChar.id, 'existing')}
+                  className={`px-3 py-1.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    activeChar.source === 'existing' ? 'bg-[#91569c] text-[#3a3a3a]' : 'text-[#888]/50 hover:text-[#5c3a62]'
+                  }`}
+                >
+                  <i className="fa-solid fa-folder-open text-[7px]"></i>
+                  Select Existing
+                </button>
+                <button
+                  onClick={() => updateCharSource(activeChar.id, 'new')}
+                  className={`px-3 py-1.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    (!activeChar.source || activeChar.source === 'new') ? 'bg-[#91569c] text-[#3a3a3a]' : 'text-[#888]/50 hover:text-[#5c3a62]'
+                  }`}
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-[7px]"></i>
+                  Create New
+                </button>
+              </div>
+              <button onClick={() => deleteCharacter(activeChar.id)} className="text-red-400/40 hover:text-red-400 p-1 transition-colors" title="Delete character">
+                <i className="fa-solid fa-trash-can text-[9px]"></i>
+              </button>
+            </div>
+          </div>
+
+          {/* SELECT EXISTING mode */}
+          {activeChar.source === 'existing' ? (
+            <div className="p-3 space-y-3">
+              <p className="text-[9px] text-[#888]/50">
+                <i className="fa-solid fa-folder text-[8px] text-[#91569c] mr-1"></i>
+                Pick a character image from <span className="font-bold">assets/3. Characters</span>
+              </p>
+
+              {filesLoading ? (
+                <div className="flex items-center gap-2 py-4 justify-center">
+                  <i className="fa-solid fa-spinner fa-spin text-[#91569c]"></i>
+                  <span className="text-[9px] text-[#888]/50">Loading character files...</span>
+                </div>
+              ) : characterFiles.length === 0 ? (
+                <div className="bg-[#f6f0f8] border border-[#ceadd4] rounded-lg p-4 text-center">
+                  <i className="fa-solid fa-folder-open text-2xl text-[#ceadd4] mb-2"></i>
+                  <p className="text-[9px] text-[#888]/50 font-bold">No character images found</p>
+                  <p className="text-[8px] text-[#888]/30 mt-1">Add images to <span className="font-mono">assets/3. Characters</span></p>
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={activeChar.existingImageUrl || ''}
+                    onChange={(e) => updateExistingImage(activeChar.id, e.target.value)}
+                    className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-2 text-[10px] text-[#888] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer"
+                  >
+                    <option value="">-- Select a character image --</option>
+                    {characterFiles.map(f => (
+                      <option key={f.path} value={`http://localhost:5182${f.path}`}>{f.name}</option>
+                    ))}
+                  </select>
+
+                  {activeChar.existingImageUrl && (
+                    <div className="bg-[#f6f0f8] border border-[#ceadd4] rounded-xl p-3 flex items-start gap-3">
+                      <img
+                        src={activeChar.existingImageUrl}
+                        alt={activeChar.name}
+                        className="w-24 h-24 rounded-lg object-cover border-2 border-[#91569c]/30 flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider">{activeChar.name}</p>
+                        <p className="text-[8px] text-[#888]/40 mt-0.5 truncate">
+                          {characterFiles.find(f => `http://localhost:5182${f.path}` === activeChar.existingImageUrl)?.name}
+                        </p>
+                        <div className="flex items-center gap-1 mt-2">
+                          <i className="fa-solid fa-circle-check text-[8px] text-green-400"></i>
+                          <span className="text-[8px] text-green-400/80">Image selected</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Grid view of all files for quick selection */}
+                  <div className="border-t border-[#ceadd4]/30 pt-3">
+                    <span className="text-[8px] font-black text-[#888]/40 uppercase tracking-wider block mb-2">
+                      <i className="fa-solid fa-grip text-[7px] mr-1"></i>
+                      All Character Images
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {characterFiles.map(f => {
+                        const url = `http://localhost:5182${f.path}`;
+                        const isSelected = activeChar.existingImageUrl === url;
+                        return (
+                          <button
+                            key={f.path}
+                            onClick={() => updateExistingImage(activeChar.id, url)}
+                            className={`relative rounded-lg overflow-hidden border-2 transition-all aspect-square ${
+                              isSelected ? 'border-[#91569c] ring-2 ring-[#91569c]/30' : 'border-[#ceadd4]/50 hover:border-[#91569c]/40'
+                            }`}
+                          >
+                            <img src={url} alt={f.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = ''; }} />
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#91569c] flex items-center justify-center">
+                                <i className="fa-solid fa-check text-[6px] text-white"></i>
+                              </div>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5">
+                              <span className="text-[6px] text-white truncate block">{f.name.replace(/\.[^.]+$/, '')}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+          <>
+          {/* CREATE NEW mode — Build/Photo toggle */}
+          <div className="flex items-center justify-between px-3 pt-2 pb-1">
             <div className="flex bg-[#f6f0f8] rounded-lg p-0.5">
               <button onClick={() => setMode('traits')} className={`px-2.5 py-1 rounded text-[8px] font-bold uppercase tracking-wider transition-all ${mode === 'traits' ? 'bg-[#91569c] text-[#3a3a3a]' : 'text-[#888]/50 hover:text-[#5c3a62]'}`}>
                 <i className="fa-solid fa-sliders text-[7px] mr-1"></i>Build
@@ -320,9 +498,6 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                 <i className="fa-solid fa-camera text-[7px] mr-1"></i>Photo
               </button>
             </div>
-            <button onClick={() => deleteCharacter(activeChar.id)} className="text-red-400/40 hover:text-red-400 p-1 transition-colors" title="Delete character">
-              <i className="fa-solid fa-trash-can text-[9px]"></i>
-            </button>
           </div>
 
           {mode === 'photo' ? (
@@ -347,42 +522,6 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
                 </div>
               )}
               <p className="text-[7px] text-[#888]/30">{(activeChar.photoUrls || []).length}/3 references</p>
-
-              {/* Age Progression */}
-              <div className="pt-2 border-t border-[#ceadd4]/50 space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <i className="fa-solid fa-children text-[8px] text-[#91569c]"></i>
-                  <span className="text-[8px] font-bold text-[#888]/50 uppercase tracking-wider">Age Progression</span>
-                </div>
-                <p className="text-[7px] text-[#888]/30">Enter ages separated by commas. Leave empty for a single image.</p>
-                <input type="text" value={ageList} onChange={(e) => setAgeList(e.target.value)} placeholder="e.g. 6 months, 1 year, 3 years, 5 years, 7 years"
-                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded px-2.5 py-1.5 text-[9px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none" />
-              </div>
-
-              {/* Single Generate Prompt button */}
-              <button
-                onClick={async () => {
-                  const ages = ageList.split(',').map(a => a.trim()).filter(Boolean);
-                  const baseDesc = activeChar.traits.distinguishing || '';
-                  if (ages.length > 0) {
-                    for (const age of ages) {
-                      const raw = `Photorealistic portrait of "${activeChar.name}" as a child aged exactly ${age}. Show correct body size and face proportions for ${age}. ${baseDesc ? `Key features: ${baseDesc}.` : ''} Same child across all ages — consistent genetic features. Warm natural lighting, cinematic, 9:16 vertical.`;
-                      const optimised = await onGeneratePrompt(activeChar.id, raw);
-                      onGenerateImage(activeChar.id, optimised, `${activeChar.name} - ${age}`);
-                    }
-                  } else {
-                    const raw = `Portrait of "${activeChar.name}" matching the reference photos. ${baseDesc ? `Features: ${baseDesc}.` : ''} Warm natural lighting, cinematic, photorealistic, 9:16 vertical.`;
-                    const optimised = await onGeneratePrompt(activeChar.id, raw);
-                    onGenerateImage(activeChar.id, optimised);
-                  }
-                }}
-                disabled={isGeneratingPrompt || (activeChar.photoUrls || []).length === 0}
-                className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#f6f0f8] text-[#91569c] border border-[#91569c]/40 hover:bg-[#91569c]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-              >
-                <i className={`fa-solid ${isGeneratingPrompt ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[8px]`}></i>
-                {isGeneratingPrompt ? 'Generating Prompts...' : 'Generate Prompt'}
-              </button>
-
             </div>
           ) : (
             <div className="p-2 space-y-1">
@@ -528,6 +667,101 @@ export const CharacterBuilder: React.FC<CharacterBuilderProps> = ({ characters, 
             )}
           </div>
           )}
+
+          </>
+          )}
+
+          {/* ─── Age Progression (available in ALL modes) ─── */}
+          <div className="p-3 mt-1 border-t border-[#ceadd4] space-y-2">
+            <div className="flex items-center gap-1.5">
+              <i className="fa-solid fa-children text-[9px] text-[#91569c]"></i>
+              <span className="text-[9px] font-black text-[#888]/60 uppercase tracking-wider">Age Progression</span>
+            </div>
+            <p className="text-[8px] text-[#888]/40 leading-relaxed">
+              Generate the same character at different ages. Enter ages separated by commas.
+              {isChildType(activeChar.name) && !ageList && (
+                <button
+                  onClick={() => setAgeList(SCREENPLAY_AGES)}
+                  className="ml-1 text-[#91569c] hover:underline"
+                >
+                  Pre-fill from screenplay
+                </button>
+              )}
+            </p>
+
+            <input
+              type="text"
+              value={ageList}
+              onChange={(e) => setAgeList(e.target.value)}
+              placeholder="e.g. 1 month, 2 years, 4 years, 7 years"
+              className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-2 text-[10px] text-[#888] placeholder:text-[#ceadd4] focus:ring-1 focus:ring-[#91569c]/50 outline-none"
+            />
+
+            {ageList.trim() && (
+              <div className="flex flex-wrap gap-1.5 py-1">
+                {ageList.split(',').map(a => a.trim()).filter(Boolean).map((age, i) => (
+                  <span key={i} className="px-2 py-1 rounded-lg bg-[#91569c]/10 text-[#91569c] text-[8px] font-bold uppercase tracking-wider flex items-center gap-1">
+                    <i className="fa-solid fa-cake-candles text-[7px]"></i>
+                    {age}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={async () => {
+                const ages = ageList.split(',').map(a => a.trim()).filter(Boolean);
+                const traitDesc = Object.values(activeChar.traits).filter(Boolean).length >= 3
+                  ? buildPromptFromTraits(activeChar.name, activeChar.traits).replace(/^Portrait photograph of "[^"]+": /, '').replace(/\. Warm natural.*$/, '')
+                  : '';
+                const distinguishing = activeChar.traits.distinguishing || '';
+                const hasRef = (activeChar.photoUrls || []).length > 0 || !!activeChar.existingImageUrl;
+
+                if (ages.length > 0) {
+                  for (const age of ages) {
+                    const parts = [
+                      `Photorealistic portrait of "${activeChar.name}" as a child aged exactly ${age}.`,
+                      `Show correct body size, face proportions, and developmental features for ${age}.`,
+                    ];
+                    if (traitDesc) parts.push(`Genetic features: ${traitDesc}.`);
+                    if (distinguishing) parts.push(`Key features: ${distinguishing}.`);
+                    if (hasRef) parts.push('Match the reference photos — same child, aged naturally.');
+                    parts.push('Same child across all ages — consistent genetic features (eye colour, nose shape, hair colour, skin tone).');
+                    parts.push('Warm natural lighting, cinematic, photorealistic, 9:16 vertical.');
+
+                    const raw = parts.join(' ');
+                    const optimised = await onGeneratePrompt(activeChar.id, raw);
+                    onGenerateImage(activeChar.id, optimised, `${activeChar.name} - ${age}`);
+                  }
+                } else {
+                  const parts = [`Portrait of "${activeChar.name}".`];
+                  if (traitDesc) parts.push(`Features: ${traitDesc}.`);
+                  if (distinguishing) parts.push(`Key features: ${distinguishing}.`);
+                  if (hasRef) parts.push('Match the reference photos.');
+                  parts.push('Warm natural lighting, cinematic, photorealistic, 9:16 vertical.');
+
+                  const raw = parts.join(' ');
+                  const optimised = await onGeneratePrompt(activeChar.id, raw);
+                  onGenerateImage(activeChar.id, optimised);
+                }
+              }}
+              disabled={isGeneratingPrompt || (
+                !ageList.trim() &&
+                Object.values(activeChar.traits).filter(Boolean).length < 3 &&
+                (activeChar.photoUrls || []).length === 0 &&
+                !activeChar.existingImageUrl
+              )}
+              className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            >
+              <i className={`fa-solid ${isGeneratingPrompt ? 'fa-spinner fa-spin' : 'fa-bolt'} text-[9px]`}></i>
+              {isGeneratingPrompt
+                ? 'Generating...'
+                : ageList.trim()
+                  ? `Generate ${ageList.split(',').filter(a => a.trim()).length} Age Stages`
+                  : 'Generate Character Image'
+              }
+            </button>
+          </div>
 
         </div>
       ) : (

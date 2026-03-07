@@ -1,8 +1,11 @@
 /**
  * Media Analysis Pipeline
  *
- * Downloads video/images from Google Drive → extracts keyframes (video) or uses images directly →
- * sends to Gemini Vision for analysis → saves Word doc → returns structured description.
+ * Video: Downloads from Google Drive → uploads to Gemini File API → waits for processing →
+ *        sends to gemini-3.1-pro-preview for native video analysis (no FFmpeg needed).
+ * Images: Downloads from Drive → sends inline to Gemini for analysis.
+ *
+ * Output: structured cinematography breakdown + optimised generative prompt.
  */
 
 import { Router } from "express";
@@ -35,98 +38,112 @@ async function cleanTemp(dir) {
   } catch { /* ignore */ }
 }
 
-function isImageMime(mime) {
-  return /^image\/(jpeg|jpg|png|gif|webp|bmp|tiff)$/i.test(mime);
+function isImageMime(mime) { return /^image\/(jpeg|jpg|png|gif|webp|bmp|tiff)$/i.test(mime); }
+function isVideoMime(mime) { return /^video\//i.test(mime); }
+function isImageFile(name) { return /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i.test(name); }
+function isVideoFile(name) { return /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(name); }
+
+function getMimeForVideo(name) {
+  const ext = name.split(".").pop().toLowerCase();
+  const map = { mp4: "video/mp4", mov: "video/quicktime", avi: "video/x-msvideo", webm: "video/webm", mkv: "video/x-matroska", m4v: "video/mp4" };
+  return map[ext] || "video/mp4";
 }
 
-function isVideoMime(mime) {
-  return /^video\//i.test(mime);
-}
+const VIDEO_PROMPT = `You are an expert cinematographer and AI prompt engineer. Your task is to analyze the provided video and extract a highly detailed, structured breakdown of its visual elements to recreate its exact vibe.
 
-function isImageFile(name) {
-  return /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i.test(name);
-}
+Please analyze the video and provide the following:
 
-function isVideoFile(name) {
-  return /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(name);
-}
+1. **Core Subject & Action:** A concise 2-3 sentence summary of the main subjects and the primary action taking place.
+2. **Visual Style & Medium:** Define the specific aesthetic (e.g., photorealistic, 3D animation, cinematic, 8-bit, retro VHS) and the dominant color grading or palette.
+3. **Cinematography & Lighting:** Describe the camera work (e.g., fast panning, static close-up, sweeping drone shot) and the lighting setup (e.g., harsh shadows, neon rim lighting, soft golden hour).
+4. **Subject & Characters:** Describe every person/object in extreme detail — age, ethnicity, build, clothing (fabric, cut, colour), hair, expression, pose, spatial relationships between subjects.
+5. **Colour & Grade:** Exact colour palette (hex-like descriptions), colour grading approach (LUT feel), contrast curve, saturation level, white balance, split toning (highlights/shadows).
+6. **Setting & Environment:** Location type, props, set dressing, background elements, time of day, weather/atmosphere.
+7. **Typography & Graphics:** Any text overlays, titles, lower thirds, branding elements — describe fonts, sizes, placement, animation style.
+8. **Chronological Breakdown:** A concise, timestamped list of major visual transitions, cuts, or key actions.
+9. **Overall Vibe:** The emotional and aesthetic feel in one paragraph.
+10. **Optimized Generative Prompt:** Synthesize your analysis into a highly descriptive, comma-separated text prompt. This prompt should be optimized for a state-of-the-art AI image or video generator to perfectly recreate the essence of this video's opening scene. Focus heavily on visual keywords, medium, and lighting. Label it **MASTER PROMPT:**.
 
-async function extractFrames(videoPath, outputDir, interval = 3) {
-  const ffmpegPath = (await import("ffmpeg-static")).default;
-  const { execFile } = await import("child_process");
-  const { promisify } = await import("util");
-  const execFileAsync = promisify(execFile);
+Ensure your output is strictly formatted using these exact headings. Be highly descriptive and prioritize specific, technical visual keywords over generic descriptions.`;
 
-  await mkdir(outputDir, { recursive: true });
+const IMAGE_PROMPT_FN = (count) => `Analyze these ${count} reference images in extreme detail, focusing on subject, lighting, medium, and style.
 
-  await execFileAsync(ffmpegPath, [
-    "-i", videoPath,
-    "-vf", `fps=1/${interval},scale=720:-1`,
-    "-q:v", "3",
-    "-frames:v", "20",
-    join(outputDir, "frame_%03d.jpg"),
-  ], { timeout: 120000 });
+For each aspect below, be as specific and precise as possible:
 
-  const files = (await readdir(outputDir)).filter(f => f.startsWith("frame_") && f.endsWith(".jpg")).sort();
-  return files.map(f => join(outputDir, f));
-}
+1. **Subject & Content**: What appears — people (age, ethnicity, build, clothing detail), objects, text, layout
+2. **Lighting**: Type, direction, quality, colour temperature, shadow characteristics
+3. **Medium & Technical**: Lens feel, depth of field, grain/noise, resolution quality, print vs digital
+4. **Colour & Grade**: Exact palette, contrast, saturation, white balance, toning
+5. **Composition**: Framing, visual hierarchy, use of space, alignment
+6. **Typography & Branding**: Fonts, logos, text treatments, brand elements
+7. **Setting & Environment**: Backgrounds, context, props, atmosphere
+8. **Overall Vibe**: The emotional and aesthetic feel in one paragraph
 
-async function analyseWithGemini(imagePaths, apiKey, mediaType) {
+Then, output a highly optimized, comma-separated text prompt designed for a state-of-the-art image generator to recreate this exact vibe. Label it **MASTER PROMPT:**.`;
+
+// ─── Native video analysis via Gemini File API ──────────────────────────────
+
+async function analyseVideoNative(videoPath, videoName, apiKey, model) {
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
+  const useModel = model || "gemini-3.1-pro-preview";
+
+  console.log(`[Analysis] Uploading video to Gemini File API...`);
+  let videoFile = await ai.files.upload({
+    file: videoPath,
+    config: { mimeType: getMimeForVideo(videoName) },
+  });
+  console.log(`[Analysis] Uploaded as: ${videoFile.name}, waiting for processing...`);
+
+  const maxWaitMs = 300000;
+  const start = Date.now();
+  while (videoFile.state === "PROCESSING") {
+    if (Date.now() - start > maxWaitMs) throw new Error("Video processing timed out after 5 minutes");
+    await new Promise(r => setTimeout(r, 3000));
+    videoFile = await ai.files.get({ name: videoFile.name });
+    process.stdout.write(".");
+  }
+  console.log("");
+
+  if (videoFile.state === "FAILED") throw new Error("Video processing failed on Google's servers");
+  console.log(`[Analysis] Video processed, analysing with ${useModel}...`);
+
+  const response = await ai.models.generateContent({
+    model: useModel,
+    contents: [videoFile, VIDEO_PROMPT],
+  });
+
+  // Clean up uploaded file
+  try { await ai.files.delete({ name: videoFile.name }); } catch { /* ignore */ }
+
+  return typeof response.text === "string" ? response.text : "";
+}
+
+// ─── Image analysis (inline, no File API needed) ────────────────────────────
+
+async function analyseImages(imagePaths, apiKey, model) {
+  const { GoogleGenAI } = await import("@google/genai");
+  const ai = new GoogleGenAI({ apiKey });
+  const useModel = model || "gemini-3.1-pro-preview";
 
   const imageParts = [];
   for (const fp of imagePaths) {
     const data = await readFile(fp);
     const ext = fp.split(".").pop().toLowerCase();
     const mimeMap = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", bmp: "image/bmp" };
-    imageParts.push({
-      inlineData: {
-        mimeType: mimeMap[ext] || "image/jpeg",
-        data: data.toString("base64"),
-      },
-    });
+    imageParts.push({ inlineData: { mimeType: mimeMap[ext] || "image/jpeg", data: data.toString("base64") } });
   }
 
-  const isVideo = mediaType === "video";
-  const prompt = isVideo
-    ? `You are a video production analyst. These are ${imagePaths.length} keyframes extracted from a reference video at regular intervals.
-
-Analyse these frames and provide a detailed breakdown:
-
-1. **Visual Style**: Colour grading, lighting approach, contrast, saturation, overall mood
-2. **Camera Work**: Shot types used (wide, medium, close-up, etc.), camera movement patterns, angles
-3. **Composition**: Framing techniques, rule of thirds, symmetry, depth of field
-4. **Subjects & Characters**: Who/what appears, their appearance, clothing, expressions
-5. **Setting & Environment**: Locations, backgrounds, props, set design
-6. **Pacing & Editing**: How the visual rhythm flows across these frames, transitions implied
-7. **Typography & Graphics**: Any text overlays, titles, branding elements
-8. **Overall Tone & Mood**: The emotional feel the video conveys
-
-Be specific and detailed — this analysis will be used to create a new video in the same style.`
-    : `You are a visual design analyst. These are ${imagePaths.length} reference images.
-
-Analyse these images and provide a detailed breakdown:
-
-1. **Visual Style**: Colour palette, lighting, contrast, saturation, overall aesthetic
-2. **Composition**: Framing, layout, use of space, visual hierarchy
-3. **Subjects & Content**: What appears in the images, people, objects, text
-4. **Typography & Branding**: Fonts, logos, text treatments, brand elements
-5. **Setting & Environment**: Backgrounds, context, props
-6. **Mood & Tone**: The emotional feel and message conveyed
-7. **Technical Details**: Resolution quality, format cues, print vs digital indicators
-
-Be specific and detailed — this analysis will be used as creative reference for a new project.`;
-
+  console.log(`[Analysis] Analysing ${imagePaths.length} images with ${useModel}...`);
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [
-      { role: "user", parts: [{ text: prompt }, ...imageParts] },
-    ],
+    model: useModel,
+    contents: [{ role: "user", parts: [{ text: IMAGE_PROMPT_FN(imagePaths.length) }, ...imageParts] }],
   });
 
   return typeof response.text === "string" ? response.text : "";
 }
+
+// ─── Save analysis to Word doc ──────────────────────────────────────────────
 
 const ANALYSES_JSON = join(SCREENPLAYS_DIR, "style_references.json");
 const ANALYSES_DOCX = join(SCREENPLAYS_DIR, "Style_References_Analysis.docx");
@@ -157,36 +174,28 @@ async function saveAnalysisAsDocx(analysis, mediaName, mediaType) {
   allAnalyses.push({ mediaName, mediaType, date: new Date().toISOString(), analysis });
   await writeFile(ANALYSES_JSON, JSON.stringify(allAnalyses, null, 2), "utf-8");
 
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } = await import("docx");
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
 
-  const sections = [];
-  for (let i = 0; i < allAnalyses.length; i++) {
-    const a = allAnalyses[i];
-    const paras = markdownToParagraphs(a.analysis);
-    sections.push({
-      children: [
-        new Paragraph({ heading: HeadingLevel.HEADING_1, children: [
-          new TextRun({ text: `Reference ${i + 1}: ${a.mediaType === "video" ? "Video" : "Image"} Analysis`, bold: true }),
-        ]}),
-        new Paragraph({ children: [new TextRun({ text: `Source: ${a.mediaName}`, italics: true, color: "888888", size: 18 })] }),
-        new Paragraph({ children: [new TextRun({ text: `Analysed: ${new Date(a.date).toLocaleDateString()} by TensorAx Studio`, italics: true, color: "888888", size: 18 })] }),
-        new Paragraph({ text: "" }),
-        ...paras,
-      ],
-    });
-  }
+  const sections = allAnalyses.map((a, i) => ({
+    children: [
+      new Paragraph({ heading: HeadingLevel.HEADING_1, children: [
+        new TextRun({ text: `Reference ${i + 1}: ${a.mediaType === "video" ? "Video" : "Image"} Analysis`, bold: true }),
+      ]}),
+      new Paragraph({ children: [new TextRun({ text: `Source: ${a.mediaName}`, italics: true, color: "888888", size: 18 })] }),
+      new Paragraph({ children: [new TextRun({ text: `Analysed: ${new Date(a.date).toLocaleDateString()} by TensorAx Studio`, italics: true, color: "888888", size: 18 })] }),
+      new Paragraph({ text: "" }),
+      ...markdownToParagraphs(a.analysis),
+    ],
+  }));
 
   const doc = new Document({
-    sections: [
-      {
-        children: [
-          new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: "Style References Analysis", bold: true })] }),
-          new Paragraph({ children: [new TextRun({ text: `${allAnalyses.length} reference${allAnalyses.length !== 1 ? "s" : ""} analysed`, italics: true, color: "888888", size: 20 })] }),
-          new Paragraph({ text: "" }),
-        ],
-      },
-      ...sections,
-    ],
+    sections: [{
+      children: [
+        new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: "Style References Analysis", bold: true })] }),
+        new Paragraph({ children: [new TextRun({ text: `${allAnalyses.length} reference${allAnalyses.length !== 1 ? "s" : ""} analysed`, italics: true, color: "888888", size: 20 })] }),
+        new Paragraph({ text: "" }),
+      ],
+    }, ...sections],
   });
 
   const buffer = await Packer.toBuffer(doc);
@@ -198,7 +207,7 @@ async function saveAnalysisAsDocx(analysis, mediaName, mediaType) {
 // ─── API endpoint ────────────────────────────────────────────────────────────
 
 router.post("/analyse-video", async (req, res) => {
-  const { url, apiKey } = req.body;
+  const { url, apiKey, model } = req.body;
   if (!url) return res.status(400).json({ error: "Missing URL" });
   if (!apiKey) return res.status(400).json({ error: "Missing API key for Gemini Vision" });
 
@@ -211,12 +220,11 @@ router.post("/analyse-video", async (req, res) => {
     const fileId = extractFileId(url);
     let mediaType = "video";
     let mediaName = "media";
-    let framePaths = [];
+    let analysis = "";
 
     if (folderId) {
       console.log(`[Analysis] Listing files in Drive folder: ${folderId}`);
       const files = await listFiles(folderId);
-
       const videoFile = files.find(f => isVideoMime(f.mimeType) || isVideoFile(f.name));
       const imageFiles = files.filter(f => isImageMime(f.mimeType) || isImageFile(f.name));
 
@@ -227,21 +235,22 @@ router.post("/analyse-video", async (req, res) => {
         const buffer = await downloadFile(videoFile.id);
         const videoPath = join(sessionDir, videoFile.name);
         await writeFile(videoPath, buffer);
-        console.log(`[Analysis] Video saved (${(buffer.length / 1024 / 1024).toFixed(1)}MB), extracting frames...`);
-        const framesDir = join(sessionDir, "frames");
-        framePaths = await extractFrames(videoPath, framesDir, 3);
+        console.log(`[Analysis] Video saved (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
+        analysis = await analyseVideoNative(videoPath, videoFile.name, apiKey, model);
       } else if (imageFiles.length > 0) {
         mediaType = "images";
         mediaName = `${imageFiles.length}_images_from_folder`;
         console.log(`[Analysis] Found ${imageFiles.length} images, downloading...`);
         const imgDir = join(sessionDir, "images");
         await mkdir(imgDir, { recursive: true });
+        const paths = [];
         for (const img of imageFiles.slice(0, 20)) {
           const buf = await downloadFile(img.id);
           const imgPath = join(imgDir, img.name);
           await writeFile(imgPath, buf);
-          framePaths.push(imgPath);
+          paths.push(imgPath);
         }
+        analysis = await analyseImages(paths, apiKey, model);
       } else {
         return res.status(404).json({ error: "No video or image files found in the Drive folder" });
       }
@@ -256,13 +265,12 @@ router.post("/analyse-video", async (req, res) => {
         mediaType = "video";
         const videoPath = join(sessionDir, mediaName);
         await writeFile(videoPath, buffer);
-        const framesDir = join(sessionDir, "frames");
-        framePaths = await extractFrames(videoPath, framesDir, 3);
+        analysis = await analyseVideoNative(videoPath, mediaName, apiKey, model);
       } else if (isImageMime(meta.mimeType) || isImageFile(meta.name)) {
         mediaType = "images";
         const imgPath = join(sessionDir, mediaName);
         await writeFile(imgPath, buffer);
-        framePaths = [imgPath];
+        analysis = await analyseImages([imgPath], apiKey, model);
       } else {
         return res.status(400).json({ error: `Unsupported file type: ${meta.mimeType}` });
       }
@@ -270,23 +278,10 @@ router.post("/analyse-video", async (req, res) => {
       return res.status(400).json({ error: "Could not parse Drive folder or file ID from URL" });
     }
 
-    console.log(`[Analysis] ${framePaths.length} frames/images ready, sending to Gemini Vision...`);
-    if (framePaths.length === 0) {
-      return res.status(500).json({ error: "No frames or images extracted" });
-    }
-
-    const analysis = await analyseWithGemini(framePaths, apiKey, mediaType);
     console.log(`[Analysis] Complete (${analysis.length} chars)`);
-
     const docPath = await saveAnalysisAsDocx(analysis, mediaName, mediaType);
 
-    res.json({
-      mediaName,
-      mediaType,
-      framesAnalysed: framePaths.length,
-      analysis,
-      savedTo: docPath,
-    });
+    res.json({ mediaName, mediaType, analysis, savedTo: docPath });
   } catch (err) {
     console.error("[Analysis] Error:", err);
     res.status(500).json({ error: err.message || "Analysis failed" });

@@ -4,6 +4,8 @@ export interface CharacterProfile {
   photoUrls: string[];
   wardrobeUrls: string[];
   traits: CharacterTraits;
+  source?: 'existing' | 'new';
+  existingImageUrl?: string;
 }
 
 export interface CharacterTraits {

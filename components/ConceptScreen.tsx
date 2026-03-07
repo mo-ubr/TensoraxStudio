@@ -31,8 +31,8 @@ const emptyBrief: ProjectBrief = {
   sampleVideoUrl: '',
 };
 
-function buildBriefSummary(brief: ProjectBrief): string {
-  return [
+function buildBriefSummary(brief: ProjectBrief, direction?: GeneralDirectionType): string {
+  const parts = [
     `Video Type: ${brief.videoType}`,
     `Format: ${brief.format} | Duration: ${brief.duration} | Tone: ${brief.tone}`,
     '',
@@ -45,9 +45,18 @@ function buildBriefSummary(brief: ProjectBrief): string {
     brief.cta ? `\nCTA: ${brief.cta}` : '',
     brief.targetAudience ? `Target Audience: ${brief.targetAudience}` : '',
     brief.offer ? `Offer: ${brief.offer}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  ];
+
+  if (direction) {
+    if (direction.aim) parts.push('', `Project Aim: ${direction.aim}`);
+    if (direction.characterConsistency) parts.push(`Character Notes: ${direction.characterConsistency}`);
+    if (direction.sceneryConsistency) parts.push(`Scenery Notes: ${direction.sceneryConsistency}`);
+    if (direction.styleGuide) parts.push(`Style Guide: ${direction.styleGuide}`);
+    if (direction.generatedPrompt) parts.push('', `Creative Direction:\n${direction.generatedPrompt}`);
+    if (direction.additionalNotes) parts.push('', `REFERENCE VIDEO/IMAGE STYLE ANALYSIS (use this to match the visual style):\n${direction.additionalNotes}`);
+  }
+
+  return parts.filter(Boolean).join('\n');
 }
 
 function parseIdeas(text: string): ConceptIdea[] {
@@ -114,9 +123,13 @@ interface ConceptScreenProps {
   brands: BrandProfile[];
   activeBrandId: string;
   activeProject?: Project | null;
+  onNavigateToImages?: () => void;
+  onContextChange?: (context: string) => void;
+  actionRef?: React.MutableRefObject<((action: import('./ChatBot').AssistantAction) => void) | null>;
+  chatHistoryRef?: React.MutableRefObject<string>;
 }
 
-export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject }) => {
+export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject, onNavigateToImages, onContextChange, actionRef, chatHistoryRef }) => {
   const [step, setStep] = useState<ConceptStep>('direction');
   const [generalDirection, setGeneralDirection] = useState<GeneralDirectionType>(() => {
     const dir = { ...emptyDirection };
@@ -174,7 +187,63 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
 
   useEffect(() => { saveToDb(); }, [saveToDb]);
 
+  useEffect(() => {
+    if (!onContextChange) return;
+    const gd = generalDirection;
+    const fields = [
+      { label: 'User Direction', key: 'aim', value: gd.aim, required: true, help: 'The main creative brief — what the video should show and achieve' },
+      { label: 'Video Type', key: 'videoType', value: gd.videoType, required: false, help: 'Options: explainer, promo, tutorial, testimonial, brand, product' },
+      { label: 'Format', key: 'format', value: gd.format, required: false, help: 'Options: 9:16 (vertical/shorts), 16:9 (landscape), 1:1 (square)' },
+      { label: 'Duration', key: 'duration', value: gd.duration, required: false, help: 'Options: 1.5min (short), 3min (long)' },
+      { label: 'Tone', key: 'tone', value: gd.tone, required: false, help: 'Options: warm, energetic, professional, playful, dramatic, inspirational' },
+      { label: 'Call to Action', key: 'cta', value: gd.cta, required: true, help: 'What should viewers do after watching? e.g. "Shop now", "Visit our stores"' },
+      { label: 'Target Audience', key: 'targetAudience', value: gd.targetAudience, required: true, help: 'Who is this video for? e.g. "Parents of young children"' },
+      { label: 'Style Inspirations', key: 'styleVideos', value: gd.styleVideos.length > 0 ? gd.styleVideos.map(s => s.url).join(', ') : '', required: false, help: 'Reference video URLs from Google Drive that set the visual style' },
+    ];
+
+    const filled = fields.filter(f => !!f.value);
+    const empty = fields.filter(f => !f.value && f.required);
+    const optional = fields.filter(f => !f.value && !f.required);
+
+    const parts: string[] = [];
+    parts.push(`## CURRENT STEP: ${step === 'direction' ? 'General Direction (setup)' : step === 'ideas' ? 'Idea Factory (ideas generated)' : 'Screenplay'}`);
+    parts.push(`Project: ${gd.projectName || '(not named yet)'}`);
+
+    parts.push('\n## DIRECTION FIELDS STATUS');
+    for (const f of fields) {
+      const status = f.value ? `✅ ${f.label}: ${f.value}` : `❌ ${f.label}: (empty) — ${f.help}`;
+      parts.push(status);
+    }
+
+    if (empty.length > 0) {
+      parts.push(`\n⚠️ MISSING REQUIRED FIELDS: ${empty.map(f => f.label).join(', ')}`);
+      parts.push('Help the user fill these in before generating ideas.');
+    } else if (!gd.generatedPrompt) {
+      parts.push('\n✅ All required fields are filled. The user can now click "Generate Idea".');
+    }
+
+    if (gd.generatedPrompt) {
+      const ideasText = gd.generatedPrompt.length > 3000
+        ? gd.generatedPrompt.slice(0, 3000) + '\n...(truncated)'
+        : gd.generatedPrompt;
+      parts.push(`\n## GENERATED IDEAS\n\n${ideasText}`);
+    }
+    if (screenplay) {
+      const screenplayText = screenplay.length > 3000
+        ? screenplay.slice(0, 3000) + '\n...(truncated)'
+        : screenplay;
+      parts.push(`\n## SCREENPLAY\n\n${screenplayText}`);
+    }
+    if (conceptState.refinedConcept) {
+      parts.push(`\n## REFINED CONCEPT\n\n${conceptState.refinedConcept.slice(0, 1500)}`);
+    }
+
+    onContextChange(parts.join('\n'));
+  }, [generalDirection, screenplay, conceptState.refinedConcept, step, onContextChange]);
+
   const activeBrand = brands.find(b => b.id === activeBrandId) || brands[0];
+
+  const actionHandlerRef = React.useRef<((action: import('./ChatBot').AssistantAction) => void) | null>(null);
 
   const handleSaveAndCreateScript = async (title: string, concept: string, directions: string) => {
     setIsSavingConcept(true);
@@ -185,18 +254,7 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
         await DB.saveProjectFile(activeProject.id, `${title.replace(/[^a-zA-Z0-9 _-]/g, '')}.txt`, conceptText, 'concepts').catch(e => console.warn('[ConceptScreen] Project file save failed:', e));
       }
 
-      // Save locally (skip Drive)
-      try {
-        const filename = `${(generalDirection.projectName || 'Project').replace(/\s+/g, '_')}_Concept.txt`;
-        await fetch('/api/save-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, data: `${title}\n\n${concept}\n${directions ? `\nDirections: ${directions}` : ''}`, folder: 'assets/2. Screenplays' }),
-        });
-      } catch { /* continue even if save fails */ }
-
-      const apiKey = getAiKey();
-      const model = getAiModel();
+      const styleAnalysis = generalDirection.additionalNotes || '';
       const scriptPrompt = `Based on the finalised video concept below, create a professional 3-column screenplay.
 
 Title: ${title}
@@ -204,12 +262,16 @@ Title: ${title}
 Concept:
 ${concept}
 ${directions ? `\nAdditional directions: ${directions}` : ''}
+${generalDirection.aim ? `\nProject Aim: ${generalDirection.aim}` : ''}
+${generalDirection.characterConsistency ? `\nCharacter Notes: ${generalDirection.characterConsistency}` : ''}
+${generalDirection.sceneryConsistency ? `\nScenery Notes: ${generalDirection.sceneryConsistency}` : ''}
+${styleAnalysis ? `\nREFERENCE STYLE ANALYSIS (match this visual style in all VIDEO PROMPTs):\n${styleAnalysis}` : ''}
 
 Generate a detailed screenplay as a scene-by-scene breakdown with exactly these 3 columns for EACH scene:
 
 Column 1 — SCENE: Scene number, description of what happens, action, camera direction, SFX/music cues.
 Column 2 — DIALOGUE: All spoken dialogue and/or narrator voiceover, attributed by character name.
-Column 3 — VIDEO PROMPT: A complete AI image/video generation prompt for this scene — include subject, outfit, environment, framing, lighting, style.
+Column 3 — VIDEO PROMPT: A complete AI image/video generation prompt for this scene — include subject, outfit, environment, framing, lighting, style. MUST match the reference style analysis if provided.
 
 Format each scene EXACTLY like this:
 
@@ -226,17 +288,112 @@ Rules:
 - Include camera movements, transitions, and pacing notes in the SCENE column
 - Dialogue should match the tone: ${generalDirection.tone}
 - Total duration target: ${generalDirection.duration}
-- Format: ${generalDirection.format}`;
+- Format: ${generalDirection.format}
+- If reference style analysis is provided, every VIDEO PROMPT must match that visual style, colour grading, lighting, and camera approach`;
 
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      const modelName = model || 'gemini-2.5-flash';
-      const response = await ai.models.generateContent({ model: modelName, contents: scriptPrompt });
-      const text = typeof response.text === 'string' ? response.text : '';
+      const text = await callAiText(scriptPrompt);
 
       if (text) {
         setScreenplay(text);
         setStep('screenplay' as ConceptStep);
+
+        // Append screenplay to the Approved Concept Word doc
+        try {
+          const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, PageOrientation } = await import('docx');
+
+          const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+          const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+          const scenes = text.split(/(?=###\s*Scene\s*\d)/i).filter((b: string) => b.trim() && /^###\s*Scene\s*\d/i.test(b.trim()));
+
+          const conceptParas: any[] = [];
+          const conceptLines = concept.split('\n');
+          for (const line of conceptLines) {
+            if (line.startsWith('## ')) {
+              conceptParas.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: line.slice(3).replace(/\*\*/g, ''), bold: true })] }));
+            } else if (line.trim()) {
+              const parts: any[] = [];
+              const boldPattern = /\*\*([^*]+)\*\*/g;
+              let last = 0;
+              let bm;
+              while ((bm = boldPattern.exec(line)) !== null) {
+                if (bm.index > last) parts.push(new TextRun({ text: line.slice(last, bm.index), size: 22 }));
+                parts.push(new TextRun({ text: bm[1], bold: true, size: 22 }));
+                last = bm.index + bm[0].length;
+              }
+              if (last < line.length) parts.push(new TextRun({ text: line.slice(last), size: 22 }));
+              conceptParas.push(new Paragraph({ children: parts.length > 0 ? parts : [new TextRun({ text: line, size: 22 })] }));
+            } else {
+              conceptParas.push(new Paragraph({ text: '' }));
+            }
+          }
+
+          const screenplayRows = scenes.map((scene: string) => {
+            const titleMatch = scene.match(/###\s*Scene\s*(\d+)[:\s\-–]*(.*)/i);
+            const sceneLabel = `Scene ${titleMatch?.[1] || '?'}: ${titleMatch?.[2]?.replace(/\*\*/g, '').trim() || ''}`;
+            const sceneMatch = scene.match(/\*\*SCENE:\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE:\*\*|$)/i);
+            const dialogueMatch = scene.match(/\*\*DIALOGUE:\*\*\s*([\s\S]*?)(?=\*\*VIDEO PROMPT:\*\*|$)/i);
+            const promptMatch = scene.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
+
+            return new TableRow({
+              children: [
+                new TableCell({ borders: cellBorders, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
+                  new Paragraph({ children: [new TextRun({ text: sceneLabel, bold: true, size: 20 })] }),
+                  new Paragraph({ children: [new TextRun({ text: sceneMatch?.[1]?.trim() || '', size: 20 })] }),
+                ] }),
+                new TableCell({ borders: cellBorders, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
+                  new Paragraph({ children: [new TextRun({ text: dialogueMatch?.[1]?.trim() || '', italics: true, size: 20 })] }),
+                ] }),
+                new TableCell({ borders: cellBorders, width: { size: 34, type: WidthType.PERCENTAGE }, children: [
+                  new Paragraph({ children: [new TextRun({ text: promptMatch?.[1]?.trim() || '', size: 18, font: 'Consolas' })] }),
+                ] }),
+              ],
+            });
+          });
+
+          const headerRow = new TableRow({
+            children: ['SCENE', 'DIALOGUE', 'VIDEO PROMPT'].map(h =>
+              new TableCell({
+                borders: cellBorders,
+                shading: { fill: '91569C' },
+                children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, bold: true, color: 'FFFFFF', size: 20 })] })],
+              })
+            ),
+          });
+
+          const doc = new Document({
+            sections: [{
+              properties: {
+                page: {
+                  size: { orientation: PageOrientation.LANDSCAPE },
+                  margin: { top: 720, bottom: 720, left: 720, right: 720 },
+                },
+              },
+              children: [
+                new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: `${generalDirection.projectName || 'Project'} — Approved Concept`, bold: true })] }),
+                new Paragraph({ children: [new TextRun({ text: `Approved: ${new Date().toLocaleDateString()} — TensorAx Studio`, italics: true, color: '888888', size: 18 })] }),
+                new Paragraph({ text: '' }),
+                ...conceptParas,
+                new Paragraph({ text: '' }),
+                new Paragraph({ text: '' }),
+                new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: 'Screenplay', bold: true })] }),
+                new Paragraph({ text: '' }),
+                new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...screenplayRows] }),
+              ],
+            }],
+          });
+
+          const blob = await Packer.toBlob(doc);
+          const dataUrl = await new Promise<string>(resolve => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result as string);
+            r.readAsDataURL(blob);
+          });
+          const docxFilename = `${(generalDirection.projectName || 'Project').replace(/\s+/g, '_')}_Screenplay.docx`;
+          if (activeProject) {
+            await DB.saveProjectFile(activeProject.id, docxFilename, dataUrl).catch(e => console.warn('[ConceptScreen] Word doc save failed:', e));
+          }
+        } catch (e) { console.warn('Word screenplay append failed:', e); }
       }
     } catch (err: any) {
       alert(`Failed: ${err.message || err}`);
@@ -251,12 +408,13 @@ Rules:
 
   const callAiText = async (prompt: string): Promise<string> => {
     const globalModel = (() => { try { return localStorage.getItem('tensorax_active_model') || ''; } catch { return ''; } })();
-    const apiKey = getAiKey();
     const model = globalModel || getAiModel() || 'gemini-2.5-flash';
 
     if (isClaudeModel(model || null)) {
+      const copyKey = getApiKeyForType('copy');
+      if (!copyKey) throw new Error('Please set your Anthropic API key in Project Settings → Creative Ideas & Script.');
       const Anthropic = (await import('@anthropic-ai/sdk')).default;
-      const client = new Anthropic({ apiKey: apiKey.trim(), dangerouslyAllowBrowser: true });
+      const client = new Anthropic({ apiKey: copyKey.trim(), dangerouslyAllowBrowser: true });
       const msg = await client.messages.create({
         model: model || 'claude-sonnet-4-6',
         max_tokens: 8192,
@@ -269,8 +427,10 @@ Rules:
         .trim();
     }
 
+    const analysisKey = getApiKeyForType('analysis');
+    if (!analysisKey) throw new Error('Please set your Google AI API key in Project Settings → Image Analysis.');
     const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: analysisKey });
     const modelName = model || 'gemini-2.5-flash';
     const response = await ai.models.generateContent({ model: modelName, contents: prompt });
     return typeof response.text === 'string' ? response.text : '';
@@ -325,14 +485,67 @@ Rules:
     }
   };
 
-  const getAiKey = (): string => {
-    const copyKey = getApiKeyForType('copy');
-    const analysisKey = getApiKeyForType('analysis');
-    const globalKey = (() => { try { return localStorage.getItem('gemini_api_key') || ''; } catch { return ''; } })();
-    const key = copyKey || analysisKey || globalKey;
-    if (!key) {
-      throw new Error('Please set an API key via the API button in the header.');
-    }
+  // Wire up the assistant action handler
+  useEffect(() => {
+    const handler = (action: import('./ChatBot').AssistantAction) => {
+      if (action.type === 'set_field' && action.field && action.value !== undefined) {
+        const fieldMap: Record<string, string> = {
+          aim: 'aim', cta: 'cta', targetAudience: 'targetAudience',
+          videoType: 'videoType', format: 'format', duration: 'duration', tone: 'tone',
+          characterConsistency: 'characterConsistency', sceneryConsistency: 'sceneryConsistency',
+        };
+        const key = fieldMap[action.field];
+        if (key) {
+          setGeneralDirection(prev => ({ ...prev, [key]: action.value }));
+        }
+      } else if (action.type === 'generate_idea') {
+        handleGenerateDirection();
+      } else if (action.type === 'regenerate_idea') {
+        const text = generalDirection.generatedPrompt;
+        if (!text) { handleGenerateDirection(action.feedback); return; }
+
+        const ideaBlocks: { num: number; title: string; body: string }[] = [];
+        const pattern = /(?:^|\n)#{1,3}\s*(?:\*\*)?(?:Idea|Concept|Response)\s*(\d*)[:\s\-–.]*(.*?)(?:\*\*)?(?=\n)/gi;
+        let m;
+        while ((m = pattern.exec(text)) !== null) {
+          const num = parseInt(m[1]) || (ideaBlocks.length + 1);
+          const start = text.indexOf('\n', m.index) + 1;
+          const rest = text.slice(start);
+          const nextHeading = rest.search(/\n#{1,3}\s*(?:\*\*)?(?:Idea|Concept)\s*\d/i);
+          const end = nextHeading >= 0 ? start + nextHeading : text.length;
+          ideaBlocks.push({ num, title: m[2].replace(/\*\*/g, '').trim(), body: text.slice(start, end).trim() });
+        }
+        if (ideaBlocks.length === 0) {
+          ideaBlocks.push({ num: 1, title: 'Response', body: text });
+        }
+
+        const chatHistory = chatHistoryRef?.current || '';
+        const fullFeedback = [
+          action.feedback,
+          chatHistory ? `\n\nFull conversation with the user (incorporate ALL their comments):\n${chatHistory}` : '',
+        ].filter(Boolean).join('\n');
+
+        handleRegenerateSingleIdea(ideaBlocks[0].num, ideaBlocks, { comment: fullFeedback });
+      } else if (action.type === 'accept_concept') {
+        const text = generalDirection.generatedPrompt;
+        const titleMatch = text.match(/(?:##?\s*(?:Idea|Concept)\s*\d*[:\s\-–.]*)(.*?)(?:\n|$)/i);
+        const title = titleMatch?.[1]?.replace(/\*\*/g, '').trim() || 'Concept';
+        handleSaveAndCreateScript(title, text, '');
+      }
+    };
+    actionHandlerRef.current = handler;
+    if (actionRef) actionRef.current = handler;
+  });
+
+  const getGoogleKey = (): string => {
+    const key = getApiKeyForType('analysis');
+    if (!key) throw new Error('Please set your Google AI API key in Project Settings → Image Analysis.');
+    return key;
+  };
+
+  const getAnthropicKey = (): string => {
+    const key = getApiKeyForType('copy');
+    if (!key) throw new Error('Please set your Anthropic API key in Project Settings → Creative Ideas & Script.');
     return key;
   };
 
@@ -342,12 +555,6 @@ Rules:
   };
 
   const handleSearchVideos = async (brief: ProjectBrief): Promise<VideoSuggestion[]> => {
-    const apiKey = getAiKey();
-    const model = getAiModel();
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey });
-    const modelName = model || 'gemini-2.5-flash';
-
     const briefContext = [
       brief.videoType && `Video type: ${brief.videoType}`,
       brief.videoConcept && `Concept: ${brief.videoConcept}`,
@@ -374,12 +581,7 @@ IMPORTANT: Since you cannot verify exact YouTube URLs, use YouTube SEARCH URLs i
 
 Return exactly 5 suggestions as a JSON array.`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-    });
-
-    const text = typeof response.text === 'string' ? response.text : '';
+    const text = await callAiText(prompt);
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error('Could not parse video suggestions');
 
@@ -393,35 +595,31 @@ Return exactly 5 suggestions as a JSON array.`;
   };
 
   const handleGenerateIdeas = async () => {
+    if (!generalDirection.additionalNotes?.includes('STYLE ANALYSIS')) {
+      const proceed = confirm('No style analysis found. The AI works best when it has analysed reference videos/images first.\n\nGo to General Direction → Style Inspirations to analyse a reference.\n\nContinue anyway?');
+      if (!proceed) return;
+    }
+
     setIsGeneratingIdeas(true);
     try {
-      const apiKey = getAiKey();
-      const model = getAiModel();
-      const briefText = buildBriefSummary(conceptState.brief);
+      const briefText = buildBriefSummary(conceptState.brief, generalDirection);
 
-      const prompt = `You are a creative director at a top video production studio. Based on the following project brief, generate exactly 1 video concept idea.
+      const prompt = `You are a creative director at a top video production studio. Based on the following project brief AND the reference style analysis, generate exactly 1 video concept idea.
+
+CRITICAL: If a REFERENCE VIDEO/IMAGE STYLE ANALYSIS is provided below, your concept MUST match that visual style, tone, pacing, and production approach. The style analysis is the primary creative reference.
 
 Use this exact format:
 
 ## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept approach]
 **Key Scenes:** [Brief description of 3-4 key visual moments]
-**Visual Style:** [Describe the visual treatment, color palette, mood]
+**Visual Style:** [Describe the visual treatment, color palette, mood — must align with the reference analysis]
 **Why It Works:** [1 sentence on why this concept fits]
 
-PROJECT BRIEF:
+PROJECT BRIEF & CREATIVE DIRECTION:
 ${briefText}`;
 
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      const modelName = model || 'gemini-2.5-flash';
-
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-      });
-
-      const text = typeof response.text === 'string' ? response.text : '';
+      const text = await callAiText(prompt);
       const parsed = parseIdeas(text);
 
       if (parsed.length === 0) {
@@ -474,12 +672,6 @@ ${briefText}`;
   const handleRefine = async (direction: string): Promise<string> => {
     setIsRefining(true);
     try {
-      const apiKey = getAiKey();
-      const model = getAiModel();
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      const modelName = model || 'gemini-2.5-flash';
-
       const prompt = `You are a creative director refining a video concept. Here is the current concept:
 
 ${conceptState.refinedConcept}
@@ -489,12 +681,7 @@ The client has given this feedback/direction:
 
 Please refine the concept based on this feedback. Keep the same structure but incorporate the changes. Return ONLY the refined concept text, no meta-commentary.`;
 
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-      });
-
-      const text = typeof response.text === 'string' ? response.text : '';
+      const text = await callAiText(prompt);
       setConceptState((prev) => ({ ...prev, refinedConcept: text.trim() }));
       return text.trim();
     } catch (e: any) {
@@ -678,14 +865,17 @@ Please refine the concept based on this feedback. Keep the same structure but in
                   const proj = (generalDirection.projectName || 'Project').replace(/\s+/g, '_');
                   const filename = `${proj}_Screenplay.md`;
                   try {
-                    const res = await fetch('http://localhost:5182/api/save-file', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ filename, data: screenplay, folder: `output/${proj}` }),
-                    });
-                    const json = await res.json();
-                    if (res.ok) alert(`Saved: ${json.path}`);
-                    else throw new Error(json.error);
+                    if (activeProject) {
+                      await DB.saveProjectFile(activeProject.id, filename, screenplay);
+                    } else {
+                      const res = await fetch('http://localhost:5182/api/save-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename, data: screenplay, folder: `output/${proj}` }),
+                      });
+                      const json = await res.json();
+                      if (!res.ok) throw new Error(json.error);
+                    }
                   } catch {
                     const blob = new Blob([screenplay], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -695,12 +885,13 @@ Please refine the concept based on this feedback. Keep the same structure but in
                     a.click();
                     URL.revokeObjectURL(url);
                   }
+                  onNavigateToImages?.();
                 }}
                 disabled={!screenplay}
-                className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-[#3a3a3a] hover:bg-[#d4af1c] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#e0d6e3] hover:text-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                <i className="fa-solid fa-floppy-disk"></i>
-                Save Screenplay
+                <i className="fa-solid fa-arrow-right"></i>
+                Save &amp; Create Characters
               </button>
             </div>
           </div>
@@ -714,6 +905,9 @@ Please refine the concept based on this feedback. Keep the same structure but in
             isGenerating={isGeneratingDirection}
             regeneratingIdeaNum={regeneratingIdeaNum}
             onSaveAndCreateScript={handleSaveAndCreateScript}
+            onSaveFile={activeProject ? async (filename, data, subfolder) => {
+              await DB.saveProjectFile(activeProject.id, filename, data, subfolder);
+            } : undefined}
             isSaving={isSavingConcept}
           />
         ) : (
@@ -794,6 +988,8 @@ Please refine the concept based on this feedback. Keep the same structure but in
         </>
         )}
       </div>
+
+      
     </div>
   );
 };

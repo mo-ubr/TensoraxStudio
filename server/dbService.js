@@ -6,7 +6,7 @@
  */
 
 import { Router } from "express";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, readdir } from "fs/promises";
 import { resolve, join } from "path";
 import Database from "better-sqlite3";
 
@@ -287,6 +287,54 @@ router.post("/projects/:id/unlink", (req, res) => {
     d.prepare("DELETE FROM project_assets WHERE projectId = ? AND assetId = ? AND assetType = ?").run(req.params.id, assetId, assetType);
     d.prepare("UPDATE projects SET updatedAt = ? WHERE id = ?").run(now(), req.params.id);
     res.json(projectRow(d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id)));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Project directory info ──────────────────────────────────────────────────
+
+router.get("/projects/:id/directory", (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
+    res.json({ path: projectDir, slug: p.slug });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/project-folders", async (_req, res) => {
+  try {
+    const projectsRoot = join(ASSETS_ROOT, SUBFOLDER_MAP.projects);
+    await mkdir(projectsRoot, { recursive: true });
+    const entries = await readdir(projectsRoot, { withFileTypes: true });
+    const folders = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    res.json({ root: projectsRoot, folders });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/projects/:id/open-folder", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
+    await mkdir(projectDir, { recursive: true });
+
+    const { exec } = await import("child_process");
+    const platform = process.platform;
+    const cmd = platform === "win32" ? `explorer "${projectDir}"`
+              : platform === "darwin" ? `open "${projectDir}"`
+              : `xdg-open "${projectDir}"`;
+    exec(cmd);
+    res.json({ opened: projectDir });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

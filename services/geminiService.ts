@@ -140,26 +140,32 @@ const ENV_MODELS: Record<string, string> = {
 };
 
 export function getApiKeyForType(type: "analysis" | "copy" | "image"): string | null {
-  // 1. localStorage (user-entered via UI)
+  const baseKey = `tensorax_${type}_key`;
+  const modelKey = `tensorax_${type}_model`;
   if (typeof window !== "undefined") {
     try {
-      const k = normalizeApiKey(localStorage.getItem(`tensorax_${type}_key`));
-      if (k) return k;
+      const model = localStorage.getItem(modelKey)?.trim();
+      if (model) {
+        const perModel = normalizeApiKey(localStorage.getItem(`${baseKey}__${model}`));
+        if (perModel) return perModel;
+      }
+      const base = normalizeApiKey(localStorage.getItem(baseKey));
+      if (base) return base;
     } catch { /* ignore */ }
   }
-  // 2. Env var baked in at build time
   const envKey = normalizeApiKey(ENV_KEYS[type]);
   if (envKey) return envKey;
-  // 3. Fall back to main Gemini key
-  return getSavedApiKey();
+  return null;
 }
 
-/** Check if user has stored an API key for a given type (does not fall back to main key). */
+/** Check if user has stored an API key for a given type. */
 export function hasStoredKeyForType(type: "analysis" | "copy" | "image"): boolean {
   if (typeof window !== "undefined") {
     try {
-      const k = normalizeApiKey(localStorage.getItem(`tensorax_${type}_key`));
-      if (k) return true;
+      const baseKey = `tensorax_${type}_key`;
+      const model = localStorage.getItem(`tensorax_${type}_model`)?.trim();
+      if (model && normalizeApiKey(localStorage.getItem(`${baseKey}__${model}`))) return true;
+      if (normalizeApiKey(localStorage.getItem(baseKey))) return true;
     } catch { /* ignore */ }
   }
   return !!normalizeApiKey(ENV_KEYS[type]);
@@ -544,38 +550,72 @@ Reply with only the single description.`;
   ASSISTANT_SYSTEM_INSTRUCTION,
 
   hasApiKey(): boolean {
-    return !!getSavedApiKey() || !!normalizeApiKey(process.env.GEMINI_API_KEY || process.env.API_KEY);
+    if (getSavedApiKey()) return true;
+    if (normalizeApiKey(process.env.GEMINI_API_KEY || process.env.API_KEY)) return true;
+    // Fall back to analysis key (Google) for assistant chat
+    if (typeof window !== "undefined") {
+      try {
+        const ak = normalizeApiKey(localStorage.getItem('tensorax_analysis_key'));
+        if (ak) { setApiKey(ak); return true; }
+      } catch { /* ignore */ }
+    }
+    return false;
   },
 
-  createChat(model?: string): Chat {
+  createChat(model?: string, projectContext?: string): Chat {
     const ai = createClient();
+    const contextBlock = projectContext
+      ? `\n\n═══ CURRENT PROJECT CONTEXT ═══\n\n${projectContext}\n\n═══ END PROJECT CONTEXT ═══\n\n═══ YOUR ROLE: CREATIVE DIRECTOR ═══\n\nYou are the creative director guiding this project. You don't just answer questions — you DRIVE the process.\n\nRULES:\n- Keep responses SHORT (2-3 sentences max). No walls of text.\n- Ask ONE question at a time. Wait for the answer before moving on.\n- Be specific — reference their actual content, not generic advice.\n- When the user gives you information, USE ACTION COMMANDS to apply it.\n\n═══ ACTION COMMANDS ═══\n\nYou can take actions by including these tags in your response. They are invisible to the user — only the text around them is shown.\n\n[ACTION:SET_FIELD:fieldName:value] — Set a form field. Available fields:\n  - aim (the main creative direction/brief)\n  - cta (call to action)\n  - targetAudience\n  - videoType (explainer | promo | tutorial | testimonial | brand | product)\n  - format (9:16 | 16:9 | 1:1)\n  - duration (1.5min | 3min)\n  - tone (warm | energetic | professional | playful | dramatic | inspirational)\n\n[ACTION:GENERATE_IDEA] — Trigger idea generation (only when all required fields are filled)\n\n[ACTION:REGENERATE:feedback text] — Regenerate the current idea with specific feedback\n\n[ACTION:ACCEPT] — Accept the current concept and move to screenplay\n\nEXAMPLES:\n\nUser: "It's for parents of young kids"\nYou: "Got it — targeting parents of young children. [ACTION:SET_FIELD:targetAudience:Parents of young children] What's the main message you want to get across?"\n\nUser: "I like it but scene 3 feels too long"\nYou: "Agreed, Scene 3 could be tighter. I'll regenerate with that note. [ACTION:REGENERATE:Make Scene 3 shorter and more dynamic — reduce duration and quicken the pacing]"\n\nUser: "This is perfect, let's go"\nYou: "Great — locking in this concept! [ACTION:ACCEPT]"\n\n═══ FLOW ═══\n\n1. SETUP: Walk through empty fields one at a time. After user answers, set the field and ask the next one.\n2. GENERATE: When all required fields are ✅, offer to generate. Use [ACTION:GENERATE_IDEA].\n3. REVIEW: After idea appears, give a brief opinion and ask what they'd change.\n4. ITERATE: Take their feedback, use [ACTION:REGENERATE:...] with a clear directive.\n5. ACCEPT: When they're happy, use [ACTION:ACCEPT].\n\n═══ END ROLE ═══`
+      : '';
     return ai.chats.create({
       model: model || CHAT_MODEL,
       config: {
         temperature: 0.7,
-        systemInstruction: GeminiService.ASSISTANT_SYSTEM_INSTRUCTION,
+        systemInstruction: GeminiService.ASSISTANT_SYSTEM_INSTRUCTION + contextBlock,
       },
     });
   },
 
   async generateImage(params: ImageGenParams): Promise<string> {
-    console.log("GeminiService: Generating image...", params);
+    const configuredModel = getModelForType('image') || 'gemini-3-flash-image';
+    console.log("GeminiService: Generating image with model:", configuredModel);
+
+    const imageKey = getApiKeyForType('image') || getApiKeyForType('analysis');
+    if (imageKey) setApiKey(imageKey);
+
     const errors: string[] = [];
     let vertexError: string | null = null;
-    let freeTierError = false;
 
-    // 0) gemini-3-pro-image-preview – BEST for visual consistency: model SEES all ref images
-    //    (character + clothing + background) directly during generation. Matches dress, hair, scene.
+    const ai = createClient();
+    const imagePrompt = buildImagePrompt(params);
+
+    // 1) Try the configured model from Project Settings
     try {
-      return await generateImageAISTudioStyle(params);
+      const parts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> = [];
+      params.referenceImages.forEach((imgData) => {
+        const parsed = parseDataUrl(imgData);
+        if (parsed) parts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.imageBytes } });
+      });
+      parts.push({ text: imagePrompt });
+
+      const response = await ai.models.generateContent({
+        model: configuredModel,
+        contents: { parts },
+        config: {
+          responseModalities: ["IMAGE", "TEXT"],
+          imageConfig: { aspectRatio: params.aspectRatio },
+        },
+      });
+
+      const dataUrl = extractImageFromGenerateContentResponse(response);
+      if (dataUrl) return dataUrl;
+      throw new Error("Model returned no image data.");
     } catch (error) {
-      const msg = toErrorMessage(error);
-      if (/free.?tier|429|quota.*0|RESOURCE_EXHAUSTED/i.test(msg)) freeTierError = true;
-      errors.push(`Gemini (gemini-3-pro-image-preview): ${msg}`);
-      logApiError("generateImage AI Studio style", error);
+      errors.push(`${configuredModel}: ${toErrorMessage(error)}`);
+      logApiError(`generateImage (${configuredModel})`, error);
     }
 
-    // 1) Vertex AI Imagen 3 – fallback; uses subject reference for face only, text for rest
+    // 2) Fallback: Vertex AI Imagen 3
     try {
       return await generateImageViaVertexBackend(params);
     } catch (error) {
@@ -585,9 +625,7 @@ Reply with only the single description.`;
       logApiError("generateImage Vertex backend", error);
     }
 
-    // 2) Imagen (SDK generateImages) - consumer API; imagen-3.0-capability-001 is Vertex-only, so 404 is expected
-    const ai = createClient();
-    const imagePrompt = buildImagePrompt(params);
+    // 3) Fallback: Imagen SDK (generateImages)
     for (const model of IMAGE_MODELS) {
       try {
         const result = await ai.models.generateImages({
@@ -610,21 +648,9 @@ Reply with only the single description.`;
       }
     }
 
-    // Prefer a clear, actionable message
-    if (vertexError && /permission denied|403/i.test(vertexError)) {
-      const raw = vertexError.length > 200 ? vertexError.slice(0, 200) + "…" : vertexError;
-      throw new Error(
-        `Vertex AI: Permission denied. Add role 'Vertex AI User' to tensorax-backend@tensoraxstudio.iam.gserviceaccount.com in IAM. See FIX-VERTEX-PERMISSION.md. (Raw: ${raw})`
-      );
-    }
-    if (freeTierError) {
-      throw new Error(
-        "Gemini API is on free tier (quota 0). Upgrade to Tier 1 at https://ai.google.dev (billing/plan). Or fix Vertex AI so the app uses that instead. See FIX-PERMISSION-AND-TIER.md."
-      );
-    }
     const fullMessage = errors.length > 0 ? errors.join("; ") : "Unknown error";
     console.error("[TensorAx Gemini] Image generation failed:", fullMessage);
-    throw new Error(`Image generation failed. ${fullMessage}`);
+    throw new Error(`Image generation failed: ${fullMessage}`);
   },
 
   async generateVideo(params: VideoGenParams): Promise<string> {
