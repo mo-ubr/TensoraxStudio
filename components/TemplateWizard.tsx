@@ -372,12 +372,28 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       const geminiKey = getGeminiKey();
       if (!geminiKey) throw new Error('No Gemini API key found. Go to Project Settings (gear icon at top right) → Analysis section and enter your Gemini key.');
 
+      // If the video is a URL (not data URI), fetch and convert to data URI first
+      let videoData = state.referenceVideo;
+      let videoFileName = state.referenceVideoName || 'reference.mp4';
+      if (!videoData.startsWith('data:')) {
+        update({ progressMessage: 'Loading sample video...' });
+        const videoRes = await fetch(videoData);
+        const blob = await videoRes.blob();
+        videoData = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        videoFileName = 'sample-reference.mp4';
+        update({ progressMessage: 'Uploading video to Gemini for analysis...' });
+      }
+
       const res = await fetch('/api/video/analyse-uploaded-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          videoData: state.referenceVideo,
-          fileName: state.referenceVideoName || 'reference.mp4',
+          videoData,
+          fileName: videoFileName,
           apiKey: geminiKey,
           model: localStorage.getItem('tensorax_analysis_model')?.trim() || undefined,
         }),
