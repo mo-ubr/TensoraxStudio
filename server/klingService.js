@@ -11,7 +11,8 @@
  * Get your key at: https://fal.ai/dashboard/keys
  */
 
-const FAL_BASE = "https://queue.fal.run";
+const FAL_BASE = "https://queue.fal.run";  // Submit endpoint
+const FAL_REST = "https://fal.run";       // Status & result polling endpoint
 
 // ─── Model endpoint mapping ────────────────────────────────────────────────
 const KLING_ENDPOINTS = {
@@ -57,10 +58,10 @@ function resolveEndpoint(modelName, isImageToVideo) {
 const MAX_POLL_SECONDS = 600; // 10-minute timeout — Kling can be slow when queue is busy
 
 async function pollFalQueue(model, requestId, headers, onProgress) {
-  const statusUrl = `${FAL_BASE}/${model}/requests/${requestId}/status`;
-  const resultUrl = `${FAL_BASE}/${model}/requests/${requestId}`;
-  // fal.ai queue polling requires POST (GET returns 405)
-  const pollHeaders = { "Authorization": headers["Authorization"], "Content-Type": "application/json" };
+  // Status & result polling uses fal.run (not queue.fal.run which returns 405 on GET)
+  const statusUrl = `${FAL_REST}/${model}/requests/${requestId}/status`;
+  const resultUrl = `${FAL_REST}/${model}/requests/${requestId}`;
+  const pollHeaders = { "Authorization": headers["Authorization"] };
 
   let elapsed = 0;
   let lastStatus = '';
@@ -81,7 +82,7 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
     let falStatus = null;
 
     try {
-      const statusRes = await fetch(statusUrl, { method: 'POST', headers: pollHeaders });
+      const statusRes = await fetch(statusUrl, { headers: pollHeaders });
       if (!statusRes.ok) {
         console.warn("[Kling] Poll error", statusRes.status);
         onProgress?.(`⚠️ Poll error (HTTP ${statusRes.status}) — retrying... (${timeStr})`);
@@ -113,7 +114,7 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
     onProgress?.(statusText);
 
     if (falStatus?.status === "COMPLETED") {
-      const resultRes = await fetch(resultUrl, { method: 'POST', headers: pollHeaders });
+      const resultRes = await fetch(resultUrl, { headers: pollHeaders });
       if (!resultRes.ok) throw new Error(`Kling: failed to fetch result (${resultRes.status})`);
       const result = await resultRes.json();
       const videoUrl =
