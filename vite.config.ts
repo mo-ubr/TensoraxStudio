@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
             target: 'http://localhost:5182',
             changeOrigin: true,
           },
+          '/project-assets': {
+            target: 'http://localhost:5182',
+            changeOrigin: true,
+          },
+          '/character-assets': {
+            target: 'http://localhost:5182',
+            changeOrigin: true,
+          },
         },
         watch: {
           ignored: ['**/assets/**', '**/output/**', '**/*.db', '**/*.db-wal', '**/*.db-shm'],
