@@ -22,6 +22,8 @@ import { generateWithDalle } from "./openai_imagen.js";
 import { runAutoGeneratePrompts } from "./prompt_api.js";
 import { generateKlingVideo } from "./klingService.js";
 import { generateSeedanceVideo } from "./seedanceService.js";
+import { mergeVideos } from "./mergeVideosService.js";
+import { generateFluxKontextImage } from "./fluxKontextService.js";
 import { listFiles, getFileMetadata, downloadFile, uploadFile, createFolder } from "./driveService.js";
 import dbRouter from "./dbService.js";
 import videoAnalysisRouter from "./videoAnalysis.js";
@@ -102,6 +104,7 @@ app.get("/api/character-files", async (_req, res) => {
 });
 
 app.use("/character-assets", express.static(CHARACTERS_DIR));
+app.use("/project-assets", express.static(resolve(process.cwd(), "assets/0. Projects")));
 
 app.post("/api/generate-image", async (req, res) => {
   try {
@@ -160,15 +163,26 @@ app.post("/api/generate-prompts", async (req, res) => {
   }
 });
 
+// Kling video generation with SSE progress streaming
 app.post("/api/generate-video-kling", async (req, res) => {
+  const { apiKey, model, startImageUrl, endImageUrl, motionVideoUrl, prompt, duration, aspectRatio, generateAudio } = req.body;
+  const resolvedApiKey = (apiKey || "").trim() || process.env.KLING_API_KEY || "";
+
+  // Set up Server-Sent Events
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+  });
+
+  const sendSSE = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
   try {
-    const { apiKey, startImageUrl, endImageUrl, motionVideoUrl, prompt, duration, aspectRatio, generateAudio } = req.body;
-
-    // Fall back to server-side env var if client didn't send key
-    const resolvedApiKey = (apiKey || "").trim() || process.env.KLING_API_KEY || "";
-
     const videoUrl = await generateKlingVideo({
       apiKey: resolvedApiKey,
+      model: model || "kling-v3-standard",
       startImageUrl,
       endImageUrl: endImageUrl || null,
       motionVideoUrl: motionVideoUrl || null,
@@ -176,12 +190,17 @@ app.post("/api/generate-video-kling", async (req, res) => {
       duration: duration || "5",
       aspectRatio: aspectRatio || "9:16",
       generateAudio: !!generateAudio,
-      onProgress: (msg) => { console.log("[Kling]", msg); },
+      onProgress: (msg) => {
+        console.log("[Kling]", msg);
+        sendSSE("progress", { message: msg });
+      },
     });
-    res.json({ videoUrl });
+    sendSSE("done", { videoUrl });
   } catch (err) {
     console.error("[Kling API]", err);
-    res.status(500).json({ error: err.message || "Kling video generation failed." });
+    sendSSE("error", { error: err.message || "Kling video generation failed." });
+  } finally {
+    res.end();
   }
 });
 
@@ -204,6 +223,52 @@ app.post("/api/generate-video-seedance", async (req, res) => {
   } catch (err) {
     console.error("[Seedance API]", err);
     res.status(500).json({ error: err.message || "Seedance video generation failed." });
+  }
+});
+
+// ─── Video Merge / Stitch ────────────────────────────────────────────────────
+
+app.post("/api/merge-videos", async (req, res) => {
+  try {
+    const { apiKey, videoUrls, resolution } = req.body;
+    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
+
+    const videoUrl = await mergeVideos({
+      apiKey: resolvedApiKey,
+      videoUrls,
+      resolution: resolution || undefined,
+      onProgress: (msg) => { console.log("[MergeVideos]", msg); },
+    });
+    res.json({ videoUrl });
+  } catch (err) {
+    console.error("[MergeVideos API]", err);
+    res.status(500).json({ error: err.message || "Video merge failed." });
+  }
+});
+
+// ─── Flux Kontext (Image Transformation) ─────────────────────────────────────
+
+app.post("/api/flux-kontext/generate", async (req, res) => {
+  try {
+    const { apiKey, imageUrl, prompt, modelId, guidanceScale, steps, seed, outputFormat, usePro } = req.body;
+    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
+
+    const result = await generateFluxKontextImage({
+      apiKey: resolvedApiKey,
+      imageUrl,
+      prompt,
+      modelId: modelId || undefined,
+      guidanceScale: guidanceScale || 2.5,
+      steps: steps || 28,
+      seed: seed || undefined,
+      outputFormat: outputFormat || "jpeg",
+      usePro: !!usePro,
+      onProgress: (msg) => { console.log("[ImageEdit]", msg); },
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("[ImageEdit API]", err);
+    res.status(500).json({ error: err.message || "Image editing failed." });
   }
 });
 

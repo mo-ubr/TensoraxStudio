@@ -1,28 +1,61 @@
 /**
  * Kling AI video generation via fal.ai
  *
- * Uses Kling V3 Standard which supports:
- * - Image-to-video (start frame + prompt)
- * - End frame
- * - Motion reference video (via elements parameter)
- * - Native audio generation
- * - 3–15 second duration, up to 1080p
+ * Supports Kling V3 and O3 (Omni) models:
+ * - V3 Standard / Pro  — best for prompt-driven cinematic generation
+ * - O3 Standard / Pro  — best for reference-heavy workflows with character consistency
+ *
+ * All support: image-to-video, text-to-video, start/end frames,
+ * motion reference video, native audio, 3–15 second duration, up to 1080p
  *
  * Get your key at: https://fal.ai/dashboard/keys
  */
 
 const FAL_BASE = "https://queue.fal.run";
 
-// Kling V3 Standard – supports elements (motion video reference)
-const KLING_V3_MODEL = "fal-ai/kling-video/v3/standard/image-to-video";
-// Kling Motion Control – dedicated endpoint for video-as-motion-reference
+// ─── Model endpoint mapping ────────────────────────────────────────────────
+const KLING_ENDPOINTS = {
+  // V3 models
+  "kling-v3-standard": {
+    i2v: "fal-ai/kling-video/v3/standard/image-to-video",
+    t2v: "fal-ai/kling-video/v3/standard/text-to-video",
+  },
+  "kling-v3-pro": {
+    i2v: "fal-ai/kling-video/v3/pro/image-to-video",
+    t2v: "fal-ai/kling-video/v3/pro/text-to-video",
+  },
+  // O3 Omni models
+  "kling-o3-standard": {
+    i2v: "fal-ai/kling-video/o3/standard/image-to-video",
+    t2v: "fal-ai/kling-video/o3/standard/image-to-video", // O3 uses same endpoint
+  },
+  "kling-o3-pro": {
+    i2v: "fal-ai/kling-video/o3/pro/image-to-video",
+    t2v: "fal-ai/kling-video/o3/pro/image-to-video",
+  },
+};
+
+// Motion control (shared across all Kling models)
 const KLING_MOTION_MODEL = "fal-ai/kling-video/motion-control";
+
+// Default fallback
+const DEFAULT_MODEL = "kling-v3-standard";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * Resolve the fal.ai endpoint ID from a model name.
+ */
+function resolveEndpoint(modelName, isImageToVideo) {
+  const endpoints = KLING_ENDPOINTS[modelName] || KLING_ENDPOINTS[DEFAULT_MODEL];
+  return isImageToVideo ? endpoints.i2v : endpoints.t2v;
+}
+
+/**
  * Poll fal.ai queue until the request is COMPLETED or FAILED.
  */
+const MAX_POLL_SECONDS = 300; // 5-minute timeout
+
 async function pollFalQueue(model, requestId, headers, onProgress) {
   const statusUrl = `${FAL_BASE}/${model}/requests/${requestId}/status`;
   const resultUrl = `${FAL_BASE}/${model}/requests/${requestId}`;
@@ -41,14 +74,20 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
   while (true) {
     await wait(8000);
     elapsed += 8;
-    onProgress?.(`${progressMessages[msgIdx % progressMessages.length]} (${Math.floor(elapsed / 60)}m ${elapsed % 60}s)`);
+
+    if (elapsed > MAX_POLL_SECONDS) {
+      throw new Error(`Kling: timed out after ${MAX_POLL_SECONDS}s. The job may still be running on fal.ai — check your dashboard.`);
+    }
+
+    const timeStr = `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+    onProgress?.(`${progressMessages[msgIdx % progressMessages.length]} (${timeStr})`);
     msgIdx++;
 
     const statusRes = await fetch(statusUrl, { headers });
     if (!statusRes.ok) { console.warn("[Kling] Poll error", statusRes.status); continue; }
 
     const status = await statusRes.json();
-    console.log("[Kling] Status:", status.status);
+    console.log("[Kling] Status:", status.status, `(${timeStr})`);
 
     if (status.status === "COMPLETED") {
       const resultRes = await fetch(resultUrl, { headers });
@@ -70,10 +109,11 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
 }
 
 /**
- * Generate a video using Kling V3 via fal.ai.
+ * Generate a video using Kling V3/O3 via fal.ai.
  *
  * @param {object}   opts
  * @param {string}   opts.apiKey          fal.ai API key
+ * @param {string}   [opts.model]         model name (e.g. "kling-v3-standard", "kling-o3-pro")
  * @param {string}   opts.startImageUrl   data-URI or HTTPS URL of start frame
  * @param {string}   [opts.endImageUrl]   optional end frame
  * @param {string}   [opts.motionVideoUrl] optional motion reference video
@@ -86,6 +126,7 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
  */
 export async function generateKlingVideo({
   apiKey,
+  model = DEFAULT_MODEL,
   startImageUrl,
   endImageUrl,
   motionVideoUrl,
@@ -96,7 +137,6 @@ export async function generateKlingVideo({
   onProgress,
 }) {
   if (!apiKey) throw new Error("Kling: missing fal.ai API key. Add it in the Video tab settings.");
-  if (!startImageUrl) throw new Error("Kling: no start image. Hover over a generated frame and click 'start'.");
   if (!prompt?.trim()) throw new Error("Kling: no prompt provided.");
 
   const headers = {
@@ -104,10 +144,12 @@ export async function generateKlingVideo({
     "Content-Type": "application/json",
   };
 
-  let model, body;
+  const modelLabel = model.replace("kling-", "").toUpperCase();
+  let endpoint, body;
 
-  if (motionVideoUrl) {
-    model = KLING_MOTION_MODEL;
+  if (motionVideoUrl && startImageUrl) {
+    // Motion control mode — dedicated endpoint, works with any Kling tier
+    endpoint = KLING_MOTION_MODEL;
     body = {
       image_url: startImageUrl,
       video_url: motionVideoUrl,
@@ -115,9 +157,10 @@ export async function generateKlingVideo({
       character_orientation: "video",
       keep_original_sound: false,
     };
-    console.log("[Kling] Using motion control mode with reference video");
-  } else {
-    model = KLING_V3_MODEL;
+    console.log(`[Kling ${modelLabel}] Using motion control mode with reference video`);
+  } else if (startImageUrl) {
+    // Image-to-video
+    endpoint = resolveEndpoint(model, true);
     body = {
       prompt: prompt.trim(),
       start_image_url: startImageUrl,
@@ -128,11 +171,23 @@ export async function generateKlingVideo({
       negative_prompt: "blur, distort, low quality, deformed, extra limbs",
       cfg_scale: 0.5,
     };
-    console.log("[Kling] Using V3 standard image-to-video");
+    console.log(`[Kling ${modelLabel}] Using image-to-video: ${endpoint}`);
+  } else {
+    // Text-to-video
+    endpoint = resolveEndpoint(model, false);
+    body = {
+      prompt: prompt.trim(),
+      duration: String(duration),
+      aspect_ratio: aspectRatio,
+      generate_audio: generateAudio,
+      negative_prompt: "blur, distort, low quality, deformed, extra limbs",
+      cfg_scale: 0.5,
+    };
+    console.log(`[Kling ${modelLabel}] Using text-to-video: ${endpoint}`);
   }
 
-  onProgress?.("Submitting to Kling V3...");
-  const submitRes = await fetch(`${FAL_BASE}/${model}`, {
+  onProgress?.(`Submitting to Kling ${modelLabel}...`);
+  const submitRes = await fetch(`${FAL_BASE}/${endpoint}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -145,7 +200,7 @@ export async function generateKlingVideo({
 
   const { request_id } = await submitRes.json();
   if (!request_id) throw new Error("Kling: no request_id returned from fal.ai");
-  console.log("[Kling] Task submitted:", request_id);
+  console.log(`[Kling ${modelLabel}] Task submitted:`, request_id);
 
-  return pollFalQueue(model, request_id, headers, onProgress);
+  return pollFalQueue(endpoint, request_id, headers, onProgress);
 }
