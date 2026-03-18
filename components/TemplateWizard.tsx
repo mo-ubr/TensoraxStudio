@@ -777,7 +777,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             <React.Fragment key={i}>
               {i > 0 && <div className={`flex-1 h-px ${i <= state.step ? 'bg-[#91569c]' : 'bg-[#ceadd4]'}`} />}
               <button
-                onClick={() => { if (i <= state.step || (state.stages.length > 0 && i <= 3)) update({ step: i }); }}
+                onClick={() => { if (i <= state.step || (state.stages.length > 0 && i <= 4)) update({ step: i }); }}
                 className={`flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity ${i > state.step && state.stages.length === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
@@ -1263,42 +1263,80 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                 </div>
               )}
 
-              {/* Stitch & Final Video */}
-              {allSegmentsReady && state.segments.length >= 2 && (
-                <div className="bg-white border border-[#e0d6e3] rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide">
-                      <i className="fa-solid fa-wand-magic-sparkles text-[#91569c] mr-1.5"></i>Final Video
-                    </h3>
-                    <button onClick={stitchAllSegments} disabled={state.isGenerating}
-                      className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 flex items-center gap-1.5 transition-colors">
-                      {state.isGenerating ? <><i className="fa-solid fa-spinner fa-spin"></i>Stitching...</> : <><i className="fa-solid fa-scissors"></i>Stitch All Segments</>}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-[#888] mb-3">Combines all {state.segments.length} segments into one continuous video using fal.ai.</p>
-                  {state.finalVideoUrl && (
-                    <div>
-                      <video src={state.finalVideoUrl} controls className="w-full rounded-lg border border-[#e0d6e3]" style={{ maxHeight: 400 }} />
-                      <div className="flex items-center gap-3 mt-2">
-                        <a href={state.finalVideoUrl} download="final-transformation.mp4"
-                          className="text-[10px] font-bold text-[#91569c] uppercase hover:underline flex items-center gap-1">
-                          <i className="fa-solid fa-download text-[9px]"></i>Download Final Video
-                        </a>
-                        <button onClick={stitchAllSegments} disabled={state.isGenerating}
-                          className="text-[10px] font-bold text-[#888] uppercase hover:text-[#5c3a62] flex items-center gap-1">
-                          <i className="fa-solid fa-rotate-right text-[9px]"></i>Re-stitch
-                        </button>
-                      </div>
+              <div className="flex justify-between items-center">
+                <button onClick={() => update({ step: 2 })} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
+                  <i className="fa-solid fa-arrow-left mr-1"></i> Back to Images
+                </button>
+                <button onClick={() => update({ step: 4 })} disabled={!allSegmentsReady}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
+                  <i className="fa-solid fa-arrow-right"></i>Next: Concatenate
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ STEP 4: Concatenate ═══ */}
+          {state.step === 4 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">
+                    <i className="fa-solid fa-wand-magic-sparkles text-[#91569c] mr-2"></i>Concatenate All Segments
+                  </h3>
+                  <button onClick={stitchAllSegments} disabled={state.isGenerating}
+                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 flex items-center gap-1.5 transition-colors shadow-lg">
+                    {state.isGenerating ? <><i className="fa-solid fa-spinner fa-spin"></i>Stitching...</> : <><i className="fa-solid fa-scissors"></i>Stitch {state.segments.length} Segments</>}
+                  </button>
+                </div>
+                <p className="text-[10px] text-[#888] mb-4">Combines all {state.segments.length} video segments into one continuous transformation video.</p>
+
+                {/* Segment preview list */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {state.segments.map(seg => (
+                    <div key={seg.id} className="bg-[#f6f0f8] rounded-lg p-2 text-center">
+                      {seg.videoUrl ? (
+                        <video src={seg.videoUrl} className="w-full rounded aspect-video object-cover" muted />
+                      ) : (
+                        <div className="w-full aspect-video bg-[#e0d6e3] rounded flex items-center justify-center">
+                          <i className="fa-solid fa-video-slash text-[#ceadd4]"></i>
+                        </div>
+                      )}
+                      <p className="text-[8px] font-bold text-[#5c3a62] mt-1 uppercase">Segment {seg.id}</p>
                     </div>
-                  )}
+                  ))}
+                </div>
+
+                {state.finalVideoUrl && (
+                  <div className="border-t border-[#e0d6e3] pt-4">
+                    <h4 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide mb-2">
+                      <i className="fa-solid fa-film text-green-500 mr-1.5"></i>Final Video
+                    </h4>
+                    <video src={state.finalVideoUrl} controls className="w-full rounded-lg border border-[#e0d6e3]" style={{ maxHeight: 400 }} />
+                    <div className="flex items-center gap-3 mt-2">
+                      <a href={state.finalVideoUrl} download="final-transformation.mp4"
+                        className="text-[10px] font-bold text-[#91569c] uppercase hover:underline flex items-center gap-1">
+                        <i className="fa-solid fa-download text-[9px]"></i>Download Final Video
+                      </a>
+                      <button onClick={stitchAllSegments} disabled={state.isGenerating}
+                        className="text-[10px] font-bold text-[#888] uppercase hover:text-[#5c3a62] flex items-center gap-1">
+                        <i className="fa-solid fa-rotate-right text-[9px]"></i>Re-stitch
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {state.error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-xs text-red-700">
+                  <i className="fa-solid fa-circle-exclamation mr-1.5"></i>{state.error}
                 </div>
               )}
 
               <div className="flex justify-between items-center">
-                <button onClick={() => update({ step: 2 })} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
-                  <i className="fa-solid fa-arrow-left mr-1"></i> Back to Keyframes
+                <button onClick={() => update({ step: 3 })} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
+                  <i className="fa-solid fa-arrow-left mr-1"></i> Back to Videos
                 </button>
-                <button onClick={() => onComplete(state)} disabled={!allSegmentsReady}
+                <button onClick={() => onComplete(state)} disabled={!state.finalVideoUrl}
                   className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
                   <i className="fa-solid fa-check"></i>Done
                 </button>
