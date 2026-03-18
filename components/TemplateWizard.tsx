@@ -247,6 +247,10 @@ const getVideoKey = (): string => {
   } catch { return ''; }
 };
 
+// Default sample video embedded with the template
+const SAMPLE_VIDEO_URL = '/samples/what-if-sample.mp4';
+const SAMPLE_VIDEO_NAME = 'What If? Sample (built-in)';
+
 export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, projectId, onComplete, onCancel }) => {
   const template = PROJECT_TEMPLATES.find(t => t.id === templateId)!;
 
@@ -257,6 +261,8 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
     segments: [],
     isGenerating: false,
     progressMessage: '',
+    referenceVideo: SAMPLE_VIDEO_URL,
+    referenceVideoName: SAMPLE_VIDEO_NAME,
   });
 
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -552,7 +558,11 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
       let resultVideoUrl: string;
 
-      if (isVeoModel(videoModel)) {
+      // Duration: Kling/Seedance = 10s, Veo = 8s
+      const isVeo = isVeoModel(videoModel);
+      const segmentDuration = isVeo ? 8 : 10;
+
+      if (isVeo) {
         // ── Veo (Google) — client-side via Gemini API ──
         console.log(`[TemplateWizard] Using Veo model for segment ${segment.id}`);
         update({ progressMessage: `Segment ${segment.id}: Generating with Veo (this may take 1-2 min)...` });
@@ -560,7 +570,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
           prompt: segment.prompt,
           startImage: startStage.imageUrl,
           endImage: endStage.imageUrl,
-          duration: '5s',
+          duration: `${segmentDuration}s`,
           apiKey: videoApiKey,
           onProgress: (msg) => update({ progressMessage: `Segment ${segment.id}: ${msg}` }),
         });
@@ -574,7 +584,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             startImageUrl: startStage.imageUrl,
             endImageUrl: endStage.imageUrl,
             prompt: segment.prompt,
-            duration: 5,
+            duration: segmentDuration,
             aspectRatio: '16:9',
             generateAudio: false,
           });
@@ -807,32 +817,40 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                   </DropZone>
                 </div>
 
-                {/* Video upload */}
+                {/* Video upload — sample embedded by default */}
                 <div className="bg-white border border-[#e0d6e3] rounded-xl p-4 shadow-sm">
                   <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide mb-3">
                     <i className="fa-solid fa-film text-[#91569c] mr-1.5"></i>Reference Video
                   </h3>
-                  <DropZone accept="video/*" onFiles={async (files) => { update({ referenceVideo: await fileToDataUri(files[0]), referenceVideoName: files[0].name }); }}>
-                    {!state.referenceVideo ? (
-                      <div
-                        onClick={() => videoInputRef.current?.click()}
-                        className="border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] rounded-xl p-6 text-center cursor-pointer transition-all hover:bg-[#f6f0f8]/50 aspect-video flex flex-col items-center justify-center"
-                      >
-                        <i className="fa-solid fa-video text-2xl text-[#ceadd4] mb-1.5"></i>
-                        <p className="text-[10px] font-bold text-[#5c3a62]">Drop video or click to upload</p>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <video src={state.referenceVideo} controls muted className="w-full rounded-lg border border-[#e0d6e3] max-h-[250px]" />
-                        <button onClick={() => { update({ referenceVideo: undefined, referenceVideoName: undefined }); if (videoInputRef.current) videoInputRef.current.value = ''; }}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500/90 hover:bg-red-600 rounded flex items-center justify-center text-white text-[10px]">
-                          <i className="fa-solid fa-xmark"></i>
+                  <div className="relative">
+                    <video src={state.referenceVideo} controls muted className="w-full rounded-lg border border-[#e0d6e3] max-h-[250px]" />
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-[9px] text-[#888] truncate">
+                        <i className="fa-solid fa-file-video mr-1"></i>
+                        {state.referenceVideoName}
+                        {state.referenceVideoName === SAMPLE_VIDEO_NAME && (
+                          <span className="ml-1 text-[#91569c] font-bold">(default)</span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {state.referenceVideoName !== SAMPLE_VIDEO_NAME && (
+                          <button
+                            onClick={() => { update({ referenceVideo: SAMPLE_VIDEO_URL, referenceVideoName: SAMPLE_VIDEO_NAME }); if (videoInputRef.current) videoInputRef.current.value = ''; }}
+                            className="text-[9px] font-bold text-[#91569c] hover:text-[#7a4685] uppercase tracking-wide"
+                          >
+                            <i className="fa-solid fa-rotate-left mr-0.5"></i>Reset to sample
+                          </button>
+                        )}
+                        <button
+                          onClick={() => videoInputRef.current?.click()}
+                          className="text-[9px] font-bold text-[#91569c] hover:text-[#7a4685] uppercase tracking-wide"
+                        >
+                          <i className="fa-solid fa-upload mr-0.5"></i>Upload different
                         </button>
-                        <p className="text-[9px] text-[#888] mt-1 truncate"><i className="fa-solid fa-file-video mr-1"></i>{state.referenceVideoName}</p>
                       </div>
-                    )}
-                    <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
-                  </DropZone>
+                    </div>
+                  </div>
+                  <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
                 </div>
               </div>
 
