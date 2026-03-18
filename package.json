@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",
+    "@fal-ai/client": "^1.9.4",
     "@google-cloud/aiplatform": "^3.35.0",
     "@google/genai": "^1.41.0",
     "better-sqlite3": "^12.6.2",

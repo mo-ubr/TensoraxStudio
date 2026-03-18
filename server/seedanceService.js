@@ -1,116 +1,19 @@
 /**
  * Seedance 2.0 video generation via fal.ai
  *
- * Image-to-video using ByteDance Seedance via fal.ai queue API.
- * Supports start frame, optional end frame, duration 2–12s, resolution up to 1080p.
+ * Uses the official @fal-ai/client SDK for reliable queue polling.
+ * Image-to-video using ByteDance Seedance via fal.ai.
  *
  * Get your key at: https://fal.ai/dashboard/keys
  */
 
-const FAL_BASE = "https://queue.fal.run";  // Submit endpoint
-const FAL_REST = "https://fal.run";       // Status & result polling endpoint
+import { fal } from "@fal-ai/client";
 
 const SEEDANCE_I2V_MODEL = "fal-ai/bytedance/seedance/v1/pro/image-to-video";
 const SEEDANCE_T2V_MODEL = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
 
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
 /**
- * Poll fal.ai queue until COMPLETED or FAILED.
- */
-async function pollFalQueue(model, requestId, headers, onProgress) {
-  // Status & result polling uses fal.run (not queue.fal.run which returns 405 on GET)
-  const statusUrl = `${FAL_REST}/${model}/requests/${requestId}/status`;
-  const resultUrl = `${FAL_REST}/${model}/requests/${requestId}`;
-  const pollHeaders = { "Authorization": headers["Authorization"] };
-
-  let elapsed = 0;
-  let lastStatus = '';
-  const MAX_POLL_SECONDS = 300;
-
-  while (true) {
-    await wait(8000);
-    elapsed += 8;
-
-    if (elapsed > MAX_POLL_SECONDS) {
-      throw new Error(`Seedance: timed out after ${MAX_POLL_SECONDS}s. The job may still be running on fal.ai — check your dashboard.`);
-    }
-
-    const mins = Math.floor(elapsed / 60);
-    const secs = elapsed % 60;
-    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-
-    let statusText = 'Checking...';
-    let falStatus = null;
-
-    try {
-      const statusRes = await fetch(statusUrl, { headers: pollHeaders });
-      if (!statusRes.ok) {
-        console.warn("[Seedance] Poll error", statusRes.status);
-        onProgress?.(`⚠️ Poll error (HTTP ${statusRes.status}) — retrying... (${timeStr})`);
-        continue;
-      }
-
-      falStatus = await statusRes.json();
-      lastStatus = falStatus.status;
-      const queuePos = falStatus.queue_position != null ? ` (position ${falStatus.queue_position})` : '';
-
-      if (falStatus.status === 'IN_QUEUE') {
-        statusText = `⏳ Waiting in queue${queuePos} — ${timeStr} elapsed`;
-      } else if (falStatus.status === 'IN_PROGRESS') {
-        statusText = `🎬 Generating video — ${timeStr} elapsed`;
-      } else if (falStatus.status === 'COMPLETED') {
-        statusText = `✅ Video ready! Downloading...`;
-      } else if (falStatus.status === 'FAILED') {
-        statusText = `❌ Generation failed`;
-      } else {
-        statusText = `Status: ${falStatus.status} — ${timeStr} elapsed`;
-      }
-    } catch (fetchErr) {
-      console.warn("[Seedance] Fetch error during poll:", fetchErr.message);
-      onProgress?.(`⚠️ Network error — retrying... (${timeStr})`);
-      continue;
-    }
-
-    console.log(`[Seedance] ${lastStatus} (${timeStr})`);
-    onProgress?.(statusText);
-
-    if (falStatus?.status === "COMPLETED") {
-      const resultRes = await fetch(resultUrl, { headers: pollHeaders });
-      if (!resultRes.ok) throw new Error(`Seedance: failed to fetch result (${resultRes.status})`);
-      const result = await resultRes.json();
-      const videoUrl =
-        result?.video?.url ||
-        result?.output?.video?.url ||
-        result?.outputs?.[0]?.video?.url;
-      if (!videoUrl) throw new Error("Seedance: completed but no video URL. Response: " + JSON.stringify(result).slice(0, 300));
-      console.log("[Seedance] Video ready:", videoUrl);
-      return videoUrl;
-    }
-
-    if (falStatus?.status === "FAILED") {
-      throw new Error("Seedance generation failed: " + (falStatus.error || JSON.stringify(falStatus).slice(0, 200)));
-    }
-
-    if (elapsed >= 120 && lastStatus === 'IN_QUEUE') {
-      onProgress?.(`⏳ Still in queue after ${timeStr} — fal.ai may be busy. This is normal.`);
-    }
-  }
-}
-
-/**
- * Generate a video using Seedance via fal.ai.
- *
- * @param {object}   opts
- * @param {string}   opts.apiKey          fal.ai API key
- * @param {string}   opts.startImageUrl   data-URI or HTTPS URL of start frame
- * @param {string}   [opts.endImageUrl]   optional end frame
- * @param {string}   opts.prompt
- * @param {string}   [opts.duration]      "5" (default) — supports "2"–"12"
- * @param {string}   [opts.aspectRatio]   "16:9" | "9:16" | "1:1" | "auto"
- * @param {string}   [opts.resolution]    "480p" | "720p" | "1080p"
- * @param {function} [opts.onProgress]
- * @returns {Promise<string>} video URL
+ * Generate a video using Seedance via fal.ai SDK.
  */
 export async function generateSeedanceVideo({
   apiKey,
@@ -123,17 +26,14 @@ export async function generateSeedanceVideo({
   onProgress,
 }) {
   if (!apiKey) throw new Error("Seedance: missing fal.ai API key. Add it in Project Settings → Video Generation.");
-  if (!startImageUrl) throw new Error("Seedance: no start image. Use Prompt Only mode (Veo) for text-to-video, or upload a Start frame.");
+  if (!startImageUrl) throw new Error("Seedance: no start image.");
   if (!prompt?.trim()) throw new Error("Seedance: no prompt provided.");
 
-  const headers = {
-    "Authorization": `Key ${apiKey.trim()}`,
-    "Content-Type": "application/json",
-  };
+  // Configure fal client with the user's API key
+  fal.config({ credentials: apiKey.trim() });
 
   const model = SEEDANCE_I2V_MODEL;
-
-  const body = {
+  const input = {
     prompt: prompt.trim(),
     image_url: startImageUrl,
     ...(endImageUrl ? { end_image_url: endImageUrl } : {}),
@@ -144,22 +44,65 @@ export async function generateSeedanceVideo({
   };
 
   console.log("[Seedance] Submitting image-to-video request");
-
   onProgress?.("Submitting to Seedance 2.0...");
-  const submitRes = await fetch(`${FAL_BASE}/${model}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
 
-  if (!submitRes.ok) {
-    const err = await submitRes.text();
-    throw new Error(`Seedance submit failed (${submitRes.status}): ${err}`);
-  }
-
-  const { request_id } = await submitRes.json();
+  // Submit to queue
+  const { request_id } = await fal.queue.submit(model, { input });
   if (!request_id) throw new Error("Seedance: no request_id returned from fal.ai");
-  console.log("[Seedance] Task submitted:", request_id);
+  console.log("[Seedance] Submitted:", request_id);
+  onProgress?.(`⏳ Submitted — waiting in queue...`);
 
-  return pollFalQueue(model, request_id, headers, onProgress);
+  // Poll using SDK
+  const MAX_POLL_SECONDS = 600;
+  let elapsed = 0;
+
+  while (true) {
+    await new Promise(r => setTimeout(r, 8000));
+    elapsed += 8;
+
+    if (elapsed > MAX_POLL_SECONDS) {
+      throw new Error(`Seedance: timed out after ${MAX_POLL_SECONDS}s. The job may still be running on fal.ai — check your dashboard.`);
+    }
+
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+    try {
+      const status = await fal.queue.status(model, { requestId: request_id, logs: true });
+      console.log(`[Seedance] ${status.status} (${timeStr})`);
+
+      const queuePos = status.queue_position != null ? ` (position ${status.queue_position})` : '';
+
+      if (status.status === 'IN_QUEUE') {
+        onProgress?.(`⏳ Waiting in queue${queuePos} — ${timeStr} elapsed`);
+      } else if (status.status === 'IN_PROGRESS') {
+        onProgress?.(`🎬 Generating video — ${timeStr} elapsed`);
+      } else if (status.status === 'COMPLETED') {
+        onProgress?.(`✅ Video ready! Downloading...`);
+
+        const result = await fal.queue.result(model, { requestId: request_id });
+        const videoUrl =
+          result?.data?.video?.url ||
+          result?.video?.url ||
+          result?.data?.output?.video?.url;
+
+        if (!videoUrl) throw new Error("Seedance: completed but no video URL. Response: " + JSON.stringify(result).slice(0, 300));
+        console.log("[Seedance] Video ready:", videoUrl);
+        return videoUrl;
+      } else if (status.status === 'FAILED') {
+        throw new Error("Seedance generation failed: " + (status.error || JSON.stringify(status).slice(0, 200)));
+      } else {
+        onProgress?.(`Status: ${status.status} — ${timeStr} elapsed`);
+      }
+
+      if (elapsed >= 120 && status.status === 'IN_QUEUE') {
+        onProgress?.(`⏳ Still in queue after ${timeStr} — fal.ai may be busy. This is normal.`);
+      }
+    } catch (err) {
+      if (err.message?.includes('timed out') || err.message?.includes('failed')) throw err;
+      console.warn("[Seedance] Poll error:", err.message);
+      onProgress?.(`⚠️ Poll error — retrying... (${timeStr})`);
+    }
+  }
 }
