@@ -1,0 +1,54 @@
+Response
+========
+
+## Response
+## Idea: Българската демографска спирала
+
+**Summary:** This documentary concept explores the alarming demographic collapse in Bulgaria, the fastest shrinking nation on Earth. It uses compelling visuals from recognisably Bulgarian locations to illustrate the profound population decline since 1989, dissecting the primary drivers: high mortality rates, a struggling healthcare system, and mass emigration of youth. The narrative culminates in the devastating "death spiral" where an aging population, rising tax burdens, and lack of opportunity force young Bulgarians to seek futures abroad, further accelerating the nation's decline.
+
+**Scene 1:**
+**Duration:** 20 seconds
+**Description:** OPENING SHOT: A quiet, wide shot of an old, traditional town centre of a small town, late afternoon. The light is soft, almost melancholic. We see a few elderly residents slowly moving, perhaps sitting on a bench. The square is notably empty of children or young adults. A traditional, well-maintained village house contrasts with another nearby, partially crumbling or showing signs of neglect.
+**Camera:** Slow, steady wide pan, slightly elevated, creating a sense of observation and vastness.
+
+**Scene 2:**
+**Duration:** 25 seconds
+**Description:** CONTINUOUS SHOT: We smoothly transition to archival footage or AI-generated 'historical' imagery of bustling 1980s Bulgarian factories or collective farms, showing a dense, young workforce. The image then flickers and morphs (via subtle digital effect) to modern-day scenes: a long-abandoned factory hall, machinery rusting; fields lying fallow. This visually represents the shift from 9 million to 6.4 million.
+**Camera:** Documentary archival style, handheld feel for the old footage, then static, desolate shots for modern.
+
+**Scene 3:**
+**Duration:** 25 seconds
+**Description:** A contemporary, recognisably Bulgarian street scene. A few young children are seen playing, but they are clearly outnumbered by much older individuals. This scene shifts to the interior of a rural Bulgarian hospital ward – functional but visibly aged, with limited, older equipment. We see medical staff (perhaps one nurse for many patients) attending to an elderly patient.
+**Camera:** Observational, medium shots, focusing on the age disparity and the hospital environment.
+
+**Scene 4:**
+**Duration:** 20 seconds
+**Description:** EXTERIOR of a mid-sized provincial hospital, like those found in Lovech or Gabrovo – perhaps a Soviet-era building, showing signs of wear. A 25-year-old Bulgarian man, dressed in contemporary but practical clothes, stands outside, looking concerned, perhaps on his phone, then looks towards the hospital. We then see an interior shot: a long, empty corridor of the same hospital.
+**Camera:** Medium close-up on the man's face, then a slow track down the empty corridor, emphasizing scarcity.
+
+**Scene 5:**
+**Duration:** 30 seconds
+**Description:** A busy, modern Bulgarian bus station or airport, with multiple young Bulgarians (early 20s to early 30s) embracing family members before departing with luggage. The farewells are poignant. One young man (the 'software engineer') waves goodbye. This transitions to him briefly in a modern European city (e.g., a park in Munich or London), speaking Bulgarian with a partner or child, creating the visual implication of future generations born abroad.
+**Camera:** Observational, close-ups on faces during farewells, then a wider shot of the departure, followed by a brief, stable shot of the new European setting.
+
+**Scene 6:**
+**Duration:** 25 seconds
+**Description:** A split-screen or cleverly composed shot: on one side, a small group of young workers (e.g., in a small office or cafe) working. On the other, a significantly larger group of elderly pensioners (e.g., in a park or community center), suggesting the imbalance. This is followed by a visual metaphor: a single young hand reaching into a nearly empty wallet, then looking up in frustration.
+**Camera:** Visual storytelling, perhaps a split diopter or an intelligent edit to contrast the two groups. Close-up on the wallet/hand.
+
+**Scene 7:**
+**Duration:** 15 seconds
+**Description:** A rapid montage of previously seen elements, accelerating: empty village streets, an aged hospital ward, a young person's departing back, the struggling face of the 25-year-old. This visual "death spiral" shows the interconnectedness of the problems.
+**Camera:** Quick cuts, energetic but still professional.
+
+**Scene 8:**
+**Duration:** 20 seconds
+**Description:** FINAL SHOT: A stark visual contrast. A modern, vibrant street in central Sofia, bustling with people, cafes, and contemporary architecture. This slowly dissolves or cuts to a wide, desolate shot of a truly abandoned rural village, structures crumbling, overgrown with vegetation, no human presence. This final image underscores the "demographic desert" and the locked trajectory.
+**Camera:** Smooth transition from dynamic Sofia to static, melancholic rural decay.
+
+**Visual Style:**
+The visual treatment will be grounded in realism, mirroring the "factual journalistic" inspiration. A naturalistic colour palette, perhaps leaning slightly muted to enhance the serious tone. Lighting will be mostly natural, with a preference for available light to create an authentic atmosphere. Camera style will be observational, steady, and professional, often using medium to wide shots to establish context, interspersed with empathetic close-ups on faces when focusing on individual impact. No overly dramatic angles or effects, maintaining a sense of objective reporting.
+
+**Why It Works:** This concept directly implements the core demographic crisis detailed in Chapter 1 of the source document through evocative, recognisably Bulgarian visuals, establishing the problem and its interconnected drivers in a professional and journalistic documentary style, perfectly aligning with the brief's requirements.
+
+Accepted: 2026-03-15

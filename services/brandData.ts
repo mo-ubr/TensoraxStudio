@@ -77,9 +77,9 @@ export function saveBrands(brands: BrandProfile[]) {
 
 export function getActiveBrandId(): string {
   try {
-    return localStorage.getItem(ACTIVE_KEY) || 'next-default';
+    return localStorage.getItem(ACTIVE_KEY) || '';
   } catch {
-    return 'next-default';
+    return '';
   }
 }
 

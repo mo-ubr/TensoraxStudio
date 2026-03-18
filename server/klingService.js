@@ -60,16 +60,8 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
   const statusUrl = `${FAL_BASE}/${model}/requests/${requestId}/status`;
   const resultUrl = `${FAL_BASE}/${model}/requests/${requestId}`;
 
-  const progressMessages = [
-    "Analysing reference frame...",
-    "Synthesising motion vectors...",
-    "Applying character consistency...",
-    "Rendering keyframes...",
-    "Encoding video stream...",
-    "Finalising output...",
-  ];
-  let msgIdx = 0;
   let elapsed = 0;
+  let lastStatus = '';
 
   while (true) {
     await wait(8000);
@@ -79,17 +71,46 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
       throw new Error(`Kling: timed out after ${MAX_POLL_SECONDS}s. The job may still be running on fal.ai — check your dashboard.`);
     }
 
-    const timeStr = `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
-    onProgress?.(`${progressMessages[msgIdx % progressMessages.length]} (${timeStr})`);
-    msgIdx++;
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 
-    const statusRes = await fetch(statusUrl, { headers });
-    if (!statusRes.ok) { console.warn("[Kling] Poll error", statusRes.status); continue; }
+    let statusText = 'Checking...';
+    let falStatus = null;
 
-    const status = await statusRes.json();
-    console.log("[Kling] Status:", status.status, `(${timeStr})`);
+    try {
+      const statusRes = await fetch(statusUrl, { headers });
+      if (!statusRes.ok) {
+        console.warn("[Kling] Poll error", statusRes.status);
+        onProgress?.(`⚠️ Poll error (HTTP ${statusRes.status}) — retrying... (${timeStr})`);
+        continue;
+      }
 
-    if (status.status === "COMPLETED") {
+      falStatus = await statusRes.json();
+      lastStatus = falStatus.status;
+      const queuePos = falStatus.queue_position != null ? ` (position ${falStatus.queue_position})` : '';
+
+      if (falStatus.status === 'IN_QUEUE') {
+        statusText = `⏳ Waiting in queue${queuePos} — ${timeStr} elapsed`;
+      } else if (falStatus.status === 'IN_PROGRESS') {
+        statusText = `🎬 Generating video — ${timeStr} elapsed`;
+      } else if (falStatus.status === 'COMPLETED') {
+        statusText = `✅ Video ready! Downloading...`;
+      } else if (falStatus.status === 'FAILED') {
+        statusText = `❌ Generation failed`;
+      } else {
+        statusText = `Status: ${falStatus.status} — ${timeStr} elapsed`;
+      }
+    } catch (fetchErr) {
+      console.warn("[Kling] Fetch error during poll:", fetchErr.message);
+      onProgress?.(`⚠️ Network error — retrying... (${timeStr})`);
+      continue;
+    }
+
+    console.log(`[Kling] ${lastStatus} (${timeStr})`);
+    onProgress?.(statusText);
+
+    if (falStatus?.status === "COMPLETED") {
       const resultRes = await fetch(resultUrl, { headers });
       if (!resultRes.ok) throw new Error(`Kling: failed to fetch result (${resultRes.status})`);
       const result = await resultRes.json();
@@ -102,8 +123,13 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
       return videoUrl;
     }
 
-    if (status.status === "FAILED") {
-      throw new Error("Kling generation failed: " + (status.error || JSON.stringify(status).slice(0, 200)));
+    if (falStatus?.status === "FAILED") {
+      throw new Error("Kling generation failed: " + (falStatus.error || JSON.stringify(falStatus).slice(0, 200)));
+    }
+
+    // Warn if it's been a long time in queue
+    if (elapsed >= 120 && lastStatus === 'IN_QUEUE') {
+      onProgress?.(`⏳ Still in queue after ${timeStr} — fal.ai may be busy. This is normal for Kling.`);
     }
   }
 }

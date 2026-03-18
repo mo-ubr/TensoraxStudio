@@ -7,20 +7,52 @@ import { ConceptScreen } from './components/ConceptScreen';
 import { ImagesScreen } from './components/ImagesScreen';
 import { ProjectsScreen } from './components/ProjectsScreen';
 import { ProjectSettings } from './components/ProjectSettings';
-import { GridImage, ImageSize, AspectRatio, GridTheme, ReferenceInput, VideoState, BrandProfile } from './types';
+import { GridImage, ImageSize, AspectRatio, GridTheme, ReferenceInput, VideoState, BrandProfile, VideoMode, PROJECT_TEMPLATES, type TemplateId } from './types';
+import { VideoScreen } from './components/VideoScreen';
 import { BrandSelector } from './components/BrandSelector';
 import { loadBrands, saveBrands, getActiveBrandId, setActiveBrandId } from './services/brandData';
 import { DB, type Project } from './services/projectDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
+import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
+import { TemplateWizard } from './components/TemplateWizard';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+
+/** Compact pipeline nav bar — shown in every inner screen header */
+const PIPELINE_STEPS = [
+  { id: 'concept', label: 'Copy', icon: 'fa-pen-nib' },
+  { id: 'images', label: 'Images', icon: 'fa-image' },
+  { id: 'scenes', label: 'Frames', icon: 'fa-clapperboard' },
+  { id: 'video', label: 'Video', icon: 'fa-video' },
+] as const;
+
+const PipelineNav: React.FC<{ current: string; onNavigate: (screen: string) => void }> = ({ current, onNavigate }) => (
+  <div className="flex items-center gap-1">
+    {PIPELINE_STEPS.map((step, i) => (
+      <React.Fragment key={step.id}>
+        {i > 0 && <i className="fa-solid fa-chevron-right text-[7px] text-[#ceadd4] mx-0.5" />}
+        <button
+          onClick={() => onNavigate(step.id)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+            current === step.id
+              ? 'bg-[#91569c] text-white shadow-sm'
+              : 'text-[#888] hover:text-[#5c3a62] hover:bg-[#f6f0f8]'
+          }`}
+        >
+          <i className={`fa-solid ${step.icon} text-[8px]`} />
+          {step.label}
+        </button>
+      </React.Fragment>
+    ))}
+  </div>
+);
 
 const API_MODELS = [
   { group: 'Gemini', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-3-flash-preview', 'gemini-3-pro-image-preview'] },
   { group: 'Claude', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-3-5'] },
   { group: 'Imagen', models: ['imagen-3.0-capability', 'imagen-4.0-generate-preview'] },
-  { group: 'Video', models: ['seedance-2.0', 'veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
+  { group: 'Video', models: ['seedance-2.0', 'kling-v2.1', 'veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
 ];
 
 const hasKeyForSlot = (baseKey: string, modelKey: string): boolean => {
@@ -123,13 +155,27 @@ interface LandingPageProps {
   onAssistantAction?: (action: import('./components/ChatBot').AssistantAction) => void;
   chatHistoryRef?: React.MutableRefObject<string>;
   brands: BrandProfile[];
+  activeBrandId: string;
   onCreateProject: (data: NewProjectData) => void;
   onSelectProject: (p: Project) => void;
   onNewProject: () => void;
+  onUpdateProject: (updated: Project) => void;
+  onBrandChange?: (brandId: string) => void;
+  onStartPipeline: (projectName: string, navigateTo: 'concept' | 'images' | 'scenes', sourceDocContent?: Record<string, string>) => void;
+  pipelineActive: boolean;
+  pipelineStep: number;
+  pipelineName: string;
+  onStartTemplate: (templateId: TemplateId) => void;
+  activeTemplateId: TemplateId | null;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, onCreateProject, onSelectProject, onNewProject, assistantContext, onAssistantAction, chatHistoryRef }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId }) => {
   const [showWizard, setShowWizard] = useState(false);
+  const [showProjectName, setShowProjectName] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const [showContentType, setShowContentType] = useState(false);
+  const [showPipelineWizard, setShowPipelineWizard] = useState(false);
+  const [activeSection, setActiveSection] = useState<'none' | 'project'>('project');
 
   const pipelineSteps = [
     { id: 'concept', label: 'Copy', icon: 'fa-pen-nib', description: 'Brief, Ideas & Finetuning' },
@@ -138,9 +184,133 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
     { id: 'video', label: 'Video', icon: 'fa-video', description: 'Video Generation' },
   ];
 
+  const contentTypes = [
+    { id: 'text', label: 'Text Document', icon: 'fa-file-lines', description: 'Screenplay, brief, article, or other written content' },
+    { id: 'image', label: 'Image', icon: 'fa-image', description: 'Key visuals, adverts, or branded imagery' },
+    { id: 'video', label: 'Video', icon: 'fa-video', description: 'Promotional video, explainer, or social content' },
+  ];
+
   if (!activeProject) {
     if (showWizard) {
-      return <NewProjectWizard brands={brands} onComplete={onCreateProject} onCancel={() => setShowWizard(false)} />;
+      return <NewProjectWizard brands={brands} onComplete={onCreateProject} onCancel={() => { setShowWizard(false); setShowContentType(false); }} />;
+    }
+
+    if (showPipelineWizard || pipelineActive) {
+      return (
+        <PipelineWizard
+          projectName={pipelineActive ? pipelineName : projectName}
+          initialStep={pipelineActive ? pipelineStep : 0}
+          onComplete={(result) => {
+            console.log('[PipelineWizard] result:', result);
+            setShowPipelineWizard(false);
+            setShowContentType(false);
+          }}
+          onCancel={() => { setShowPipelineWizard(false); }}
+          onNavigateToCreate={(step, sourceDocContent) => {
+            const screenMap: Record<string, 'concept' | 'images' | 'scenes'> = {
+              screenplay: 'concept',
+              characters: 'images',
+              scenes: 'scenes',
+            };
+            onStartPipeline(projectName, screenMap[step], sourceDocContent);
+          }}
+        />
+      );
+    }
+
+    /* showWizard is now handled above (before !activeProject block) to support template → project flow */
+
+    if (showContentType) {
+      return (
+        <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+          <div className="w-full max-w-md space-y-6 animate-fade-in">
+            <div className="text-center mb-8">
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What do you want to create?</h2>
+              <p className="text-sm text-[#888] mt-1">Choose the type of content for your project</p>
+            </div>
+
+            <div className="space-y-3">
+              {contentTypes.map(ct => (
+                <button
+                  key={ct.id}
+                  onClick={() => {
+                    // Map content type to scope
+                    const scopeMap: Record<string, string> = {
+                      text: 'blog',
+                      image: 'image-advert',
+                      video: 'video-advert',
+                    };
+                    onCreateProject({
+                      name: projectName.trim(),
+                      brandId: '',
+                      scope: scopeMap[ct.id] || ct.id,
+                      brief: '',
+                    });
+                  }}
+                  className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
+                >
+                  <div className="w-11 h-11 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+                    <i className={`fa-solid ${ct.icon} text-lg text-[#91569c]`}></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">{ct.label}</span>
+                    <p className="text-[10px] text-[#888] mt-0.5">{ct.description}</p>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => { setShowContentType(false); }}
+              className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+            >
+              <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (showProjectName) {
+      return (
+        <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+          <div className="w-full max-w-md space-y-6 animate-fade-in">
+            <div className="text-center mb-8">
+              <div className="w-14 h-14 rounded-xl bg-[#f6f0f8] flex items-center justify-center mx-auto mb-4">
+                <i className="fa-solid fa-pen text-2xl text-[#91569c]"></i>
+              </div>
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What will be the name of your project?</h2>
+              <p className="text-sm text-[#888] mt-1">Give your project a descriptive name</p>
+            </div>
+
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && projectName.trim()) setShowContentType(true);
+              }}
+              placeholder="e.g. NEXT Gift Card Campaign"
+              autoFocus
+              className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
+            />
+
+            <div className="flex justify-between">
+              <button onClick={() => { setShowProjectName(false); setProjectName(''); }} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+              </button>
+              <button
+                onClick={() => setShowContentType(true)}
+                disabled={!projectName.trim()}
+                className="px-6 py-2.5 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next <i className="fa-solid fa-arrow-right ml-1.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -167,9 +337,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
                 className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer"
               >
                 <option value="" disabled>Select a project...</option>
-                {allProjects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {allProjects.map(p => {
+                  const tpl = p.description?.startsWith('Template:') ? p.description.replace('Template: ', '') : '';
+                  const suffix = tpl ? ` [${tpl}]` : '';
+                  return <option key={p.id} value={p.id}>{p.name}{suffix}</option>;
+                })}
               </select>
               <p className="text-[10px] text-[#888] mt-2">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''} available</p>
             </div>
@@ -177,9 +349,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
 
           <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
 
+          {/* Use template */}
+          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <i className="fa-solid fa-shapes text-lg text-[#91569c]"></i>
+              <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Use Template</span>
+            </div>
+            <div className="space-y-2">
+              {PROJECT_TEMPLATES.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => onStartTemplate(t.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-[#e0d6e3] bg-[#f6f0f8]/50 hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-left group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+                    <i className={`fa-solid ${t.icon} text-[#91569c]`}></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">{t.name}</span>
+                    <p className="text-[9px] text-[#888] mt-0.5 leading-relaxed">{t.description}</p>
+                  </div>
+                  <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
+
           {/* Start new project — opens wizard */}
           <button
-            onClick={() => setShowWizard(true)}
+            onClick={() => setShowProjectName(true)}
             className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
           >
             <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
@@ -190,26 +390,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
     );
   }
 
+  const sectionContext = activeSection === 'project' ? `The user is viewing Project Settings for "${activeProject.name}". They can configure source material, character references, brand, aspect ratio, and API keys. Help them set up their project.` : '';
+  const combinedContext = [assistantContext, sectionContext].filter(Boolean).join('\n');
+
   return (
     <div className="flex-1 flex bg-[#edecec] overflow-hidden">
       {/* Left nav */}
-      <div className="flex flex-col gap-3 w-64 flex-shrink-0 p-4 overflow-y-auto">
+      <div className="flex flex-col gap-3 w-56 flex-shrink-0 p-4 overflow-y-auto">
         <button
-          onClick={() => onNavigate('project-settings')}
-          className="group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8] shadow-sm text-left"
+          onClick={() => setActiveSection('project')}
+          className={`group flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 shadow-sm text-left ${
+            activeSection === 'project'
+              ? 'bg-[#f6f0f8] border-[#91569c] ring-1 ring-[#91569c]/30'
+              : 'bg-white border-[#e0d6e3] hover:border-[#91569c]/50 hover:bg-[#f6f0f8]'
+          }`}
         >
-          <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-            <i className="fa-solid fa-sliders text-[#91569c]"></i>
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+            activeSection === 'project' ? 'bg-[#91569c]' : 'bg-[#f6f0f8] group-hover:bg-[#eadcef]'
+          }`}>
+            <i className={`fa-solid fa-sliders ${activeSection === 'project' ? 'text-white' : 'text-[#91569c]'}`}></i>
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-bold uppercase tracking-wider text-xs text-[#5c3a62] group-hover:text-[#91569c] transition-colors">Project</span>
+            <span className={`font-bold uppercase tracking-wider text-xs transition-colors ${
+              activeSection === 'project' ? 'text-[#91569c]' : 'text-[#5c3a62] group-hover:text-[#91569c]'
+            }`}>Project</span>
             <p className="text-[9px] text-[#888] mt-0.5">Settings & Pipeline</p>
           </div>
         </button>
 
         <div className="h-px bg-[#e0d6e3]"></div>
 
-        {pipelineSteps.map((item, idx) => (
+        {pipelineSteps.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate(item.id as any)}
@@ -226,18 +437,34 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
         ))}
       </div>
 
-      {/* Middle — free area */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="text-center opacity-30">
-          <i className="fa-solid fa-wand-magic-sparkles text-4xl text-[#ceadd4] mb-3 block"></i>
-          <p className="text-[#888] text-xs font-bold uppercase tracking-wider">Ready to create</p>
-          <p className="text-[#ceadd4] text-[10px] mt-1">Pick a step from the left or chat with the assistant</p>
-        </div>
+      {/* Middle — content area */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        {activeSection === 'project' ? (
+          <ProjectSettings
+            project={activeProject}
+            brands={brands}
+            activeBrandId={activeBrandId}
+            activeTemplateId={activeTemplateId}
+            onBack={() => setActiveSection('none')}
+            onSwitchProject={onNewProject}
+            onUpdateProject={onUpdateProject}
+            onNavigate={(screen) => onNavigate(screen as any)}
+            onBrandChange={onBrandChange}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center p-6">
+            <div className="text-center opacity-30">
+              <i className="fa-solid fa-wand-magic-sparkles text-4xl text-[#ceadd4] mb-3 block"></i>
+              <p className="text-[#888] text-xs font-bold uppercase tracking-wider">Ready to create</p>
+              <p className="text-[#ceadd4] text-[10px] mt-1">Pick a step from the left or chat with the assistant</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right — Assistant */}
       <div className="w-80 flex-shrink-0 p-4 pl-0">
-        <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={onAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
+        <ChatBotBoundary><ChatBot projectContext={combinedContext} onAction={onAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
       </div>
     </div>
   );
@@ -316,29 +543,40 @@ const App: React.FC = () => {
     }))
   );
   const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings'>('landing');
+  const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
+  const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
   const [assistantContext, setAssistantContext] = useState('');
   const conceptActionRef = useRef<((action: import('./components/ChatBot').AssistantAction) => void) | null>(null);
   const chatHistoryRef = useRef('');
   const handleAssistantAction = (action: import('./components/ChatBot').AssistantAction) => {
     conceptActionRef.current?.(action);
   };
-  const [isEnhancing, setIsEnhancing] = useState(false);
+  // isEnhancing, isReviewingVideo, videoReview moved to VideoScreen component
   const [limitCooldownRemaining, setLimitCooldownRemaining] = useState(0);
+  const [projectScreenplay, setProjectScreenplay] = useState('');
 
   // ─── Project state ───────────────────────────────────────────────────────
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [allProjects, setAllProjects] = useState<Project[]>([]);
+  // Pipeline wizard state — persists across screen navigations
+  const [pipelineActive, setPipelineActive] = useState(false);
+  const [pipelineStep, setPipelineStep] = useState(0); // index into pipeline wizard steps
+  const [pipelineName, setPipelineName] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('tensorax_active_project');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setActiveProject(parsed);
-      } catch { /* ignore */ }
-    }
+    // Always start on the project selection screen — don't auto-restore last project
+    localStorage.removeItem('tensorax_active_project');
     DB.listProjects().then(setAllProjects).catch(() => {});
   }, []);
+
+  // Load screenplay from project metadata when project changes or navigating to video
+  useEffect(() => {
+    if (!activeProject) { setProjectScreenplay(''); return; }
+    DB.getMetadata(activeProject.id).then(meta => {
+      if (meta.screenplay && typeof meta.screenplay === 'string') setProjectScreenplay(meta.screenplay);
+      else setProjectScreenplay('');
+    }).catch(() => setProjectScreenplay(''));
+  }, [activeProject?.id]);
 
   const persistProject = (p: Project | null) => {
     setActiveProject(p);
@@ -350,7 +588,7 @@ const App: React.FC = () => {
     try {
       const isWizard = typeof data !== 'string';
       const name = isWizard ? data.name : data;
-      const brandId = isWizard ? data.brandId : activeBrandId;
+      const brandId = isWizard ? (data.brandId || activeBrandId) : activeBrandId;
       const description = isWizard ? data.brief : '';
       const notes = isWizard && data.scope ? `Scope: ${data.scope}` : '';
 
@@ -372,7 +610,79 @@ const App: React.FC = () => {
 
   const handleSelectProject = (p: Project) => {
     persistProject(p);
+    // Auto-detect template projects and restore activeTemplateId
+    const templateMatch = p.description?.match(/Template:\s*([\w-]+)/i);
+    if (templateMatch) {
+      const detectedTemplate = templateMatch[1] as TemplateId;
+      if (PROJECT_TEMPLATES.find(t => t.id === detectedTemplate)) {
+        setActiveTemplateId(detectedTemplate);
+      }
+    } else {
+      setActiveTemplateId(null);
+    }
     setCurrentScreen('landing');
+  };
+
+  const handleStartPipeline = async (projectName: string, navigateTo: 'concept' | 'images' | 'scenes', sourceDocContent?: Record<string, string>) => {
+    // Create the project if not already created
+    let projectId = activeProject?.id;
+    if (!activeProject) {
+      try {
+        const project = await DB.createProject({ name: projectName, status: 'active', brandId: activeBrandId, description: '', characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: 'Pipeline: video' });
+        persistProject(project);
+        setAllProjects(prev => [...prev, project]);
+        projectId = project.id;
+      } catch (e) {
+        console.error('[App] Create project for pipeline failed:', e);
+        alert('Failed to create project. Is the backend running?');
+        return;
+      }
+    }
+    // Save source document content to project metadata if provided
+    if (sourceDocContent && projectId) {
+      const sourceFiles = Object.keys(sourceDocContent);
+      DB.saveMetadata(projectId, { sourceFiles, sourceContents: sourceDocContent }).catch(e => console.warn('[App] Failed to save source content:', e));
+    }
+    // Track which pipeline step comes next after this creation screen
+    const stepMap: Record<string, number> = { concept: 1, images: 2, scenes: 3 }; // next step after creation
+    setPipelineActive(true);
+    setPipelineStep(stepMap[navigateTo] ?? 0);
+    setPipelineName(projectName);
+    setCurrentScreen(navigateTo);
+  };
+
+  // Template project creation — prompts for a custom name before creating
+  const [pendingTemplateId, setPendingTemplateId] = useState<TemplateId | null>(null);
+  const [templateProjectName, setTemplateProjectName] = useState('');
+
+  const handleStartTemplate = (templateId: TemplateId) => {
+    setPendingTemplateId(templateId);
+    setTemplateProjectName('');
+  };
+
+  const confirmTemplateProject = async () => {
+    if (!pendingTemplateId || !templateProjectName.trim()) return;
+    try {
+      const name = templateProjectName.trim();
+      if (!activeProject) {
+        const project = await DB.createProject({ name, status: 'active', brandId: activeBrandId, description: `Template: ${pendingTemplateId}`, characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: '' });
+        persistProject(project);
+        setAllProjects(prev => [...prev, project]);
+      }
+      setActiveTemplateId(pendingTemplateId);
+      setPendingTemplateId(null);
+      setTemplateProjectName('');
+      setCurrentScreen('project-settings');
+    } catch (e) {
+      console.error('[App] Create project for template failed:', e);
+      alert('Failed to create project. Is the backend running?');
+    }
+  };
+
+  const handlePipelineReturn = () => {
+    // Called when user finishes a creation step and returns to landing
+    setCurrentScreen('landing');
+    // pipelineActive + pipelineStep will cause the LandingPage to show the pipeline wizard at the right step
   };
 
   const getVideoModel = (): string => {
@@ -388,13 +698,15 @@ const App: React.FC = () => {
     const model = getVideoModel();
     try {
       return localStorage.getItem(`tensorax_video_key__${model}`)?.trim()
+          || (model.startsWith('kling-') || model.startsWith('seedance') ? localStorage.getItem('tensorax_fal_key')?.trim() : '')
           || localStorage.getItem('tensorax_video_key')?.trim()
           || '';
     } catch { return ''; }
   };
 
   // Video State
-  const [videoState, setVideoState] = useState<VideoState & { movementVideo?: string }>({
+  const [videoState, setVideoState] = useState<VideoState>({
+    mode: 'prompt-only' as VideoMode,
     prompt: '',
     movementDescription: '',
     duration: '5s',
@@ -419,7 +731,7 @@ const App: React.FC = () => {
     const updated = brands.filter(b => b.id !== id);
     setBrands(updated);
     saveBrands(updated);
-    if (activeBrandId === id) handleSelectBrand('next-default');
+    if (activeBrandId === id) handleSelectBrand('');
   };
 
   // Scene Inputs
@@ -464,9 +776,49 @@ const App: React.FC = () => {
     };
     try {
       const [charUrl, clothingUrl, sceneryUrl] = await Promise.all(urls.map(toDataUrl));
+
+      // 1. Reference images (existing behaviour)
       setCharacter(p => ({ ...p, images: [charUrl, p.images[1], p.images[2]] }));
       setClothing(p => ({ ...p, images: [clothingUrl, p.images[1], p.images[2]] }));
       setBackground(p => ({ ...p, images: [sceneryUrl, p.images[1], p.images[2]] }));
+
+      // 2. Pre-fill 9 shot prompts so you can skip prompt generation
+      const testPrompts = [
+        'ELS – Extreme Long Shot. A stylish woman stands small within a vast sunlit Mediterranean plaza, terracotta buildings stretching into the distance. She wears a tailored navy blazer over a white blouse, slim-fit trousers, block-heel sandals. Warm golden-hour light, deep shadows, cinematic colour grade.',
+        'LS – Long Shot. Full-body view of the same woman walking confidently towards camera along a tree-lined boulevard. Navy blazer, white blouse, slim trousers, tan leather bag slung over one shoulder. Dappled sunlight through plane trees, shallow depth of field on background.',
+        'MLS – Medium Long Shot. Framed from knees up, the woman pauses at a café terrace, one hand on the back of a wrought-iron chair. Same outfit. Espresso cup on the marble table. Soft bokeh of passing pedestrians behind her.',
+        'MS – Medium Shot. Waist up, the woman smiles while examining a colourful display of artisan ceramics at a street market stall. Navy blazer sleeves pushed up slightly. Warm ambient light, shallow focus on her hands and the pottery.',
+        'MCU – Medium Close-Up. Chest up, she turns towards camera with a relaxed, knowing smile. Wind catches her hair slightly. The white blouse collar visible above the blazer lapel. Soft rim light from behind, creamy bokeh.',
+        'CU – Close-Up. Tight on her face, eyes bright with confidence, lips in a subtle smile. Fine skin texture visible, natural makeup. Warm side-light, one catchlight in each eye, blurred golden tones behind.',
+        'ECU – Extreme Close-Up. Macro detail of her hand adjusting a delicate gold bracelet on her wrist. The blazer cuff and white blouse sleeve edge visible. Shallow depth of field, every texture crisp.',
+        'Low Angle – Worm\'s Eye. Looking up at the woman from ground level as she strides past, silhouetted against a dramatic blue sky with wispy clouds. The blazer flares slightly with movement. Heroic, imposing composition.',
+        'High Angle – Bird\'s Eye. Looking down from above as she sits at a round café table, an espresso and open book in front of her. The navy blazer contrasts with the pale stone floor. Geometric pattern of surrounding tables and chairs.',
+      ];
+      setShotPrompts(testPrompts);
+
+      // 3. Use the character image as a mock grid image for all 9 slots
+      //    so the Frames grid appears fully populated
+      setImages(prev => prev.map((img, i) => ({
+        ...img,
+        url: charUrl,
+        loading: false,
+        error: undefined,
+        promptSuffix: img.promptSuffix,
+      })));
+
+      // 4. Pre-load video state with start/end frames and a prompt ready to generate
+      setVideoState(v => ({
+        ...v,
+        startImage: charUrl,
+        endImage: sceneryUrl,
+        prompt: testPrompts[0],
+        mode: 'prompt-images' as VideoMode,
+      }));
+
+      // 5. Set scene prompt text
+      setScenePrompt('Test scene: A confident woman explores a Mediterranean town, discovering local artisan culture. Golden-hour cinematic lighting throughout.');
+
+      console.log('[TensorAx] Test data loaded — prompts, grid images, and video state all pre-filled.');
     } catch (e) {
       console.error('[TensorAx] Load test data failed', e);
       alert('Could not load test images. Ensure /test-refs/ exists in public.');
@@ -552,22 +904,7 @@ const App: React.FC = () => {
     }
   };
 
-  const enhancePrompt = async () => {
-    if (!videoState.prompt || isEnhancing) return;
-    setIsEnhancing(true);
-    try {
-      const enhanced = await GeminiService.enhancePrompt(
-        videoState.prompt,
-        "You are Gemini 3 creative prompt optimizer. Rewrite this video generation prompt to be cinematic, technical, and concise (under 80 words), preserving intent."
-      );
-      setVideoState(v => ({ ...v, prompt: enhanced }));
-    } catch (e) {
-      console.error("Enhance prompt failed", e);
-      alert("Prompt enhancement failed. Check API key or model access.");
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
+  // enhancePrompt moved to VideoScreen component
 
   const autoGeneratePrompts = async () => {
     if (isAutoGeneratingPrompts) return;
@@ -680,97 +1017,7 @@ const App: React.FC = () => {
     setCurrentScreen('video');
   };
 
-  const startVideoGeneration = async () => {
-    if (videoState.isGenerating || !videoState.prompt) return;
-    setVideoState(v => ({ ...v, isGenerating: true, progressMessage: "Initializing..." }));
-    const provider = getVideoProvider();
-    const apiKey = getVideoApiKey();
-    try {
-      let url: string | undefined;
-
-      if (provider === 'seedance') {
-        if (!apiKey) {
-          alert("Please set your fal.ai API key in Project Settings → Video Generation.");
-          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
-          return;
-        }
-        if (!videoState.startImage) {
-          alert("Seedance requires a Start frame. Hover over a generated image and click Start.");
-          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
-          return;
-        }
-        const durationSecs = videoState.duration === '10s' ? '10' : '5';
-        const res = await fetch('/api/generate-video-seedance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            apiKey,
-            startImageUrl: videoState.startImage,
-            endImageUrl: videoState.endImage || null,
-            prompt: videoState.prompt,
-            duration: durationSecs,
-            aspectRatio,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Seedance request failed: ${res.status}`);
-        }
-        const data = await res.json();
-        url = data.videoUrl;
-      } else if (provider === 'kling') {
-        if (!apiKey) {
-          alert("Please set your fal.ai API key in Project Settings → Video Generation.");
-          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
-          return;
-        }
-        if (!videoState.startImage) {
-          alert("Kling requires a Start frame. Hover over a generated image and click Start.");
-          setVideoState(v => ({ ...v, isGenerating: false, progressMessage: '' }));
-          return;
-        }
-        const durationSecs = videoState.duration === '10s' ? '10' : '5';
-        const res = await fetch('/api/generate-video-kling', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            apiKey,
-            startImageUrl: videoState.startImage,
-            endImageUrl: videoState.endImage || null,
-            motionVideoUrl: (videoState as any).motionVideo || null,
-            prompt: videoState.prompt,
-            duration: durationSecs,
-            aspectRatio,
-            generateAudio: false,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Kling request failed: ${res.status}`);
-        }
-        const data = await res.json();
-        url = data.videoUrl;
-      } else {
-        url = await GeminiService.generateVideo({
-          prompt: videoState.prompt,
-          startImage: videoState.startImage,
-          midImage: videoState.midImage,
-          endImage: videoState.endImage,
-          movementDescription: videoState.movementDescription,
-          duration: videoState.duration,
-          onProgress: (msg) => setVideoState(v => ({ ...v, progressMessage: msg }))
-        });
-      }
-
-      if (url) {
-        setVideoState(v => ({ ...v, resultUrl: url, isGenerating: false, progressMessage: '' }));
-      }
-    } catch (e: any) {
-      console.error("Video generation failed:", e);
-      setVideoState(v => ({ ...v, isGenerating: false, progressMessage: "Error encountered." }));
-      alert(`Video generation failed: ${e?.message || 'Unknown error'}`);
-    }
-  };
+  // startVideoGeneration and reviewGeneratedVideo moved to VideoScreen component
 
   const downloadAllImages = async () => {
     const successfulImages = images.filter(img => !img.loading && img.url);
@@ -893,6 +1140,33 @@ const App: React.FC = () => {
     }
   };
 
+  // Template wizard — renders after project is created and user clicks "Launch Template"
+  if (activeProject && activeTemplateId && currentScreen !== 'project-settings') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
+          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }} />
+          <div className="mx-auto flex items-center gap-3">
+            <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+            {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+            ) : null; })()}
+          </div>
+        </header>
+        <TemplateWizard
+          templateId={activeTemplateId}
+          projectId={activeProject.id}
+          onComplete={(result) => {
+            console.log('[TemplateWizard] completed:', result.templateId, result.videoUrl ? 'with video' : 'no video');
+            setActiveTemplateId(null);
+            setCurrentScreen('landing');
+          }}
+          onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+        />
+      </div>
+    );
+  }
+
   if (currentScreen === 'project-settings' && activeProject) {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
@@ -914,12 +1188,34 @@ const App: React.FC = () => {
             <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </div>
         </header>
+        {activeTemplateId && (() => {
+          const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
+          return (
+            <div className="bg-gradient-to-r from-[#f6f0f8] to-[#eadcef] border-b border-[#ceadd4] px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <i className={`fa-solid ${tpl?.icon || 'fa-shapes'} text-[#91569c]`}></i>
+                <div>
+                  <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">{tpl?.name || 'Template'}</span>
+                  <p className="text-[9px] text-[#888] mt-0.5">Configure your API keys below, then launch the template</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCurrentScreen('landing')}
+                className="px-5 py-2 rounded-lg bg-[#91569c] hover:bg-[#7a4685] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2"
+              >
+                <i className="fa-solid fa-rocket text-[10px]"></i>
+                Launch Template
+              </button>
+            </div>
+          );
+        })()}
         <ProjectSettings
           project={activeProject}
           brands={brands}
           activeBrandId={activeBrandId}
-          onBack={() => setCurrentScreen('landing')}
-          onSwitchProject={() => { persistProject(null); setCurrentScreen('landing'); }}
+          activeTemplateId={activeTemplateId}
+          onBack={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          onSwitchProject={() => { persistProject(null); setActiveTemplateId(null); setCurrentScreen('landing'); }}
           onUpdateProject={(updated) => {
             persistProject(updated);
             setAllProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -942,6 +1238,9 @@ const App: React.FC = () => {
               {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
                 <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
               ) : null; })()}
+              <div className="ml-3">
+                <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
+              </div>
             </div>
           )}
           <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
@@ -958,26 +1257,92 @@ const App: React.FC = () => {
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
             {activeProject && (
               <div className="mx-auto flex items-center gap-3">
-              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-              ) : null; })()}
-            </div>
+                <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+                {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+                ) : null; })()}
+                <div className="ml-3">
+                  <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
+                </div>
+              </div>
             )}
             <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </header>
           <LandingPage
-            onNavigate={(screen) => setCurrentScreen(screen as any)}
+            onNavigate={(screen) => {
+              if (screen === 'concept:screenplay') {
+                setConceptIntent('screenplay');
+                setCurrentScreen('concept');
+              } else {
+                setConceptIntent(null);
+                setCurrentScreen(screen as any);
+              }
+            }}
             activeProject={activeProject}
             allProjects={allProjects}
             brands={brands}
+            activeBrandId={activeBrandId}
             onCreateProject={handleCreateProject}
             onSelectProject={handleSelectProject}
             onNewProject={() => persistProject(null)}
+            onUpdateProject={(updated) => {
+              persistProject(updated);
+              setAllProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+            }}
+            onBrandChange={(brandId) => { setActiveBrandIdState(brandId); setActiveBrandId(brandId); }}
             assistantContext={assistantContext}
             onAssistantAction={handleAssistantAction}
             chatHistoryRef={chatHistoryRef}
+            onStartPipeline={handleStartPipeline}
+            pipelineActive={pipelineActive}
+            pipelineStep={pipelineStep}
+            pipelineName={pipelineName}
+            onStartTemplate={handleStartTemplate}
+            activeTemplateId={activeTemplateId}
           />
+
+          {/* Template project name dialog */}
+          {pendingTemplateId && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setPendingTemplateId(null)}>
+              <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 w-full max-w-md mx-4 shadow-xl animate-fade-in" onClick={e => e.stopPropagation()}>
+                <div className="text-center mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-[#f6f0f8] flex items-center justify-center mx-auto mb-3">
+                    <i className="fa-solid fa-wand-magic-sparkles text-xl text-[#91569c]"></i>
+                  </div>
+                  <h3 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide">
+                    Name Your Project
+                  </h3>
+                  <p className="text-[10px] text-[#888] mt-1">
+                    Using template: {PROJECT_TEMPLATES.find(t => t.id === pendingTemplateId)?.name}
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  value={templateProjectName}
+                  onChange={(e) => setTemplateProjectName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && templateProjectName.trim()) confirmTemplateProject(); }}
+                  placeholder="e.g. Summer Campaign Transformation"
+                  autoFocus
+                  className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#3a3a3a] placeholder:text-[#888] outline-none focus:ring-2 focus:ring-[#91569c]/30 mb-4"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setPendingTemplateId(null)}
+                    className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmTemplateProject}
+                    disabled={!templateProjectName.trim()}
+                    className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-[#91569c] text-white border border-[#91569c] hover:bg-[#5c3a62] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Create Project
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     );
   }
@@ -995,21 +1360,15 @@ const App: React.FC = () => {
             </button>
             <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
           </div>
-          {activeProject && (
-            <div className="mx-auto flex items-center gap-3">
-              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-              ) : null; })()}
-            </div>
-          )}
+          <div className="mx-auto">
+            <PipelineNav current="concept" onNavigate={(s) => setCurrentScreen(s as any)} />
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Copy</span>
             <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </div>
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <ConceptScreen onBack={() => setCurrentScreen('landing')} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} onNavigateToImages={() => setCurrentScreen('images')} onContextChange={setAssistantContext} actionRef={conceptActionRef} chatHistoryRef={chatHistoryRef} />
+          <ConceptScreen onBack={() => { if (pipelineActive) handlePipelineReturn(); else setCurrentScreen('landing'); }} onOpenApiKeyModal={openApiKeyModal} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} onNavigateToImages={() => { if (pipelineActive) handlePipelineReturn(); else setCurrentScreen('images'); }} onContextChange={setAssistantContext} actionRef={conceptActionRef} chatHistoryRef={chatHistoryRef} initialIntent={conceptIntent} onIntentConsumed={() => setConceptIntent(null)} onSendToVideo={(prompt) => { setVideoState(v => ({ ...v, prompt })); setCurrentScreen('video'); }} />
           <div className="w-72 flex-shrink-0 p-3 pl-0">
             <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
           </div>
@@ -1064,13 +1423,27 @@ const App: React.FC = () => {
 
   if (currentScreen === 'images') {
     return (
-      <div className="flex h-screen overflow-hidden bg-[#edecec]">
-        <div className="flex-1 min-w-0">
-          <ImagesScreen onBack={() => setCurrentScreen('landing')} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+      <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
+        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
+              <i className="fa-solid fa-arrow-left text-sm"></i>
+            </button>
+            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
+          </div>
+          <div className="mx-auto">
+            <PipelineNav current="images" onNavigate={(s) => setCurrentScreen(s as any)} />
+          </div>
+          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
+        </header>
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-w-0">
+            <ImagesScreen onBack={() => { if (pipelineActive) handlePipelineReturn(); else setCurrentScreen('landing'); }} brands={brands} activeBrandId={activeBrandId} activeProject={activeProject} />
+          </div>
+          <aside className="w-72 flex-shrink-0 p-2 pl-0">
+            <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
+          </aside>
         </div>
-        <aside className="w-72 flex-shrink-0 p-2 pl-0">
-          <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
-        </aside>
       </div>
     );
   }
@@ -1087,14 +1460,9 @@ const App: React.FC = () => {
           </button>
           <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
         </div>
-        {activeProject && (
-            <div className="mx-auto flex items-center gap-3">
-              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-              ) : null; })()}
-            </div>
-        )}
+        <div className="mx-auto">
+          <PipelineNav current={currentScreen} onNavigate={(s) => setCurrentScreen(s as any)} />
+        </div>
         <div className="flex items-center gap-2">
           {currentScreen === 'scenes' && images.some(img => img.url) && !isGenerating && (
             <button
@@ -1122,9 +1490,10 @@ const App: React.FC = () => {
                 <button
                   type="button"
                   onClick={loadTestData}
-                  className="text-[9px] font-black uppercase text-[#91569c] hover:text-[#91569c]/80 border border-[#ceadd4] hover:border-[#91569c]/50 rounded px-2 py-1 transition-colors"
+                  className="text-[9px] font-black uppercase text-[#91569c] hover:text-white hover:bg-[#91569c] border border-[#ceadd4] hover:border-[#91569c] rounded px-2.5 py-1 transition-colors flex items-center gap-1.5"
                 >
-                  Load test
+                  <i className="fa-solid fa-flask text-[8px]"></i>
+                  Load test set
                 </button>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
@@ -1361,260 +1730,17 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
             </main>
           </>
         ) : (
-          <>
-            <aside className="w-80 bg-[#edecec] border-r border-[#e0d6e3] flex flex-col overflow-hidden flex-shrink-0">
-              <div className="p-4 border-b border-[#e0d6e3] bg-white/50">
-                <h2 className="text-lg font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Configuration</h2>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
-                {/* Active Video Engine (set in Project Settings) */}
-                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Video Engine</label>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentScreen('project-settings')}
-                      className="text-[9px] font-bold text-[#91569c] hover:text-[#5c3a62] transition-colors flex items-center gap-1"
-                    >
-                      <i className="fa-solid fa-gear text-[8px]"></i> Change in Settings
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 bg-[#f6f0f8] rounded-xl px-4 py-2.5 border border-[#e0d6e3]">
-                    <i className="fa-solid fa-video text-[#91569c] text-sm"></i>
-                    <span className="text-[11px] font-black text-[#5c3a62] uppercase tracking-wide">{getVideoModel()}</span>
-                    {!getVideoApiKey() && getVideoProvider() !== 'veo' && (
-                      <span className="ml-auto text-[9px] text-red-500 font-bold flex items-center gap-1">
-                        <i className="fa-solid fa-circle-xmark text-[8px]"></i> No API key
-                      </span>
-                    )}
-                    {(getVideoApiKey() || getVideoProvider() === 'veo') && (
-                      <span className="ml-auto text-[9px] text-green-600 font-bold flex items-center gap-1">
-                        <i className="fa-solid fa-circle-check text-[8px]"></i> Ready
-                      </span>
-                    )}
-                  </div>
-                  {getVideoProvider() === 'seedance' && (
-                    <p className="text-[9px] text-[#3a3a3a]/60">Seedance 2.0 via fal.ai. Supports Start and End frames, up to 1080p.</p>
-                  )}
-                  {getVideoProvider() === 'veo' && (
-                    <p className="text-[9px] text-[#3a3a3a]/60">Veo via Gemini API. Supports Start, Mid and End frames.</p>
-                  )}
-                  {getVideoProvider() === 'kling' && (
-                    <>
-                      <p className="text-[9px] text-[#3a3a3a]/60">Kling via fal.ai. Supports Start and End frames + motion reference video.</p>
-                      <div>
-                        <label className="block text-[10px] font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Motion Reference Video <span className="font-normal normal-case text-[#3a3a3a]/60">(optional)</span></label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="file"
-                            accept="video/*"
-                            id="kling-motion-video"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = (ev) => {
-                                if (typeof ev.target?.result === 'string') {
-                                  setVideoState(v => ({ ...v, motionVideo: ev.target!.result as string } as any));
-                                }
-                              };
-                              reader.readAsDataURL(file);
-                              e.target.value = '';
-                            }}
-                          />
-                          <label htmlFor="kling-motion-video" className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed cursor-pointer text-[10px] transition-colors ${(videoState as any).motionVideo ? 'border-[#91569c] bg-[#91569c]/10 text-[#3a3a3a]' : 'border-[#ceadd4] bg-white text-[#3a3a3a]/60 hover:border-[#91569c]/50'}`}>
-                            <i className={`fa-solid ${(videoState as any).motionVideo ? 'fa-video text-[#91569c]' : 'fa-film'}`}></i>
-                            {(videoState as any).motionVideo ? 'Motion video set ✓' : 'Upload motion reference video'}
-                          </label>
-                          {(videoState as any).motionVideo && (
-                            <button type="button" onClick={() => setVideoState(v => { const n = { ...v }; delete (n as any).motionVideo; return n; })} className="text-[10px] text-red-500 hover:text-red-400 px-1">✕</button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Generation Prompt */}
-                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Generation Prompt</label>
-                    <button 
-                      onClick={enhancePrompt}
-                      disabled={isEnhancing || !videoState.prompt}
-                      title="Enhance Prompt"
-                      className={`text-sm transition-all p-1.5 rounded-lg border ${isEnhancing ? 'bg-white border-[#ceadd4] text-[#3a3a3a]' : 'bg-white border-[#ceadd4] text-[#91569c]/70 hover:text-[#91569c] hover:border-[#91569c]/30 active:scale-95'}`}
-                    >
-                      <i className={`fa-solid ${isEnhancing ? 'fa-wand-magic-sparkles fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-                    </button>
-                  </div>
-                  <textarea 
-                    value={videoState.prompt} 
-                    onChange={(e) => setVideoState(v => ({ ...v, prompt: e.target.value }))} 
-                    placeholder="Describe the cinematic scene..."
-                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-24 resize-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70"
-                  />
-                </div>
-
-                {/* Key Frame Sequence */}
-                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-4">
-                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Key Frame Sequence</label>
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-[#3a3a3a] tracking-wider">Upload key frame images</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'start', label: 'Start' },
-                        { id: 'mid', label: 'Mid' },
-                        { id: 'end', label: 'End' }
-                      ].map(slot => (
-                        <div key={slot.id} className="relative aspect-square">
-                          <input type="file" id={`upload-${slot.id}`} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, slot.id as any)} />
-                          <label htmlFor={`upload-${slot.id}`} className="flex flex-col items-center justify-center w-full h-full bg-white border border-[#ceadd4] border-dashed rounded-lg cursor-pointer hover:border-[#91569c]/30 transition-all overflow-hidden group">
-                            { (videoState as any)[`${slot.id}Image`] ? (
-                              <img src={(videoState as any)[`${slot.id}Image`]} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="flex flex-col items-center gap-1">
-                                <i className="fa-solid fa-cloud-arrow-up text-[#5c3a62] text-lg group-hover:text-[#91569c]/50 transition-colors"></i>
-                                <span className="text-xs font-black uppercase text-[#3a3a3a]">{slot.label}</span>
-                              </div>
-                            )}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Movement Path */}
-                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-4">
-                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Movement Path</label>
-                  <textarea 
-                    value={videoState.movementDescription} 
-                    onChange={(e) => setVideoState(v => ({ ...v, movementDescription: e.target.value }))} 
-                    placeholder="Describe specific movements (e.g. camera zooms in)..."
-                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] focus:ring-1 focus:ring-[#91569c] outline-none h-20 resize-none text-[#3a3a3a] placeholder:text-[#3a3a3a]/70" 
-                  />
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-[#3a3a3a] tracking-wider">Upload movement video</p>
-                    <div className="relative">
-                      <input 
-                        type="file" 
-                        id="upload-movement-video" 
-                        className="hidden" 
-                        accept="video/*" 
-                        onChange={(e) => handleFileUpload(e, 'movementVideo')} 
-                      />
-                      <label 
-                        htmlFor="upload-movement-video" 
-                        className={`flex items-center gap-3 w-full p-3 rounded-xl border border-dashed transition-all cursor-pointer ${videoState.movementVideo ? 'border-[#91569c]/50 bg-[#91569c]/5' : 'border-[#ceadd4] bg-white hover:border-[#91569c]/30'}`}
-                      >
-                        <i className={`fa-solid ${videoState.movementVideo ? 'fa-video text-[#91569c]' : 'fa-film text-[#5c3a62] text-lg'}`}></i>
-                        <span className={`text-xs font-black uppercase ${videoState.movementVideo ? 'text-[#3a3a3a]' : 'text-[#3a3a3a]'}`}>
-                          {videoState.movementVideo ? 'Video Attached' : 'Select Reference Video'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Select Duration */}
-                <div className="bg-white/80 border border-[#ceadd4] p-4 rounded-2xl space-y-3">
-                  <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Select Duration</label>
-                  <select 
-                    value={videoState.duration}
-                    onChange={(e) => setVideoState(v => ({ ...v, duration: e.target.value as '5s' | '10s' }))}
-                    className="w-full bg-white border border-[#ceadd4] rounded-xl p-3 text-[11px] outline-none text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c] appearance-none cursor-pointer"
-                  >
-                    <option value="5s">5 Seconds Clip</option>
-                    <option value="10s">10 Seconds Clip</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-[#ceadd4] bg-white">
-                <button 
-                  onClick={startVideoGeneration} 
-                  disabled={videoState.isGenerating} 
-                  className={`w-full py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-lg active:scale-95 ${
-                    videoState.isGenerating 
-                      ? 'bg-white text-[#3a3a3a] cursor-not-allowed' 
-                      : 'bg-[#91569c] hover:bg-[#91569c]/90 text-black'
-                  }`}
-                >
-                  {videoState.isGenerating ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <i className="fa-solid fa-gear fa-spin"></i> PROCESSING
-                    </span>
-                  ) : getVideoProvider() === 'seedance' ? 'GENERATE SEEDANCE CLIP' : getVideoProvider() === 'kling' ? 'GENERATE KLING CLIP' : 'GENERATE VEO CLIP'}
-                </button>
-              </div>
-            </aside>
-            <main className="flex-1 bg-[#edecec] p-6 flex flex-col items-center justify-center relative">
-               {!videoState.resultUrl && !videoState.isGenerating && (
-                 <div className="text-center space-y-6 opacity-20">
-                    <i className="fa-solid fa-clapperboard text-[120px] text-[#888]"></i>
-                    <p className="font-black uppercase tracking-[0.3em] text-[#888]">Video Studio Idle</p>
-                 </div>
-               )}
-
-               {videoState.isGenerating && (
-                 <div className="w-full max-w-lg text-center space-y-8 animate-pulse">
-                    <div className="w-32 h-32 mx-auto relative">
-                       <LogoIcon className="w-full h-full text-[#91569c] animate-spin-slow opacity-20" />
-                       <div className="absolute inset-0 flex items-center justify-center">
-                          <i className="fa-solid fa-gear fa-spin text-3xl text-[#91569c]"></i>
-                       </div>
-                    </div>
-                    <div className="space-y-4">
-                      <p className="text-lg font-black uppercase tracking-widest text-[#888]">{videoState.progressMessage}</p>
-                      <p className="text-[10px] text-[#888] uppercase tracking-[0.4em] font-bold">This typically takes 2-4 minutes</p>
-                    </div>
-                 </div>
-               )}
-
-               {videoState.resultUrl && !videoState.isGenerating && (
-                 <div className="w-full max-w-4xl animate-fade-in space-y-6">
-                    <div className="relative rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-[#ceadd4] bg-black">
-                       <video 
-                         src={videoState.resultUrl} 
-                         controls 
-                         autoPlay 
-                         loop 
-                         className="w-full aspect-video" 
-                       />
-                       <div className="absolute top-6 right-6 flex gap-2">
-                         <a 
-                           href={videoState.resultUrl} 
-                           download="tensorax-veo.mp4"
-                           className="w-12 h-12 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-[#5c3a62] hover:bg-white/20 transition-all shadow-xl"
-                         >
-                           <i className="fa-solid fa-download"></i>
-                         </a>
-                       </div>
-                    </div>
-                    <div className="flex justify-between items-center px-4">
-                       <div className="flex gap-4 items-center">
-                          <div className="w-10 h-10 bg-white border border-[#ceadd4] rounded-xl flex items-center justify-center">
-                             <LogoIcon className="w-5 h-5 text-[#888]" />
-                          </div>
-                          <div>
-                            <h3 className="text-base font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Veo Cinematic Generation</h3>
-                            <p className="text-[10px] text-[#888] uppercase font-bold">Processed at 720p • Motion Consistent</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => setVideoState(v => ({ ...v, resultUrl: undefined }))}
-                         className="text-[10px] font-black text-[#888] uppercase hover:text-red-500 transition-colors"
-                       >
-                         Discard Session
-                       </button>
-                    </div>
-                 </div>
-               )}
-            </main>
-          </>
+          <VideoScreen
+            videoState={videoState}
+            setVideoState={setVideoState}
+            screenplay={projectScreenplay}
+            getVideoModel={getVideoModel}
+            getVideoProvider={getVideoProvider}
+            getVideoApiKey={getVideoApiKey}
+            aspectRatio={aspectRatio}
+            projectId={activeProject?.id}
+            onNavigateSettings={() => setCurrentScreen('project-settings')}
+          />
         )}
         <aside className={`flex-shrink-0 mt-0 mb-2 mx-2 ${currentScreen === 'scenes' ? 'w-[18%] min-w-[240px] max-w-[320px] block' : 'hidden 2xl:block w-80'}`}>
           <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>

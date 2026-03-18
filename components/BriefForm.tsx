@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ProjectBrief } from '../types';
+import DropZone from './DropZone';
 
 export interface VideoSuggestion {
   title: string;
@@ -327,28 +328,43 @@ export const BriefForm: React.FC<BriefFormProps> = ({ brief, onChange, onSubmit,
           </Field>
 
           <Field label="Upload Sample Video" icon="fa-upload">
-            <div className="relative">
-              <input
-                type="file"
-                id="brief-sample-video"
-                className="hidden"
-                accept="video/*"
-                onChange={handleVideoFileUpload}
-              />
-              <label
-                htmlFor="brief-sample-video"
-                className={`flex items-center gap-3 w-full p-3 rounded-lg border border-dashed transition-all cursor-pointer ${
-                  brief.sampleVideoFile
-                    ? 'border-[#91569c]/50 bg-[#91569c]/10 text-[#3a3a3a]'
-                    : 'border-[#ceadd4] bg-white text-[#3a3a3a]/60 hover:border-[#91569c]/40'
-                }`}
-              >
-                <i className={`fa-solid ${brief.sampleVideoFile ? 'fa-check-circle text-[#91569c]' : 'fa-cloud-arrow-up'}`}></i>
-                <span className="text-[10px] font-bold uppercase">
-                  {brief.sampleVideoFile ? 'Video attached' : 'Choose file'}
-                </span>
-              </label>
-            </div>
+            <DropZone
+              accept="video/*"
+              onFiles={(files) => {
+                const file = files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  if (typeof ev.target?.result === 'string') {
+                    update('sampleVideoFile', ev.target.result);
+                  }
+                };
+                reader.readAsDataURL(file);
+              }}
+            >
+              <div className="relative">
+                <input
+                  type="file"
+                  id="brief-sample-video"
+                  className="hidden"
+                  accept="video/*"
+                  onChange={handleVideoFileUpload}
+                />
+                <label
+                  htmlFor="brief-sample-video"
+                  className={`flex items-center gap-3 w-full p-3 rounded-lg border border-dashed transition-all cursor-pointer ${
+                    brief.sampleVideoFile
+                      ? 'border-[#91569c]/50 bg-[#91569c]/10 text-[#3a3a3a]'
+                      : 'border-[#ceadd4] bg-white text-[#3a3a3a]/60 hover:border-[#91569c]/40'
+                  }`}
+                >
+                  <i className={`fa-solid ${brief.sampleVideoFile ? 'fa-check-circle text-[#91569c]' : 'fa-cloud-arrow-up'}`}></i>
+                  <span className="text-[10px] font-bold uppercase">
+                    {brief.sampleVideoFile ? 'Video attached' : 'Drop video or click to choose'}
+                  </span>
+                </label>
+              </div>
+            </DropZone>
           </Field>
         </div>
       </div>

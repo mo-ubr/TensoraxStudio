@@ -57,7 +57,11 @@ export { emptyDirection };
 const IDEA_MODEL_KEY = 'tensorax_idea_model';
 const IDEA_APIKEY_KEY = 'tensorax_idea_apiKey';
 
-export const GENERAL_DIRECTION_SYSTEM_PROMPT = (direction: GeneralDirectionType, brand: BrandProfile | undefined) => `You are a senior creative director. Generate exactly 1 video concept idea.
+export const GENERAL_DIRECTION_SYSTEM_PROMPT = (direction: GeneralDirectionType, brand: BrandProfile | undefined, sourceDocContent?: string, sourceNotes?: string, characterNotes?: string) => {
+  const hasSourceDoc = sourceDocContent && sourceDocContent.trim().length > 0;
+  const hasSourceNotes = sourceNotes && sourceNotes.trim().length > 0;
+  const hasCharNotes = characterNotes && characterNotes.trim().length > 0;
+  return `You are a senior creative director. Generate exactly 1 video concept idea.
 
 CRITICAL: The PROJECT BRIEF below is your PRIMARY instruction. The idea MUST directly implement what the brief describes. Do NOT invent your own story — follow the brief's specific direction. If the brief says "show a growing child" then the idea shows a growing child. If the brief says "show gift cards from relatives" then the idea shows that.
 
@@ -68,7 +72,30 @@ CRITICAL: The PROJECT BRIEF below is your PRIMARY instruction. The idea MUST dir
 ${direction.aim || '(not specified)'}
 
 ---
+${hasSourceDoc ? `
+═══════════════════════════════════════════════════════════════
+SOURCE DOCUMENT — THE VIDEO CONCEPT MUST BE BASED ON THIS
+═══════════════════════════════════════════════════════════════
 
+The user has uploaded this source document. The concept idea MUST be closely based on this document's content.
+${hasSourceNotes ? `
+USER'S DIRECTION FOR THIS MATERIAL:
+${sourceNotes!.trim()}
+
+Follow the user's direction above as your primary guide for HOW to use the source document.
+` : ''}
+CRITICAL RULES FOR SOURCE DOCUMENT:
+• Follow the document's structure and sequence of points — the video scenes should reflect the document's flow.
+• Preserve ALL specific numbers, statistics, percentages, dates, and figures EXACTLY as stated — do NOT round, approximate, or change any numerical data.
+• Use the document's key messages, facts, and talking points as the foundation of each scene.
+• Do NOT invent facts, claims, or data that are not in the source document.
+• If the document contains quotes, product names, or brand-specific terminology, use them verbatim.
+
+--- BEGIN SOURCE DOCUMENT ---
+${sourceDocContent}
+--- END SOURCE DOCUMENT ---
+
+` : ''}
 ## PROJECT DETAILS
 
 Project name: ${direction.projectName || '(not specified)'}
@@ -82,6 +109,7 @@ ${direction.styleVideos?.filter(v => v.url).map((v, i) => `Style inspiration ${i
 ${brand ? `Brand: ${brand.name}` : 'Brand: (none selected)'}
 ${brand ? `Brand colours: ${brand.colour}` : ''}
 ${brand ? `Brand typography: ${brand.typography}` : ''}
+${hasCharNotes ? `Character direction: ${characterNotes!.trim()}` : ''}
 
 ---
 
@@ -89,26 +117,34 @@ Use this exact format:
 
 ## Idea: [Creative Title]
 **Summary:** [2-3 sentence overview of the concept — what's the story, what's the hook?]
-**Scene 1:** [Describe the scene — what happens, who appears, camera angle, approximate duration]
-**Scene 2:** [Next scene]
-...continue with as many scenes as the concept needs (typically 3-8 depending on complexity and video duration)...
-**Scene N:** [Final scene — include the ending and CTA]
+**Scene 1 (~Xs):** [Describe the scene — what happens, who appears, camera angle, approximate duration in seconds. If the scene is longer than 8s, note the distinct video clips needed, e.g. "3 clips: establishing shot → close-up dialogue → reaction shot"]
+**Scene 2 (~Xs):** [Next scene]
+...continue with as many scenes as the concept needs — create enough scenes to cover the full video duration...
+**Scene N (~Xs):** [Final scene — include the ending and CTA]
 **Visual Style:** [Describe the visual treatment: colour palette, lighting mood, camera style, film stock feel]
 **Why It Works:** [1 sentence on why this concept fits the brand, audience, and CTA]
 
 Rules:
-- The idea must faithfully implement the PROJECT BRIEF — same core story elements, same characters, same message
+- The idea must faithfully implement the PROJECT BRIEF — same core story elements, same characters, same message${hasSourceDoc ? `
+- The idea MUST faithfully represent the source document's content — every key point, fact, and figure must be accurately reflected
+- Scene descriptions must map to the document's structure and cover all its main points in the same order` : ''}
 - Keep it simple and uncomplicated as the brief requests — no overcomplication
-- The idea must be feasible with AI video generation tools (Veo, Kling, Imagen)
-- Be very specific about scenes — describe exactly what is shown frame by frame
+- The idea must be feasible with AI video generation tools (Veo, Kling, Imagen) — each tool generates 5-8 second clips, so scenes longer than 8s need multiple clips
+- Be very specific about scenes — describe exactly what is shown, include approximate duration for each scene
+- Each scene that involves a change in background, scenery, or major action shift should note these transitions so the screenplay can generate separate video prompts for each
+- The total of all scene durations must add up to approximately the target video duration
 ${brand ? `- Integrate the ${brand.name} brand naturally (logo placement, brand colours, typography style)` : ''}`;
+};
 
 export const SINGLE_IDEA_REGEN_PROMPT = (
   ideaNum: number,
   allIdeas: { num: number; title: string; body: string }[],
   direction: GeneralDirectionType,
   brand: BrandProfile | undefined,
-  feedback?: { rating?: 'like' | 'neutral' | 'dislike'; comment?: string }
+  feedback?: { rating?: 'like' | 'neutral' | 'dislike'; comment?: string },
+  sourceDocContent?: string,
+  sourceNotes?: string,
+  characterNotes?: string,
 ) => {
   const otherIdeas = allIdeas.filter(i => i.num !== ideaNum);
   const otherSummaries = otherIdeas.map(i => `- "${i.title}": ${i.body.slice(0, 120)}...`).join('\n');
@@ -128,6 +164,9 @@ export const SINGLE_IDEA_REGEN_PROMPT = (
     feedbackLines.push(`User feedback: "${feedback.comment.trim()}" — incorporate this feedback into the new idea.`);
   }
 
+  const hasSourceDoc = sourceDocContent && sourceDocContent.trim().length > 0;
+  const hasSourceNotes = sourceNotes && sourceNotes.trim().length > 0;
+
   return `You are a senior creative director. Generate exactly 1 replacement video concept idea.
 
 CRITICAL: Follow the PROJECT BRIEF below EXACTLY. Do NOT invent your own story.
@@ -139,7 +178,26 @@ CRITICAL: Follow the PROJECT BRIEF below EXACTLY. Do NOT invent your own story.
 ${direction.aim || '(not specified)'}
 
 ---
+${hasSourceDoc ? `
+═══════════════════════════════════════════════════════════════
+SOURCE DOCUMENT — THE VIDEO CONCEPT MUST BE BASED ON THIS
+═══════════════════════════════════════════════════════════════
 
+The user has uploaded this source document. The concept idea MUST be closely based on this document's content.
+${hasSourceNotes ? `
+USER'S DIRECTION FOR THIS MATERIAL:
+${sourceNotes!.trim()}
+
+Follow the user's direction above as your primary guide for HOW to use the source document.
+` : ''}
+Preserve ALL specific numbers, statistics, percentages, dates, and figures EXACTLY as stated.
+Use the document's key messages and talking points as the foundation. Do NOT invent facts not in the document.
+
+--- BEGIN SOURCE DOCUMENT ---
+${sourceDocContent}
+--- END SOURCE DOCUMENT ---
+
+` : ''}
 ## PROJECT DETAILS
 
 Project name: ${direction.projectName || '(not specified)'}
@@ -152,6 +210,7 @@ ${direction.targetAudience ? `Target audience: ${direction.targetAudience}` : ''
 ${brand ? `Brand: ${brand.name}` : 'Brand: (none selected)'}
 ${brand ? `Brand colours: ${brand.colour}` : ''}
 ${brand ? `Brand typography: ${brand.typography}` : ''}
+${characterNotes?.trim() ? `Character direction: ${characterNotes.trim()}` : ''}
 
 ---
 
@@ -172,7 +231,8 @@ Generate exactly 1 new idea using this format:
 
 Rules:
 - Must be completely distinct from all existing ideas listed above
-- Must faithfully follow the PROJECT BRIEF
+- Must faithfully follow the PROJECT BRIEF${hasSourceDoc ? `
+- MUST faithfully represent the source document's content — every key point, fact, and figure must be accurately reflected` : ''}
 - Keep it simple and uncomplicated
 - Feasible with AI video generation tools (Veo, Kling, Imagen)
 - Be very specific about scenes
@@ -542,50 +602,24 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
 
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Settings — first */}
+          {/* Settings summary — read-only, managed in Project Settings */}
           <div>
-            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <label className="block text-[10px] font-bold text-[#5c3a62] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <i className="fa-solid fa-sliders text-[#91569c] text-[9px]"></i>
               Settings
             </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Video Type</label>
-                <select value={value.videoType} onChange={(e) => update('videoType', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
-                  <option value="explainer">Explainer</option>
-                  <option value="promo">Promo / Ad</option>
-                  <option value="tutorial">Tutorial</option>
-                  <option value="testimonial">Testimonial</option>
-                  <option value="brand">Brand Story</option>
-                  <option value="product">Product Showcase</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Format</label>
-                <select value={value.format} onChange={(e) => update('format', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
-                  <option value="9:16">9:16 (YT Short, TT, IG)</option>
-                  <option value="16:9">16:9 (YT, Website)</option>
-                  <option value="1:1">1:1 (Square)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Duration</label>
-                <select value={value.duration} onChange={(e) => update('duration', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
-                  <option value="1.5min">1.5 min (Short form)</option>
-                  <option value="3min">3 min (Long form)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[9px] font-bold text-[#888]/80 uppercase tracking-wide mb-1">Tone</label>
-                <select value={value.tone} onChange={(e) => update('tone', e.target.value)} className="w-full bg-white border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[10px] text-[#3a3a3a] focus:ring-1 focus:ring-[#91569c]/50 outline-none cursor-pointer">
-                  <option value="warm">Warm &amp; Emotional</option>
-                  <option value="energetic">Energetic</option>
-                  <option value="professional">Professional</option>
-                  <option value="playful">Playful</option>
-                  <option value="dramatic">Dramatic</option>
-                  <option value="inspirational">Inspirational</option>
-                </select>
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                value.videoType && { label: value.videoType },
+                value.format && { label: value.format },
+                value.duration && { label: value.duration },
+                value.tone && { label: value.tone },
+              ].filter(Boolean).map((tag, i) => (
+                <span key={i} className="px-2 py-1 rounded-md bg-[#f6f0f8] border border-[#ceadd4] text-[9px] font-bold text-[#5c3a62] uppercase tracking-wide">
+                  {(tag as any).label}
+                </span>
+              ))}
+              <span className="px-2 py-1 rounded-md text-[9px] text-[#888] italic">Edit in Project Settings</span>
             </div>
 
             <StyleInspirations value={value} onChange={onChange} />
@@ -699,7 +733,7 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                     className="flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
                   >
                     <i className={`fa-solid ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i>
-                    {isSaving ? 'Creating Screenplay...' : 'Create Screenplay'}
+                    {isSaving ? 'Saving...' : 'Save Screenplay'}
                   </button>
                 </div>
               </div>
@@ -926,11 +960,15 @@ export const GeneralDirection: React.FC<GeneralDirectionProps> = ({
                           }],
                         });
                         const blob = await Packer.toBlob(doc);
-                        const dataUrl = await new Promise<string>(resolve => {
+                        const base64 = await new Promise<string>(resolve => {
                           const r = new FileReader();
                           r.onload = () => resolve(r.result as string);
                           r.readAsDataURL(blob);
                         });
+                        const filename = `${(value.projectName || 'Concept').replace(/\s+/g, '_')}_Approved_Concept.docx`;
+                        if (onSaveFile) {
+                          await onSaveFile(filename, base64, 'concepts');
+                        }
                       } catch (e) { console.warn('Word save failed:', e); }
 
                       setSavingWord(false);

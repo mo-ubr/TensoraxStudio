@@ -83,7 +83,8 @@ const API_SLOTS: ApiSlot[] = [
     models: [
       { group: 'Seedance (fal.ai)', items: ['seedance-2.0'] },
       { group: 'Google Veo', items: ['veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
-      { group: 'Kling (fal.ai)', items: ['kling-v2.1'] },
+      { group: 'Kling V3 (fal.ai)', items: ['kling-v3-standard', 'kling-v3-pro'] },
+      { group: 'Kling O3 Omni (fal.ai)', items: ['kling-o3-standard', 'kling-o3-pro'] },
     ],
   },
 ];
@@ -92,16 +93,34 @@ function getStoredKey(storageKey: string): string {
   try { return localStorage.getItem(storageKey)?.trim() || ''; } catch { return ''; }
 }
 
+// Check if a model is fal.ai-based (Kling, Seedance)
+function isFalModel(model: string): boolean {
+  return model.startsWith('kling-') || model.startsWith('seedance');
+}
+
 function getStoredKeyForModel(baseKey: string, model: string): string {
   try {
-    return localStorage.getItem(`${baseKey}__${model}`)?.trim()
-        || localStorage.getItem(baseKey)?.trim()
-        || '';
+    // Per-model key first
+    const perModel = localStorage.getItem(`${baseKey}__${model}`)?.trim();
+    if (perModel) return perModel;
+    // Shared fal.ai key for all fal-based models
+    if (isFalModel(model)) {
+      const falKey = localStorage.getItem('tensorax_fal_key')?.trim();
+      if (falKey) return falKey;
+    }
+    // Base key fallback
+    return localStorage.getItem(baseKey)?.trim() || '';
   } catch { return ''; }
 }
 
 function setStoredKeyForModel(baseKey: string, model: string, value: string) {
-  try { localStorage.setItem(`${baseKey}__${model}`, value); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(`${baseKey}__${model}`, value);
+    // Also save as shared fal key so it works across all fal models
+    if (isFalModel(model)) {
+      localStorage.setItem('tensorax_fal_key', value);
+    }
+  } catch { /* ignore */ }
 }
 
 function getStoredModel(storageKey: string, defaultModel: string): string {

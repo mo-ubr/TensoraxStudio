@@ -7,6 +7,7 @@ import { IdeaFinetune } from './IdeaFinetune';
 import { GeneralDirection, emptyDirection, GENERAL_DIRECTION_SYSTEM_PROMPT, SINGLE_IDEA_REGEN_PROMPT } from './GeneralDirection';
 import { isClaudeModel } from '../services/claudeService';
 import { DB, type Project } from '../services/projectDB';
+import { generateImageWithCurrentProvider } from '../services/imageProvider';
 
 type ConceptStep = 'direction' | 'ideas' | 'screenplay';
 
@@ -127,9 +128,12 @@ interface ConceptScreenProps {
   onContextChange?: (context: string) => void;
   actionRef?: React.MutableRefObject<((action: import('./ChatBot').AssistantAction) => void) | null>;
   chatHistoryRef?: React.MutableRefObject<string>;
+  initialIntent?: 'screenplay' | null;
+  onIntentConsumed?: () => void;
+  onSendToVideo?: (prompt: string) => void;
 }
 
-export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject, onNavigateToImages, onContextChange, actionRef, chatHistoryRef }) => {
+export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiKeyModal, brands, activeBrandId, activeProject, onNavigateToImages, onContextChange, actionRef, chatHistoryRef, initialIntent, onIntentConsumed, onSendToVideo }) => {
   const [step, setStep] = useState<ConceptStep>('direction');
   const [generalDirection, setGeneralDirection] = useState<GeneralDirectionType>(() => {
     const dir = { ...emptyDirection };
@@ -155,6 +159,13 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
   const [editingScene, setEditingScene] = useState<number | null>(null);
   const [editedSceneData, setEditedSceneData] = useState<{ scene: string; dialogue: string; prompt: string }>({ scene: '', dialogue: '', prompt: '' });
   const [dbLoaded, setDbLoaded] = useState(false);
+  const [sourceDocContent, setSourceDocContent] = useState('');
+  const [sourceNotes, setSourceNotes] = useState('');
+  const [characterNotes, setCharacterNotes] = useState('');
+  const [acceptedConcept, setAcceptedConcept] = useState<{ title: string; concept: string } | null>(null);
+  const [frameImages, setFrameImages] = useState<Record<string, string>>({});
+  const [generatingFrames, setGeneratingFrames] = useState<Set<string>>(new Set());
+  const [frameErrors, setFrameErrors] = useState<Record<string, string>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load from DB on mount
@@ -162,12 +173,23 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
     if (!activeProject) return;
     DB.getMetadata(activeProject.id).then(meta => {
       if (meta.generalDirection) {
-        const dir = meta.generalDirection as GeneralDirectionType;
+        // Merge with defaults so missing fields (e.g. styleVideos) don't cause crashes
+        const dir = { ...emptyDirection, ...(meta.generalDirection as GeneralDirectionType) };
         dir.projectName = activeProject.name;
+        // Ensure arrays are never undefined
+        if (!Array.isArray(dir.styleVideos)) dir.styleVideos = [];
         setGeneralDirection(dir);
       }
       if (meta.screenplay) setScreenplay(meta.screenplay as string);
       if (meta.conceptState) setConceptState(meta.conceptState as ConceptState);
+      // Load source document content for screenplay generation
+      if (meta.sourceContents && typeof meta.sourceContents === 'object') {
+        const contents = Object.values(meta.sourceContents as Record<string, string>).filter(Boolean);
+        if (contents.length > 0) setSourceDocContent(contents.join('\n\n---\n\n'));
+      }
+      if (meta.sourceNotes) setSourceNotes(meta.sourceNotes as string);
+      if (meta.characterNotes) setCharacterNotes(meta.characterNotes as string);
+      if (meta.acceptedConcept) setAcceptedConcept(meta.acceptedConcept as { title: string; concept: string });
       setDbLoaded(true);
     }).catch(() => setDbLoaded(true));
   }, [activeProject?.id]);
@@ -187,6 +209,23 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
 
   useEffect(() => { saveToDb(); }, [saveToDb]);
 
+  // Handle intent from project page (e.g., "Create Screenplay" button)
+  const intentHandled = useRef(false);
+  useEffect(() => {
+    if (!dbLoaded || !initialIntent || intentHandled.current) return;
+    if (initialIntent === 'screenplay') {
+      intentHandled.current = true;
+      onIntentConsumed?.();
+      if (screenplay) {
+        setStep('screenplay');
+      } else if (acceptedConcept) {
+        // Have an accepted concept — go straight to screenplay view and auto-generate
+        setStep('screenplay');
+        handleGenerateScreenplay(acceptedConcept.title, acceptedConcept.concept, '');
+      }
+    }
+  }, [dbLoaded, initialIntent]);
+
   useEffect(() => {
     if (!onContextChange) return;
     const gd = generalDirection;
@@ -198,7 +237,7 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
       { label: 'Tone', key: 'tone', value: gd.tone, required: false, help: 'Options: warm, energetic, professional, playful, dramatic, inspirational' },
       { label: 'Call to Action', key: 'cta', value: gd.cta, required: true, help: 'What should viewers do after watching? e.g. "Shop now", "Visit our stores"' },
       { label: 'Target Audience', key: 'targetAudience', value: gd.targetAudience, required: true, help: 'Who is this video for? e.g. "Parents of young children"' },
-      { label: 'Style Inspirations', key: 'styleVideos', value: gd.styleVideos.length > 0 ? gd.styleVideos.map(s => s.url).join(', ') : '', required: false, help: 'Reference video URLs from Google Drive that set the visual style' },
+      { label: 'Style Inspirations', key: 'styleVideos', value: (gd.styleVideos || []).length > 0 ? gd.styleVideos.map(s => s.url).join(', ') : '', required: false, help: 'Reference video URLs from Google Drive that set the visual style' },
     ];
 
     const filled = fields.filter(f => !!f.value);
@@ -241,20 +280,36 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
     onContextChange(parts.join('\n'));
   }, [generalDirection, screenplay, conceptState.refinedConcept, step, onContextChange]);
 
-  const activeBrand = brands.find(b => b.id === activeBrandId) || brands[0];
+  const activeBrand = activeBrandId ? brands.find(b => b.id === activeBrandId) : undefined;
 
   const actionHandlerRef = React.useRef<((action: import('./ChatBot').AssistantAction) => void) | null>(null);
 
-  const handleSaveAndCreateScript = async (title: string, concept: string, directions: string) => {
+  const handleAcceptConcept = async (title: string, concept: string, _directions: string) => {
     setIsSavingConcept(true);
     try {
-      // Save to project folder on disk
+      // Save accepted concept text to project folder
       if (activeProject) {
-        const conceptText = `${title}\n${'='.repeat(title.length)}\n\n${concept}\n${directions ? `\nDirections: ${directions}` : ''}\n\nGenerated: ${new Date().toISOString().split('T')[0]}`;
+        const conceptText = `${title}\n${'='.repeat(title.length)}\n\n${concept}\n\nAccepted: ${new Date().toISOString().split('T')[0]}`;
         await DB.saveProjectFile(activeProject.id, `${title.replace(/[^a-zA-Z0-9 _-]/g, '')}.txt`, conceptText, 'concepts').catch(e => console.warn('[ConceptScreen] Project file save failed:', e));
+
+        // Mark concept as accepted in metadata
+        await DB.saveMetadata(activeProject.id, {
+          acceptedConcept: { title, concept, acceptedAt: new Date().toISOString() },
+        }).catch(() => {});
       }
+    } catch (e) { console.warn('[ConceptScreen] Accept concept failed:', e); }
+    setIsSavingConcept(false);
+
+    // Navigate back to project page
+    onBack();
+  };
+
+  const handleGenerateScreenplay = async (title: string, concept: string, directions: string) => {
+    setIsSavingConcept(true);
+    try {
 
       const styleAnalysis = generalDirection.additionalNotes || '';
+      const hasSourceDoc = sourceDocContent.trim().length > 0;
       const scriptPrompt = `Based on the finalised video concept below, create a professional 3-column screenplay.
 
 Title: ${title}
@@ -263,33 +318,78 @@ Concept:
 ${concept}
 ${directions ? `\nAdditional directions: ${directions}` : ''}
 ${generalDirection.aim ? `\nProject Aim: ${generalDirection.aim}` : ''}
-${generalDirection.characterConsistency ? `\nCharacter Notes: ${generalDirection.characterConsistency}` : ''}
+${generalDirection.characterConsistency ? `\nCharacter Notes: ${generalDirection.characterConsistency}` : ''}${characterNotes.trim() ? `\nCharacter Reference Direction: ${characterNotes.trim()}` : ''}
 ${generalDirection.sceneryConsistency ? `\nScenery Notes: ${generalDirection.sceneryConsistency}` : ''}
 ${styleAnalysis ? `\nREFERENCE STYLE ANALYSIS (match this visual style in all VIDEO PROMPTs):\n${styleAnalysis}` : ''}
+${hasSourceDoc ? `
+═══════════════════════════════════════════════════════════════
+SOURCE DOCUMENT — THIS IS YOUR PRIMARY REFERENCE
+═══════════════════════════════════════════════════════════════
 
-Generate a detailed screenplay as a scene-by-scene breakdown with exactly these 3 columns for EACH scene:
+The user has uploaded the following source document. The screenplay MUST be based closely on this document.
+${sourceNotes.trim() ? `
+USER'S DIRECTION FOR THIS MATERIAL:
+${sourceNotes.trim()}
 
-Column 1 — SCENE: Scene number, description of what happens, action, camera direction, SFX/music cues.
+Follow the user's direction above as your primary guide for HOW to use the source document.
+` : ''}
+CRITICAL INSTRUCTIONS FOR SOURCE DOCUMENT:
+• Follow the document's structure, narrative flow, and sequence of points faithfully.
+• Preserve ALL specific numbers, statistics, percentages, dates, and figures EXACTLY as they appear in the document — do NOT round, approximate, or change any numerical data.
+• Use the document's key messages, arguments, and talking points as the backbone of the screenplay.
+• The screenplay scenes should map to the document's sections/topics in the same order they appear.
+• Do NOT invent facts, claims, or data points that are not in the source document.
+• If the document contains quotes, product names, or brand-specific terminology, use them verbatim.
+• Any creative interpretation (visuals, transitions, camera work) should serve the document's content, not replace it.
+
+--- BEGIN SOURCE DOCUMENT ---
+${sourceDocContent}
+--- END SOURCE DOCUMENT ---
+` : ''}
+
+Generate a detailed screenplay as a scene-by-scene breakdown. Each scene has a SCENE description (with approximate duration), DIALOGUE, one or more FRAME prompts (for image generation), and one or more VIDEO PROMPT blocks (for AI video generation).
+
+CRITICAL — VIDEO PROMPT COVERAGE:
+Each scene has an approximate duration. AI video generation tools produce clips of 5-8 seconds each. You MUST generate enough VIDEO PROMPTs per scene to cover the scene's full duration AND every change in action, background, or camera angle. For example:
+- A 5-8s scene with one continuous shot → 1 VIDEO PROMPT
+- A 15s scene with one continuous action → 2-3 VIDEO PROMPTs
+- A 25s scene with multiple locations → 4-5 VIDEO PROMPTs
+- Any change in background/scenery/location within a scene → a new VIDEO PROMPT
+
+Each VIDEO PROMPT must describe a 5-8 second clip. Consecutive VIDEO PROMPTs within the same scene MUST be seamlessly connected — the end state of one clip is the start state of the next. Include exact visual details: subject appearance, clothing, environment, lighting, camera angle, and motion.
+
+Column 1 — SCENE: Scene number, description of what happens, action, camera direction, SFX/music cues, and APPROXIMATE DURATION in seconds (e.g. "~15s").
 Column 2 — DIALOGUE: All spoken dialogue and/or narrator voiceover, attributed by character name.
-Column 3 — VIDEO PROMPT: A complete AI image/video generation prompt for this scene — include subject, outfit, environment, framing, lighting, style. MUST match the reference style analysis if provided.
+Column 3 — FRAMES: Multiple numbered frame prompts. Each frame is a complete, self-contained AI image generation prompt for one distinct shot/moment in the scene — include subject, outfit, environment, framing, lighting, style. MUST match the reference style analysis if provided.
+Column 4 — VIDEO PROMPTS: Multiple numbered video prompts. Each is a complete, self-contained AI video generation prompt for a 5-8 second clip. Together they must cover the scene's full duration and every scenery/action change.
 
 Format each scene EXACTLY like this:
 
 ### Scene [N]: [Scene Title]
-**SCENE:** [description]
+**SCENE:** [description, including ~Xs approximate duration]
 **DIALOGUE:** [dialogue/voiceover]
-**VIDEO PROMPT:** [full prompt]
+**FRAME 1:** [first shot - complete image generation prompt]
+**FRAME 2:** [second shot - complete image generation prompt]
+**VIDEO PROMPT 1:** [first 5-8s clip - complete video generation prompt with full visual details]
+**VIDEO PROMPT 2:** [next 5-8s clip - seamless continuation from VIDEO PROMPT 1]
+**VIDEO PROMPT 3:** [next clip if scene duration or action changes require it]
 
 Rules:
-- Break the concept into 6-10 distinct scenes
-- Each scene should be 5-15 seconds of the final video
-- Maintain strict character/wardrobe/environment continuity across all scenes
-- Video prompts must be fully self-contained (each prompt works independently for image generation)
+- Break the concept into as many scenes as needed to tell the full story
+- Each scene should have an approximate duration noted in the SCENE description
+- Generate enough VIDEO PROMPTs per scene to cover the FULL duration (one VIDEO PROMPT = one 5-8s clip)
+- Every change in scenery, background, location, or major action within a scene MUST get its own VIDEO PROMPT
+- Consecutive VIDEO PROMPTs must connect seamlessly — the end of one is the beginning of the next
+- Each scene should have 2-4 frames (distinct shots/moments for image generation)
+- Maintain strict character/wardrobe/environment continuity across all scenes, frames, and video prompts
+- Every FRAME prompt must be fully self-contained (each works independently for image generation)
+- Every VIDEO PROMPT must be fully self-contained (each works independently for video generation) but describe a seamless continuation
 - Include camera movements, transitions, and pacing notes in the SCENE column
 - Dialogue should match the tone: ${generalDirection.tone}
 - Total duration target: ${generalDirection.duration}
 - Format: ${generalDirection.format}
-- If reference style analysis is provided, every VIDEO PROMPT must match that visual style, colour grading, lighting, and camera approach`;
+- If reference style analysis is provided, every VIDEO PROMPT must match that visual style, colour grading, lighting, and camera approach${hasSourceDoc ? `
+- IMPORTANT: The dialogue and scene content MUST closely follow the source document. Every key point, fact, and figure from the source must be represented accurately in the screenplay. Do not contradict or deviate from the source material.` : ''}`;
 
       const text = await callAiText(scriptPrompt);
 
@@ -331,28 +431,45 @@ Rules:
           const screenplayRows = scenes.map((scene: string) => {
             const titleMatch = scene.match(/###\s*Scene\s*(\d+)[:\s\-–]*(.*)/i);
             const sceneLabel = `Scene ${titleMatch?.[1] || '?'}: ${titleMatch?.[2]?.replace(/\*\*/g, '').trim() || ''}`;
-            const sceneMatch = scene.match(/\*\*SCENE:\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE:\*\*|$)/i);
-            const dialogueMatch = scene.match(/\*\*DIALOGUE:\*\*\s*([\s\S]*?)(?=\*\*VIDEO PROMPT:\*\*|$)/i);
-            const promptMatch = scene.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
+            const sceneMatch = scene.match(/\*\*SCENE[:\s]*\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE[:\s]*\*\*|$)/i);
+            const dialogueMatch = scene.match(/\*\*DIALOGUE[:\s]*\*\*\s*([\s\S]*?)(?=\*\*(?:VIDEO\s*PROMPT|FRAME\s*\d+)[:\s]*\*\*|$)/i);
+
+            // Parse FRAME prompts
+            const framesList = [...scene.matchAll(/\*\*FRAME\s*(\d+)[:\s]*\*\*\s*([\s\S]*?)(?=\*\*(?:FRAME\s*\d+|VIDEO\s*PROMPT)[:\s]*\*\*|###|$)/gi)]
+              .map(m => `Frame ${m[1]}: ${m[2]?.trim()}`).filter(Boolean);
+
+            // Parse VIDEO PROMPT blocks (numbered)
+            const videoPromptsList = [...scene.matchAll(/\*\*VIDEO\s*PROMPT\s*(\d+)[:\s]*\*\*\s*([\s\S]*?)(?=\*\*VIDEO\s*PROMPT\s*\d+[:\s]*\*\*|\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/gi)]
+              .map(m => `VP ${m[1]}: ${m[2]?.trim()}`).filter(Boolean);
+            // Fallback: single VIDEO PROMPT (no number)
+            if (videoPromptsList.length === 0) {
+              const vp = scene.match(/\*\*VIDEO\s*PROMPT[:\s]*\*\*\s*([\s\S]*?)(?=\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/i);
+              if (vp?.[1]?.trim()) videoPromptsList.push(vp[1].trim());
+            }
 
             return new TableRow({
               children: [
-                new TableCell({ borders: cellBorders, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
-                  new Paragraph({ children: [new TextRun({ text: sceneLabel, bold: true, size: 20 })] }),
-                  new Paragraph({ children: [new TextRun({ text: sceneMatch?.[1]?.trim() || '', size: 20 })] }),
+                new TableCell({ borders: cellBorders, width: { size: 20, type: WidthType.PERCENTAGE }, children: [
+                  new Paragraph({ children: [new TextRun({ text: sceneLabel, bold: true, size: 18 })] }),
+                  new Paragraph({ children: [new TextRun({ text: sceneMatch?.[1]?.trim() || '', size: 18 })] }),
                 ] }),
-                new TableCell({ borders: cellBorders, width: { size: 33, type: WidthType.PERCENTAGE }, children: [
-                  new Paragraph({ children: [new TextRun({ text: dialogueMatch?.[1]?.trim() || '', italics: true, size: 20 })] }),
+                new TableCell({ borders: cellBorders, width: { size: 20, type: WidthType.PERCENTAGE }, children: [
+                  new Paragraph({ children: [new TextRun({ text: dialogueMatch?.[1]?.trim() || '', italics: true, size: 18 })] }),
                 ] }),
-                new TableCell({ borders: cellBorders, width: { size: 34, type: WidthType.PERCENTAGE }, children: [
-                  new Paragraph({ children: [new TextRun({ text: promptMatch?.[1]?.trim() || '', size: 18, font: 'Consolas' })] }),
-                ] }),
+                new TableCell({ borders: cellBorders, width: { size: 30, type: WidthType.PERCENTAGE }, children:
+                  framesList.map(f => new Paragraph({ children: [new TextRun({ text: f, size: 16, font: 'Consolas' })] }))
+                }),
+                new TableCell({ borders: cellBorders, width: { size: 30, type: WidthType.PERCENTAGE }, children:
+                  videoPromptsList.length > 0
+                    ? videoPromptsList.map(vp => new Paragraph({ children: [new TextRun({ text: vp, size: 16, font: 'Consolas' })] }))
+                    : [new Paragraph({ children: [new TextRun({ text: '(no video prompts)', size: 16, color: '999999' })] })]
+                }),
               ],
             });
           });
 
           const headerRow = new TableRow({
-            children: ['SCENE', 'DIALOGUE', 'VIDEO PROMPT'].map(h =>
+            children: ['SCENE', 'DIALOGUE', 'FRAMES', 'VIDEO PROMPTS'].map(h =>
               new TableCell({
                 borders: cellBorders,
                 shading: { fill: '91569C' },
@@ -439,7 +556,7 @@ Rules:
   const handleGenerateDirection = async (feedback?: string) => {
     setIsGeneratingDirection(true);
     try {
-      const systemPrompt = GENERAL_DIRECTION_SYSTEM_PROMPT(generalDirection, activeBrand);
+      const systemPrompt = GENERAL_DIRECTION_SYSTEM_PROMPT(generalDirection, activeBrand, sourceDocContent, sourceNotes, characterNotes);
       const fullPrompt = feedback ? `${systemPrompt}\n\n---\n\n${feedback}` : systemPrompt;
       const text = await callAiText(fullPrompt);
 
@@ -457,7 +574,7 @@ Rules:
   const handleRegenerateSingleIdea = async (ideaNum: number, currentIdeas: { num: number; title: string; body: string }[], feedback?: { rating?: 'like' | 'neutral' | 'dislike'; comment?: string }) => {
     setRegeneratingIdeaNum(ideaNum);
     try {
-      const prompt = SINGLE_IDEA_REGEN_PROMPT(ideaNum, currentIdeas, generalDirection, activeBrand, feedback);
+      const prompt = SINGLE_IDEA_REGEN_PROMPT(ideaNum, currentIdeas, generalDirection, activeBrand, feedback, sourceDocContent, sourceNotes, characterNotes);
       const newText = await callAiText(prompt);
 
       if (newText && generalDirection.generatedPrompt) {
@@ -530,7 +647,7 @@ Rules:
         const text = generalDirection.generatedPrompt;
         const titleMatch = text.match(/(?:##?\s*(?:Idea|Concept)\s*\d*[:\s\-–.]*)(.*?)(?:\n|$)/i);
         const title = titleMatch?.[1]?.replace(/\*\*/g, '').trim() || 'Concept';
-        handleSaveAndCreateScript(title, text, '');
+        handleAcceptConcept(title, text, '');
       }
     };
     actionHandlerRef.current = handler;
@@ -755,6 +872,13 @@ Please refine the concept based on this feedback. Keep the same structure but in
             </div>
             <div className="flex-1 overflow-y-auto p-4">
               {(() => {
+                if (isSavingConcept && !screenplay) return (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20">
+                    <i className="fa-solid fa-spinner fa-spin text-3xl text-[#91569c]"></i>
+                    <p className="text-[12px] font-bold text-[#5c3a62] uppercase tracking-wider">Generating Screenplay...</p>
+                    <p className="text-[10px] text-[#888]">This may take a minute. The AI is creating your scene breakdown.</p>
+                  </div>
+                );
                 const scenes = screenplay.split(/(?=###\s*Scene\s*\d)/i).filter(b => b.trim() && /^###\s*Scene\s*\d/i.test(b.trim()));
                 if (scenes.length === 0) return <pre className="text-[11px] text-[#888] whitespace-pre-wrap font-sans">{screenplay}</pre>;
                 const saveSceneEdit = (sceneIdx: number) => {
@@ -769,75 +893,153 @@ Please refine the concept based on this feedback. Keep the same structure but in
 
                 return (
                   <div className="space-y-4">
+                    {/* Generate All Frames button */}
+                    <button
+                      disabled={generatingFrames.size > 0}
+                      onClick={async () => {
+                        const allFrames: { key: string; prompt: string }[] = [];
+                        scenes.forEach((scene, i) => {
+                          const frameMatches = [...scene.matchAll(/\*\*FRAME\s*(\d+)[:\s]*\*\*\s*([\s\S]*?)(?=\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/gi)];
+                          frameMatches.forEach(fm => {
+                            if (fm[2]?.trim()) allFrames.push({ key: `scene-${i}-frame-${fm[1]}`, prompt: fm[2].trim() });
+                          });
+                          // Fallback: VIDEO PROMPT as single frame
+                          if (frameMatches.length === 0) {
+                            const vp = scene.match(/\*\*VIDEO\s*PROMPT[:\s]*\*\*\s*([\s\S]*?)(?=\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/i);
+                            if (vp?.[1]?.trim()) allFrames.push({ key: `scene-${i}-frame-1`, prompt: vp[1].trim() });
+                          }
+                        });
+                        console.log('[GenerateAllFrames] Found frames:', allFrames.length, allFrames.map(f => f.key));
+                        if (allFrames.length === 0) { alert('No frame prompts found in screenplay. Try regenerating the screenplay.'); return; }
+                        setGeneratingFrames(prev => {
+                          const s = new Set(prev);
+                          allFrames.forEach(f => s.add(f.key));
+                          return s;
+                        });
+                        setFrameErrors({});
+                        for (const { key, prompt } of allFrames) {
+                          try {
+                            const url = await generateImageWithCurrentProvider({ prompt, size: '1K', aspectRatio: '16:9', referenceImages: [] });
+                            setFrameImages(prev => ({ ...prev, [key]: url }));
+                          } catch (err: any) {
+                            setFrameErrors(prev => ({ ...prev, [key]: err?.message || 'Generation failed' }));
+                          }
+                          setGeneratingFrames(prev => { const s = new Set(prev); s.delete(key); return s; });
+                        }
+                      }}
+                      className="w-full py-2.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#7a4385] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {generatingFrames.size > 0 ? (
+                        <><i className="fa-solid fa-spinner fa-spin"></i> Generating {generatingFrames.size} remaining...</>
+                      ) : (
+                        <><i className="fa-solid fa-images"></i> Generate All Frames</>
+                      )}
+                    </button>
                     {scenes.map((scene, i) => {
                       const titleMatch = scene.match(/###\s*Scene\s*(\d+)[:\s\-–]*(.*)/i);
                       const sceneNum = titleMatch?.[1] || `${i + 1}`;
                       const sceneTitle = titleMatch?.[2]?.replace(/\*\*/g, '').trim() || `Scene ${sceneNum}`;
-                      const sceneMatch = scene.match(/\*\*SCENE:\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE:\*\*|$)/i);
-                      const dialogueMatch = scene.match(/\*\*DIALOGUE:\*\*\s*([\s\S]*?)(?=\*\*VIDEO PROMPT:\*\*|$)/i);
-                      const promptMatch = scene.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
+                      const sceneMatch = scene.match(/\*\*SCENE[:\s]*\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE[:\s]*\*\*|$)/i);
+                      const dialogueMatch = scene.match(/\*\*DIALOGUE[:\s]*\*\*\s*([\s\S]*?)(?=\*\*(?:VIDEO\s*PROMPT|FRAME\s*\d+)[:\s]*\*\*|$)/i);
+                      const frames = [...scene.matchAll(/\*\*FRAME\s*(\d+)[:\s]*\*\*\s*([\s\S]*?)(?=\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/gi)]
+                        .map(m => ({ num: m[1], prompt: m[2]?.trim() || '' }))
+                        .filter(f => f.prompt);
+                      // Fallback: if no FRAME tags found, try VIDEO PROMPT as single frame
+                      if (frames.length === 0) {
+                        const vp = scene.match(/\*\*VIDEO\s*PROMPT[:\s]*\*\*\s*([\s\S]*?)(?=\*\*FRAME\s*\d+[:\s]*\*\*|###|$)/i);
+                        if (vp?.[1]?.trim()) frames.push({ num: '1', prompt: vp[1].trim() });
+                      }
                       const isEditing = editingScene === i;
                       return (
                         <div key={i} className={`bg-[#f6f0f8] border rounded-xl overflow-hidden transition-colors ${isEditing ? 'border-[#91569c]/40' : 'border-[#ceadd4]'}`}>
                           <div className="flex items-center gap-3 px-4 py-2.5 bg-[#f6f0f8] border-b border-[#ceadd4]">
                             <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#91569c] flex items-center justify-center text-[#3a3a3a] text-[10px] font-black">{sceneNum}</span>
                             <h3 className="flex-1 text-[12px] font-bold text-[#5c3a62]">{sceneTitle}</h3>
-                            <button
-                              onClick={() => {
-                                if (isEditing) {
-                                  saveSceneEdit(i);
-                                } else {
+                            <span className="text-[8px] text-[#888]/60">{frames.length} frame{frames.length !== 1 ? 's' : ''}</span>
+                            {!isEditing ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingScene(i);
                                   setEditedSceneData({
                                     scene: sceneMatch?.[1]?.trim() || '',
                                     dialogue: dialogueMatch?.[1]?.trim() || '',
-                                    prompt: promptMatch?.[1]?.trim() || '',
+                                    prompt: frames.map(f => f.prompt).join('\n---\n'),
                                   });
-                                  setEditingScene(i);
-                                }
-                              }}
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                                isEditing
-                                  ? 'text-green-400 bg-green-400/15 hover:bg-green-400/25 ring-1 ring-green-400/30'
-                                  : 'text-[#888]/70 hover:text-[#91569c] hover:bg-[#f6f0f8]'
-                              }`}
-                              title={isEditing ? 'Save edits' : 'Edit scene'}
-                            >
-                              <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-pencil'} text-[11px]`}></i>
-                            </button>
+                                }}
+                                title="Edit this scene"
+                                className="text-[8px] font-bold uppercase px-2 py-1 rounded border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors flex items-center gap-1"
+                              >
+                                <i className="fa-solid fa-pen text-[7px]"></i>
+                                Edit
+                              </button>
+                            ) : (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Save edits back into the screenplay markdown
+                                    const updated = [...scenes];
+                                    const tMatch = updated[i].match(/###\s*Scene\s*(\d+)[:\s\-–]*(.*)/i);
+                                    const sNum = tMatch?.[1] || `${i + 1}`;
+                                    const sTitle = tMatch?.[2]?.replace(/\*\*/g, '').trim() || `Scene ${sNum}`;
+                                    // Rebuild frame prompts
+                                    const editedFrames = editedSceneData.prompt.split(/\n---\n/).map((p, fi) => `**FRAME ${fi + 1}:** ${p.trim()}`).join('\n\n');
+                                    // Also use last frame as video prompt for compatibility
+                                    const lastFramePrompt = editedSceneData.prompt.split(/\n---\n/).pop()?.trim() || editedSceneData.prompt.trim();
+                                    updated[i] = `### Scene ${sNum}: ${sTitle}\n\n**SCENE:** ${editedSceneData.scene}\n\n**DIALOGUE:** ${editedSceneData.dialogue}\n\n${editedFrames}\n\n**VIDEO PROMPT:** ${lastFramePrompt}\n`;
+                                    setScreenplay(updated.join('\n'));
+                                    setEditingScene(null);
+                                  }}
+                                  className="text-[8px] font-bold uppercase px-2 py-1 rounded bg-[#91569c] text-white hover:bg-[#7a4385] transition-colors flex items-center gap-1"
+                                >
+                                  <i className="fa-solid fa-check text-[7px]"></i> Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingScene(null)}
+                                  className="text-[8px] font-bold uppercase px-2 py-1 rounded border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                            {onSendToVideo && frames.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => onSendToVideo(frames[0].prompt)}
+                                title="Send video prompt to Video screen"
+                                className="text-[8px] font-bold uppercase px-2 py-1 rounded bg-[#91569c] text-white hover:bg-[#7a4385] transition-colors flex items-center gap-1"
+                              >
+                                <i className="fa-solid fa-video text-[7px]"></i>
+                                Video
+                              </button>
+                            )}
                           </div>
+                          {/* Scene + Dialogue */}
                           {isEditing ? (
-                            <div className="grid grid-cols-3 divide-x divide-[#4a3a52]">
+                            <div className="grid grid-cols-2 divide-x divide-[#4a3a52]">
                               <div className="p-3">
                                 <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Scene</span>
                                 <textarea
                                   value={editedSceneData.scene}
-                                  onChange={(e) => setEditedSceneData(prev => ({ ...prev, scene: e.target.value }))}
-                                  rows={6}
-                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
-                                  autoFocus
+                                  onChange={e => setEditedSceneData(prev => ({ ...prev, scene: e.target.value }))}
+                                  className="w-full text-[10px] text-[#3a3a3a] bg-white border border-[#ceadd4] rounded-lg p-2 leading-relaxed resize-y min-h-[60px] focus:outline-none focus:border-[#91569c]"
+                                  rows={4}
                                 />
                               </div>
                               <div className="p-3">
                                 <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Dialogue</span>
                                 <textarea
                                   value={editedSceneData.dialogue}
-                                  onChange={(e) => setEditedSceneData(prev => ({ ...prev, dialogue: e.target.value }))}
-                                  rows={6}
-                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed italic focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
-                                />
-                              </div>
-                              <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Video Prompt</span>
-                                <textarea
-                                  value={editedSceneData.prompt}
-                                  onChange={(e) => setEditedSceneData(prev => ({ ...prev, prompt: e.target.value }))}
-                                  rows={6}
-                                  className="w-full bg-[#f6f0f8] border border-[#91569c]/30 rounded p-2 text-[10px] text-[#888] leading-relaxed font-mono focus:ring-1 focus:ring-[#91569c]/50 outline-none resize-y"
+                                  onChange={e => setEditedSceneData(prev => ({ ...prev, dialogue: e.target.value }))}
+                                  className="w-full text-[10px] text-[#3a3a3a] bg-white border border-[#ceadd4] rounded-lg p-2 leading-relaxed italic resize-y min-h-[60px] focus:outline-none focus:border-[#91569c]"
+                                  rows={4}
                                 />
                               </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-3 divide-x divide-[#4a3a52]">
+                            <div className="grid grid-cols-2 divide-x divide-[#4a3a52]">
                               <div className="p-3">
                                 <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Scene</span>
                                 <p className="text-[10px] text-[#888] leading-relaxed">{sceneMatch?.[1]?.trim() || '—'}</p>
@@ -846,9 +1048,82 @@ Please refine the concept based on this feedback. Keep the same structure but in
                                 <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Dialogue</span>
                                 <p className="text-[10px] text-[#888] leading-relaxed italic">{dialogueMatch?.[1]?.trim() || '—'}</p>
                               </div>
-                              <div className="p-3">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">Video Prompt</span>
-                                <p className="text-[10px] text-[#888] leading-relaxed font-mono">{promptMatch?.[1]?.trim() || '—'}</p>
+                            </div>
+                          )}
+                          {/* Frames */}
+                          {frames.length > 0 && (
+                            <div className="border-t border-[#ceadd4]/50">
+                              {isEditing && (
+                                <div className="p-3">
+                                  <span className="text-[8px] font-black uppercase tracking-wider text-[#91569c] block mb-1.5">
+                                    Frame / Video Prompts <span className="font-normal text-[#888]">(separate multiple with ---)</span>
+                                  </span>
+                                  <textarea
+                                    value={editedSceneData.prompt}
+                                    onChange={e => setEditedSceneData(prev => ({ ...prev, prompt: e.target.value }))}
+                                    className="w-full text-[9px] text-[#3a3a3a] bg-white border border-[#ceadd4] rounded-lg p-2 leading-relaxed font-mono resize-y min-h-[80px] focus:outline-none focus:border-[#91569c]"
+                                    rows={5}
+                                  />
+                                </div>
+                              )}
+                              <div className={`grid divide-x divide-[#ceadd4]/30`} style={{ gridTemplateColumns: `repeat(${frames.length}, 1fr)` }}>
+                                {frames.map(frame => {
+                                  const key = `scene-${i}-frame-${frame.num}`;
+                                  return (
+                                    <div key={key} className="p-2">
+                                      <span className="text-[7px] font-black uppercase tracking-wider text-[#91569c]/60 block mb-1">Frame {frame.num}</span>
+                                      {!isEditing && <p className="text-[9px] text-[#888] leading-relaxed font-mono mb-2">{frame.prompt}</p>}
+                                      {generatingFrames.has(key) ? (
+                                        <div className="flex items-center justify-center py-4">
+                                          <i className="fa-solid fa-spinner fa-spin text-[#91569c]"></i>
+                                        </div>
+                                      ) : frameImages[key] ? (
+                                        <div>
+                                          <img src={frameImages[key]} alt={`Scene ${sceneNum} Frame ${frame.num}`} className="rounded-lg w-full object-contain mb-1.5" />
+                                          <div className="flex gap-1">
+                                            <button
+                                              onClick={async () => {
+                                                if (!activeProject) return;
+                                                try {
+                                                  const slug = (generalDirection.projectName || 'Project').replace(/\s+/g, '_');
+                                                  const filename = `${slug}_Scene${sceneNum}_Frame${frame.num}.png`;
+                                                  const resp = await fetch(frameImages[key]);
+                                                  const blob = await resp.blob();
+                                                  const reader = new FileReader();
+                                                  reader.onloadend = async () => { await DB.saveProjectFile(activeProject.id, filename, reader.result as string, 'frames'); };
+                                                  reader.readAsDataURL(blob);
+                                                } catch (err) { console.error('Save failed:', err); }
+                                              }}
+                                              className="flex-1 py-1 rounded text-[7px] font-bold uppercase bg-[#91569c] text-white hover:bg-[#7a4385] transition-colors"
+                                            >
+                                              <i className="fa-solid fa-floppy-disk text-[6px] mr-0.5"></i>Save
+                                            </button>
+                                            <button
+                                              onClick={async () => {
+                                                setGeneratingFrames(prev => new Set(prev).add(key));
+                                                setFrameImages(prev => { const n = { ...prev }; delete n[key]; return n; });
+                                                setFrameErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+                                                try {
+                                                  const url = await generateImageWithCurrentProvider({ prompt: frame.prompt, size: '1K', aspectRatio: '16:9', referenceImages: [] });
+                                                  setFrameImages(prev => ({ ...prev, [key]: url }));
+                                                } catch (err: any) {
+                                                  setFrameErrors(prev => ({ ...prev, [key]: err?.message || 'Generation failed' }));
+                                                }
+                                                setGeneratingFrames(prev => { const s = new Set(prev); s.delete(key); return s; });
+                                              }}
+                                              className="flex-1 py-1 rounded text-[7px] font-bold uppercase bg-[#f6f0f8] border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors"
+                                            >
+                                              <i className="fa-solid fa-rotate text-[6px] mr-0.5"></i>Redo
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                      {frameErrors[key] && (
+                                        <p className="text-[8px] text-red-500 mt-1"><i className="fa-solid fa-triangle-exclamation mr-0.5"></i>{frameErrors[key]}</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -866,7 +1141,21 @@ Please refine the concept based on this feedback. Keep the same structure but in
                   const filename = `${proj}_Screenplay.md`;
                   try {
                     if (activeProject) {
+                      // Save screenplay markdown
                       await DB.saveProjectFile(activeProject.id, filename, screenplay);
+                      // Save all generated frame images
+                      const imageKeys = Object.keys(frameImages);
+                      if (imageKeys.length > 0) {
+                        for (const key of imageKeys) {
+                          const parts = key.match(/scene-(\d+)-frame-(\d+)/);
+                          if (!parts) continue;
+                          const imgFilename = `${proj}_Scene${parseInt(parts[1]) + 1}_Frame${parts[2]}.png`;
+                          const dataUrl = frameImages[key];
+                          await DB.saveProjectFile(activeProject.id, imgFilename, dataUrl, 'frames').catch(e =>
+                            console.warn(`Failed to save ${imgFilename}:`, e)
+                          );
+                        }
+                      }
                     } else {
                       const res = await fetch('http://localhost:5182/api/save-file', {
                         method: 'POST',
@@ -885,17 +1174,37 @@ Please refine the concept based on this feedback. Keep the same structure but in
                     a.click();
                     URL.revokeObjectURL(url);
                   }
-                  onNavigateToImages?.();
+                  onBack();
                 }}
                 disabled={!screenplay}
                 className="w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#e0d6e3] hover:text-[#5c3a62] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                <i className="fa-solid fa-arrow-right"></i>
-                Save &amp; Create Characters
+                <i className="fa-solid fa-floppy-disk"></i>
+                Save Screenplay & All Images
               </button>
             </div>
           </div>
         ) : step === 'direction' ? (
+          <>
+          {acceptedConcept && !screenplay && (
+            <div className="bg-[#f6f0f8] border border-[#91569c]/30 rounded-xl mx-2 mt-2 p-4 flex items-center gap-4 flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-[#91569c] flex items-center justify-center flex-shrink-0">
+                <i className="fa-solid fa-check text-white"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-[#5c3a62]">Concept accepted: {acceptedConcept.title}</p>
+                <p className="text-[9px] text-[#888] mt-0.5">Ready to generate the screenplay from this concept</p>
+              </div>
+              <button
+                onClick={() => handleGenerateScreenplay(acceptedConcept.title, acceptedConcept.concept, '')}
+                disabled={isSavingConcept}
+                className="px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+              >
+                <i className={`fa-solid ${isSavingConcept ? 'fa-spinner fa-spin' : 'fa-scroll'}`}></i>
+                {isSavingConcept ? 'Generating...' : 'Create Screenplay'}
+              </button>
+            </div>
+          )}
           <GeneralDirection
             value={generalDirection}
             onChange={handleDirectionChange}
@@ -904,12 +1213,13 @@ Please refine the concept based on this feedback. Keep the same structure but in
             onRegenerateSingleIdea={handleRegenerateSingleIdea}
             isGenerating={isGeneratingDirection}
             regeneratingIdeaNum={regeneratingIdeaNum}
-            onSaveAndCreateScript={handleSaveAndCreateScript}
+            onSaveAndCreateScript={handleAcceptConcept}
             onSaveFile={activeProject ? async (filename, data, subfolder) => {
               await DB.saveProjectFile(activeProject.id, filename, data, subfolder);
             } : undefined}
             isSaving={isSavingConcept}
           />
+          </>
         ) : (
         <>
         <aside className="w-[30%] min-w-[320px] max-w-[480px] h-full min-h-0 bg-[#edecec] border border-[#e0d6e3] rounded-xl flex flex-col overflow-hidden flex-shrink-0">

@@ -20,16 +20,21 @@ export interface ReferenceInput {
   images: string[];
 }
 
+export type VideoMode = 'prompt-only' | 'prompt-images' | 'prompt-images-video';
+
 export interface VideoState {
+  mode: VideoMode;
   prompt: string;
   startImage?: string;
   midImage?: string;
   endImage?: string;
   movementDescription: string;
+  movementVideo?: string;
   duration: '5s' | '10s';
   isGenerating: boolean;
   progressMessage: string;
   resultUrl?: string;
+  selectedSceneIndex?: number;
 }
 
 export interface ProjectBrief {
@@ -94,6 +99,65 @@ export interface BrandProfile {
   assets: string;
   rawText: string;
 }
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+export type TemplateId = 'what-if-transformation';
+
+export interface ProjectTemplate {
+  id: TemplateId;
+  name: string;
+  description: string;
+  icon: string;
+  steps: string[];
+  /** Default transformation prompt hint */
+  defaultPrompt?: string;
+}
+
+/** A single transformation stage (keyframe) */
+export interface TransformationStage {
+  id: number;
+  label: string;           // e.g. "Initial Cleanup"
+  prompt: string;          // Flux Kontext edit prompt for this stage
+  imageUrl?: string;       // Generated keyframe image URL
+  isGenerating?: boolean;
+}
+
+/** A video segment between two keyframes */
+export interface VideoSegment {
+  id: number;
+  startStageId: number;
+  endStageId: number;
+  prompt: string;          // Motion prompt for this segment
+  videoUrl?: string;       // Generated video segment URL
+  isGenerating?: boolean;
+}
+
+export interface TemplateState {
+  templateId: TemplateId;
+  step: number;
+  beforeImage?: string;           // data-URI or URL of uploaded source image
+  referenceVideo?: string;        // data-URI of uploaded reference video
+  referenceVideoName?: string;    // filename for display
+  videoAnalysis?: string;         // Gemini analysis of the reference video
+  stages: TransformationStage[];  // Keyframe stages (editable)
+  segments: VideoSegment[];       // Video segments between keyframes
+  finalVideoUrl?: string;         // Final stitched video URL
+  isGenerating: boolean;
+  progressMessage: string;
+  error?: string;
+}
+
+export const PROJECT_TEMPLATES: ProjectTemplate[] = [
+  {
+    id: 'what-if-transformation',
+    name: 'What If? Transformation',
+    description: 'Upload a reference video and starting image. The AI extracts transformation stages, generates keyframe images for each stage, then creates video segments between them.',
+    icon: 'fa-wand-magic-sparkles',
+    steps: ['Upload Media', 'Define Stages', 'Generate Keyframes', 'Generate Video'],
+    defaultPrompt: '',
+  },
+];
 
 export enum GridTheme {
   CINEMATIC = "Cinematic lighting, hyper-realistic, 8k, detailed textures",

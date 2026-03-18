@@ -83,7 +83,7 @@ Then, output a highly optimized, comma-separated text prompt designed for a stat
 
 // ─── Native video analysis via Gemini File API ──────────────────────────────
 
-async function analyseVideoNative(videoPath, videoName, apiKey, model) {
+async function analyseVideoNative(videoPath, videoName, apiKey, model, customPrompt) {
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
   const useModel = model || "gemini-3.1-pro-preview";
@@ -108,12 +108,12 @@ async function analyseVideoNative(videoPath, videoName, apiKey, model) {
   if (videoFile.state === "FAILED") throw new Error("Video processing failed on Google's servers");
   console.log(`[Analysis] Video processed, analysing with ${useModel}...`);
 
+  const filePart = { fileData: { fileUri: videoFile.uri, mimeType: videoFile.mimeType } };
   const response = await ai.models.generateContent({
     model: useModel,
-    contents: [videoFile, VIDEO_PROMPT],
+    contents: [{ role: "user", parts: [filePart, { text: customPrompt || VIDEO_PROMPT }] }],
   });
 
-  // Clean up uploaded file
   try { await ai.files.delete({ name: videoFile.name }); } catch { /* ignore */ }
 
   return typeof response.text === "string" ? response.text : "";
@@ -207,7 +207,7 @@ async function saveAnalysisAsDocx(analysis, mediaName, mediaType) {
 // ─── API endpoint ────────────────────────────────────────────────────────────
 
 router.post("/analyse-video", async (req, res) => {
-  const { url, apiKey, model } = req.body;
+  const { url, apiKey, model, prompt: customPrompt } = req.body;
   if (!url) return res.status(400).json({ error: "Missing URL" });
   if (!apiKey) return res.status(400).json({ error: "Missing API key for Gemini Vision" });
 
@@ -236,7 +236,7 @@ router.post("/analyse-video", async (req, res) => {
         const videoPath = join(sessionDir, videoFile.name);
         await writeFile(videoPath, buffer);
         console.log(`[Analysis] Video saved (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
-        analysis = await analyseVideoNative(videoPath, videoFile.name, apiKey, model);
+        analysis = await analyseVideoNative(videoPath, videoFile.name, apiKey, model, customPrompt);
       } else if (imageFiles.length > 0) {
         mediaType = "images";
         mediaName = `${imageFiles.length}_images_from_folder`;
@@ -265,7 +265,7 @@ router.post("/analyse-video", async (req, res) => {
         mediaType = "video";
         const videoPath = join(sessionDir, mediaName);
         await writeFile(videoPath, buffer);
-        analysis = await analyseVideoNative(videoPath, mediaName, apiKey, model);
+        analysis = await analyseVideoNative(videoPath, mediaName, apiKey, model, customPrompt);
       } else if (isImageMime(meta.mimeType) || isImageFile(meta.name)) {
         mediaType = "images";
         const imgPath = join(sessionDir, mediaName);
@@ -279,12 +279,126 @@ router.post("/analyse-video", async (req, res) => {
     }
 
     console.log(`[Analysis] Complete (${analysis.length} chars)`);
-    const docPath = await saveAnalysisAsDocx(analysis, mediaName, mediaType);
-
-    res.json({ mediaName, mediaType, analysis, savedTo: docPath });
+    if (customPrompt) {
+      res.json({ mediaName, mediaType, analysis });
+    } else {
+      const docPath = await saveAnalysisAsDocx(analysis, mediaName, mediaType);
+      res.json({ mediaName, mediaType, analysis, savedTo: docPath });
+    }
   } catch (err) {
     console.error("[Analysis] Error:", err);
     res.status(500).json({ error: err.message || "Analysis failed" });
+  } finally {
+    cleanTemp(sessionDir).catch(() => {});
+  }
+});
+
+// ─── Analyse uploaded video (data-URI or raw file) ──────────────────────────
+
+const TRANSFORMATION_ANALYSIS_PROMPT = `You are an expert motion designer and cinematographer. Analyse this reference video to extract a precise description of its transformation/motion pattern for recreating it on a different subject.
+
+Focus on:
+1. **Transformation Stages**: Describe each distinct stage of change (e.g., "stage 1: surface cleanup, stage 2: structural renovation, stage 3: landscaping added"). Be very specific about what changes at each stage.
+2. **Motion & Pacing**: How does the transformation progress? (gradual reveal, left-to-right sweep, dissolve, morphing, jump cuts?) What is the timing/rhythm?
+3. **Camera Work**: Is the camera static, panning, zooming? Describe any camera movement.
+4. **Visual Effects**: Any specific effects (glow, particle effects, cross-dissolve, colour shift)?
+5. **Duration & Rhythm**: Total length, pace of each stage, any pauses or acceleration.
+
+Then synthesize everything into a single **MOTION PROMPT** (a concise paragraph suitable as a video generation prompt that captures the exact motion pattern, transformation style, and pacing). This prompt should be written so that an AI video generator can apply the same transformation pattern to any starting image.
+
+Format your response as:
+**ANALYSIS:**
+[your detailed analysis]
+
+**MOTION PROMPT:**
+[the synthesized prompt]`;
+
+router.post("/analyse-uploaded-video", async (req, res) => {
+  const { videoData, fileName, apiKey, model } = req.body;
+  if (!videoData) return res.status(400).json({ error: "Missing video data" });
+  if (!apiKey) return res.status(400).json({ error: "Missing Gemini API key" });
+
+  const sessionDir = join(TEMP_DIR, `upload-${Date.now()}`);
+
+  try {
+    await mkdir(sessionDir, { recursive: true });
+
+    // Convert data-URI to buffer
+    let buffer;
+    const name = fileName || "reference.mp4";
+    if (videoData.startsWith("data:")) {
+      const match = videoData.match(/^data:[^;]+;base64,(.+)$/);
+      if (!match) throw new Error("Invalid data-URI format");
+      buffer = Buffer.from(match[1], "base64");
+    } else {
+      // Assume raw base64
+      buffer = Buffer.from(videoData, "base64");
+    }
+
+    const videoPath = join(sessionDir, name);
+    await writeFile(videoPath, buffer);
+    console.log(`[TemplateAnalysis] Video saved (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
+
+    const analysis = await analyseVideoNative(videoPath, name, apiKey, model, TRANSFORMATION_ANALYSIS_PROMPT);
+    console.log(`[TemplateAnalysis] Complete (${analysis.length} chars)`);
+
+    // Extract the MOTION PROMPT section
+    const motionPromptMatch = analysis.match(/\*\*MOTION PROMPT:\*\*\s*([\s\S]*?)$/i);
+    const motionPrompt = motionPromptMatch ? motionPromptMatch[1].trim() : '';
+
+    res.json({ analysis, motionPrompt });
+  } catch (err) {
+    console.error("[TemplateAnalysis] Error:", err);
+    res.status(500).json({ error: err.message || "Video analysis failed" });
+  } finally {
+    cleanTemp(sessionDir).catch(() => {});
+  }
+});
+
+// ─── Review generated video via URL ─────────────────────────────────────────
+
+const REVIEW_PROMPT = `You are a senior creative director reviewing an AI-generated video clip. Watch the video carefully and provide a concise, actionable review covering:
+
+1. **Overall Impression** (2 sentences): First reaction — does it feel polished and professional?
+2. **Motion & Pacing**: Is the movement natural? Any jitter, warping, or unnatural morphing?
+3. **Visual Quality**: Sharpness, colour consistency, lighting coherence, any artefacts or glitches?
+4. **Subject Consistency**: Do characters/objects maintain their appearance throughout? Any deformations?
+5. **Composition**: Framing, camera movement — does it feel intentional and cinematic?
+6. **Brand Alignment**: Does the tone/style fit a premium retail brand (NEXT)?
+7. **Score**: Rate 1–10 with one-line justification.
+8. **Top 3 Improvements**: Specific, actionable suggestions to fix in the next generation.
+
+Be direct and specific. Reference exact moments (e.g., "at ~2s the hand warps"). Keep the total review under 400 words.`;
+
+router.post("/review-generated-video", async (req, res) => {
+  const { videoUrl, apiKey, model, prompt } = req.body;
+  if (!videoUrl) return res.status(400).json({ error: "Missing video URL" });
+  if (!apiKey) return res.status(400).json({ error: "Missing Gemini API key" });
+
+  const sessionDir = join(TEMP_DIR, `review-${Date.now()}`);
+
+  try {
+    await mkdir(sessionDir, { recursive: true });
+
+    console.log(`[Review] Downloading generated video from: ${videoUrl.substring(0, 80)}...`);
+    const response = await fetch(videoUrl);
+    if (!response.ok) throw new Error(`Failed to download video: ${response.status}`);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    const ext = videoUrl.match(/\.(mp4|webm|mov)/i)?.[1] || "mp4";
+    const fileName = `generated-clip.${ext}`;
+    const videoPath = join(sessionDir, fileName);
+    await writeFile(videoPath, buffer);
+    console.log(`[Review] Video saved (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
+
+    const reviewPrompt = prompt || REVIEW_PROMPT;
+    const analysis = await analyseVideoNative(videoPath, fileName, apiKey, model, reviewPrompt);
+
+    console.log(`[Review] Complete (${analysis.length} chars)`);
+    res.json({ analysis });
+  } catch (err) {
+    console.error("[Review] Error:", err);
+    res.status(500).json({ error: err.message || "Video review failed" });
   } finally {
     cleanTemp(sessionDir).catch(() => {});
   }

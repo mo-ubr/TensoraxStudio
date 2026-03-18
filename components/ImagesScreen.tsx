@@ -54,8 +54,8 @@ const parseScreenplayText = (raw: string): ParsedScreenplay => {
   return {
     scenes: blocks.map(block => {
       const titleMatch = block.match(/###\s*Scene\s*\d+[:\s\-–]*(.*)/i);
-      const sceneMatch = block.match(/\*\*SCENE:\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE:\*\*|$)/i);
-      const promptMatch = block.match(/\*\*VIDEO PROMPT:\*\*\s*([\s\S]*?)(?=###|$)/i);
+      const sceneMatch = block.match(/\*\*SCENE[:\s]*\*\*\s*([\s\S]*?)(?=\*\*DIALOGUE[:\s]*\*\*|$)/i);
+      const promptMatch = block.match(/\*\*VIDEO\s*PROMPT[:\s]*\*\*\s*([\s\S]*?)(?=\*\*(?:START|OPENING)\s*FRAME[:\s]*\*\*|###|$)/i);
       return {
         title: titleMatch?.[1]?.replace(/\*\*/g, '').trim() || 'Untitled',
         scene: sceneMatch?.[1]?.trim() || '',
@@ -64,6 +64,7 @@ const parseScreenplayText = (raw: string): ParsedScreenplay => {
     }),
   };
 };
+
 
 const extractCharactersFromScreenplay = (scenes: { title: string; scene: string; prompt: string }[]): string[] => {
   const characterPatterns = /\b(granny|grandma|grandmother|grandad|grandpa|grandfather|uncle|auntie|aunt|mother|father|woman|man|child|children|baby|toddler|newborn|boy|girl|infant|son|daughter|friend)\b/gi;
@@ -196,6 +197,9 @@ const extractCharacterDescriptions = (scenes: { title: string; scene: string; pr
 
 export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, activeBrandId, activeProject }) => {
   const [step, setStep] = useState<ImageStep>('characters');
+  const [charMode, setCharMode] = useState<'list' | 'builder'>('list');
+  const [selectedCharForBuilder, setSelectedCharForBuilder] = useState<string | null>(null);
+  const [charBuilderAction, setCharBuilderAction] = useState<'auto' | 'upload' | 'specify' | null>(null);
   const [assets, setAssets] = useState<GeneratedAsset[]>(loadAssets);
   const [charBrief, setCharBrief] = useState('Caucasian family, single character, green screen background');
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
@@ -430,7 +434,7 @@ Output ONLY the prompt. No explanations.`,
 
   const stepAssets = assets.filter(a => {
     if (a.type !== step) return false;
-    if (step === 'characters' && activeCharId) return a.charId === activeCharId;
+    if (step === 'characters' && charMode === 'builder' && activeCharId) return a.charId === activeCharId;
     return true;
   });
 
@@ -524,49 +528,196 @@ Output ONLY the prompt. No explanations.`,
           {step === 'characters' ? (
             <>
               <div className="p-4 border-b border-[#ceadd4] flex-shrink-0">
-                <h2 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
-                  <i className="fa-solid fa-user text-[#91569c]"></i>
-                  Character Builder
-                </h2>
-                <p className="text-[9px] text-[#888]/50 mt-1">Build each character visually or upload a reference photo.</p>
-              </div>
-              {screenplay.scenes.length > 0 && (
-                <div className="p-3 border-b border-[#ceadd4] bg-[#f6f0f8]/50 flex-shrink-0 space-y-2">
-                  <div>
-                    <label className="block text-[8px] font-black text-[#888] uppercase tracking-wider mb-1">Character Brief</label>
-                    <input
-                      type="text"
-                      value={charBrief}
-                      onChange={(e) => setCharBrief(e.target.value)}
-                      placeholder="e.g. Caucasian family, diverse cast, Asian family..."
-                      className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#888]/40 outline-none focus:ring-1 focus:ring-[#91569c]/30"
-                    />
-                  </div>
-                  <button
-                    onClick={handleAutoGenerateAll}
-                    disabled={isAutoGenerating}
-                    className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                  >
-                    <i className={`fa-solid ${isAutoGenerating ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[9px]`}></i>
-                    {isAutoGenerating ? autoGenProgress : 'Auto-Generate All Characters'}
-                  </button>
-                  {!isAutoGenerating && (
-                    <p className="text-[8px] text-[#888] text-center">
-                      {extractCharacterDescriptions(screenplay.scenes).length} characters from screenplay — brief applies to all
-                    </p>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2">
+                    <i className="fa-solid fa-user text-[#91569c]"></i>
+                    {charMode === 'list' ? 'Characters' : 'Character Builder'}
+                  </h2>
+                  {charMode === 'builder' && (
+                    <button
+                      onClick={() => { setCharMode('list'); setSelectedCharForBuilder(null); setCharBuilderAction(null); }}
+                      className="text-[9px] font-bold uppercase tracking-wider text-[#888]/60 hover:text-[#91569c] transition-colors flex items-center gap-1"
+                    >
+                      <i className="fa-solid fa-arrow-left text-[8px]"></i>
+                      Character List
+                    </button>
                   )}
                 </div>
+                <p className="text-[9px] text-[#888]/50 mt-1">
+                  {charMode === 'list' ? 'Characters from your screenplay. Choose how to create each one.' : 'Build the character visually or upload a reference photo.'}
+                </p>
+              </div>
+
+              {charMode === 'list' ? (
+                /* ── Character List View ────────────────────────── */
+                <div className="flex-1 overflow-y-auto">
+                  {/* Auto-generate all bar */}
+                  {screenplay.scenes.length > 0 && (
+                    <div className="p-3 border-b border-[#ceadd4] bg-[#f6f0f8]/50 space-y-2">
+                      <div>
+                        <label className="block text-[8px] font-black text-[#888] uppercase tracking-wider mb-1">Character Brief</label>
+                        <input
+                          type="text"
+                          value={charBrief}
+                          onChange={(e) => setCharBrief(e.target.value)}
+                          placeholder="e.g. Caucasian family, diverse cast, Asian family..."
+                          className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-1.5 text-[10px] text-[#3a3a3a] placeholder:text-[#888]/40 outline-none focus:ring-1 focus:ring-[#91569c]/30"
+                        />
+                      </div>
+                      <button
+                        onClick={handleAutoGenerateAll}
+                        disabled={isAutoGenerating}
+                        className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                      >
+                        <i className={`fa-solid ${isAutoGenerating ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-[9px]`}></i>
+                        {isAutoGenerating ? autoGenProgress : 'Auto-Generate All Characters'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Character list */}
+                  <div className="p-3 space-y-2">
+                    {(() => {
+                      const charNames = extractCharactersFromScreenplay(screenplay.scenes);
+                      const screenplayChars = charNames.map(name => ({ name: name.charAt(0).toUpperCase() + name.slice(1), scenes: [] as string[] }));
+                      if (screenplayChars.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <i className="fa-solid fa-users-slash text-2xl text-[#ceadd4] mb-2 block"></i>
+                            <p className="text-[10px] text-[#888]/60">No characters found in screenplay.</p>
+                            <button
+                              onClick={() => setCharMode('builder')}
+                              className="mt-3 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#f6f0f8] border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors"
+                            >
+                              <i className="fa-solid fa-plus text-[8px] mr-1"></i>
+                              Add Manually
+                            </button>
+                          </div>
+                        );
+                      }
+                      return screenplayChars.map((char, idx) => {
+                        const hasAsset = assets.some(a => a.type === 'characters' && a.label.toLowerCase() === char.name.toLowerCase() && a.imageUrl);
+                        return (
+                          <div key={idx} className="bg-white border border-[#e0d6e3] rounded-xl p-3 hover:border-[#91569c]/30 transition-colors">
+                            <div className="flex items-center gap-3 mb-2.5">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${hasAsset ? 'bg-green-50 border border-green-200' : 'bg-[#f6f0f8] border border-[#ceadd4]'}`}>
+                                <i className={`fa-solid ${hasAsset ? 'fa-check text-green-500' : 'fa-user text-[#91569c]'} text-[11px]`}></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-bold text-[#5c3a62]">{char.name}</p>
+                                {char.scenes.length > 0 && (
+                                  <p className="text-[8px] text-[#888]/60 mt-0.5 truncate">
+                                    {char.scenes.length} scene{char.scenes.length !== 1 ? 's' : ''}: {char.scenes.slice(0, 3).join(', ')}{char.scenes.length > 3 ? '...' : ''}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={async () => {
+                                  // Auto-generate this single character — stay on list view, show in middle
+                                  const charDescs = extractCharacterDescriptions(screenplay.scenes);
+                                  const desc = charDescs.find(d => d.name.toLowerCase() === char.name.toLowerCase());
+                                  const brief = charBrief.trim();
+                                  const profile = ROLE_PROFILES[char.name.toLowerCase()];
+                                  const profileText = profile ? `EXACT APPEARANCE: Age ${profile.age}. ${profile.look}.` : '';
+                                  const descText = desc?.description || '';
+                                  const rawPrompt = [brief, descText, profileText, `Photorealistic cinematic portrait of ${char.name}. Single person only. 9:16 vertical format, high detail facial features.`].filter(Boolean).join('. ');
+
+                                  // Ensure character profile exists
+                                  const existing = characters.find(c => c.name.toLowerCase() === char.name.toLowerCase());
+                                  const charId = existing?.id || `char-${Date.now()}-${idx}`;
+                                  if (!existing) {
+                                    const newChar: CharacterProfile = { id: charId, name: char.name, photoUrls: [], wardrobeUrls: [], traits: { gender: '', ageRange: '', ethnicity: '', build: '', faceShape: '', skinTone: '', hairLength: '', hairTexture: '', hairColour: '', eyeShape: '', eyeColour: '', noseShape: '', lipShape: '', distinguishing: '' }, source: 'new' };
+                                    setCharacters(prev => [...prev, newChar]);
+                                  }
+
+                                  // Generate prompt via AI
+                                  const prompt = await handleGeneratePrompt(charId, rawPrompt);
+
+                                  // Create asset and generate image directly (bypass handleCharacterGenerate)
+                                  const assetId = `characters-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                                  setAssets(prev => [...prev, { id: assetId, type: 'characters' as ImageStep, label: char.name, prompt, imageUrl: null, isGenerating: true, charId }]);
+                                  try {
+                                    const url = await generateImageWithCurrentProvider({
+                                      prompt,
+                                      size: '1024x1024' as any,
+                                      aspectRatio: '9:16' as any,
+                                      referenceImages: [],
+                                    });
+                                    setAssets(prev => prev.map(a => a.id === assetId ? { ...a, imageUrl: url, isGenerating: false } : a));
+                                    if (activeProject && url) {
+                                      const filename = `${char.name.replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')}.png`;
+                                      DB.saveProjectFile(activeProject.id, filename, url, 'characters').catch(e => console.warn('[CharGen] Save failed:', e));
+                                    }
+                                  } catch (err: any) {
+                                    setAssets(prev => prev.map(a => a.id === assetId ? { ...a, isGenerating: false } : a));
+                                    alert(`Image generation failed: ${err.message || err}`);
+                                  }
+                                }}
+                                className="flex-1 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-wand-magic-sparkles text-[8px]"></i>
+                                Generate
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCharForBuilder(char.name);
+                                  setCharBuilderAction('upload');
+                                  setCharMode('builder');
+                                  // Ensure character profile exists and set to 'existing' source
+                                  const existing = characters.find(c => c.name.toLowerCase() === char.name.toLowerCase());
+                                  if (!existing) {
+                                    const newChar: CharacterProfile = { id: `char-${Date.now()}-${idx}`, name: char.name, photoUrls: [], wardrobeUrls: [], traits: { gender: '', ageRange: '', ethnicity: '', build: '', faceShape: '', skinTone: '', hairLength: '', hairTexture: '', hairColour: '', eyeShape: '', eyeColour: '', noseShape: '', lipShape: '', distinguishing: '' }, source: 'existing' };
+                                    setCharacters(prev => [...prev, newChar]);
+                                  }
+                                  setActiveCharId(existing?.id || `char-${Date.now()}-${idx}`);
+                                }}
+                                className="flex-1 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#f6f0f8] border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-upload text-[8px]"></i>
+                                Upload
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCharForBuilder(char.name);
+                                  setCharBuilderAction('specify');
+                                  setCharMode('builder');
+                                  // Ensure character profile exists and set to 'new' source
+                                  const existing = characters.find(c => c.name.toLowerCase() === char.name.toLowerCase());
+                                  if (!existing) {
+                                    const newChar: CharacterProfile = { id: `char-${Date.now()}-${idx}`, name: char.name, photoUrls: [], wardrobeUrls: [], traits: { gender: '', ageRange: '', ethnicity: '', build: '', faceShape: '', skinTone: '', hairLength: '', hairTexture: '', hairColour: '', eyeShape: '', eyeColour: '', noseShape: '', lipShape: '', distinguishing: '' }, source: 'new' };
+                                    setCharacters(prev => [...prev, newChar]);
+                                  }
+                                  setActiveCharId(existing?.id || `char-${Date.now()}-${idx}`);
+                                }}
+                                className="flex-1 py-2 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#f6f0f8] border border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c]/40 transition-colors flex items-center justify-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-sliders text-[8px]"></i>
+                                Specify
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                /* ── Character Builder View ─────────────────────── */
+                <>
+                  <CharacterBuilder
+                    characters={characters}
+                    onChange={setCharacters}
+                    detectedNames={detectedCharacters}
+                    onGeneratePrompt={handleGeneratePrompt}
+                    onGenerateImage={handleCharacterGenerate}
+                    onActiveCharChange={setActiveCharId}
+                    isGeneratingPrompt={isGeneratingPrompt}
+                    projectName={(() => { try { const d = JSON.parse(localStorage.getItem('tensorax_general_direction') || '{}'); return d.projectName || ''; } catch { return ''; } })()}
+                  />
+                </>
               )}
-              <CharacterBuilder
-                characters={characters}
-                onChange={setCharacters}
-                detectedNames={detectedCharacters}
-                onGeneratePrompt={handleGeneratePrompt}
-                onGenerateImage={handleCharacterGenerate}
-                onActiveCharChange={setActiveCharId}
-                isGeneratingPrompt={isGeneratingPrompt}
-                projectName={(() => { try { const d = JSON.parse(localStorage.getItem('tensorax_general_direction') || '{}'); return d.projectName || ''; } catch { return ''; } })()}
-              />
             </>
           ) : (
           <>
@@ -666,13 +817,15 @@ Output ONLY the prompt. No explanations.`,
           <div className="flex-1 overflow-y-auto p-4">
             {(step === 'review' ? assets : stepAssets).length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <i className={`fa-solid ${step === 'review' ? 'fa-check-double' : STEP_META[stepIndex].icon} text-4xl text-[#ceadd4] mb-4`}></i>
+                <i className={`fa-solid ${step === 'characters' ? 'fa-users' : step === 'review' ? 'fa-check-double' : STEP_META[stepIndex].icon} text-4xl text-[#ceadd4] mb-4`}></i>
                 <p className="text-[#888]/60 text-sm font-bold uppercase tracking-widest mb-2">
-                  {step === 'review' ? 'No assets yet' : `No ${STEP_META[stepIndex].label} yet`}
+                  {step === 'review' ? 'No assets yet' : step === 'characters' ? 'Generate characters' : `No ${STEP_META[stepIndex].label} yet`}
                 </p>
                 <p className="text-[#888]/40 text-xs max-w-md leading-relaxed">
                   {step === 'review'
                     ? 'Generate characters, backgrounds, props, and key visuals in the previous steps.'
+                    : step === 'characters'
+                    ? 'Click Generate next to a character on the left to create their image, or use Auto-Generate All.'
                     : 'Use the suggestions on the left or write a custom prompt, then generate.'}
                 </p>
               </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BrandProfile } from '../types';
 import { parseBrandDocument } from '../services/brandData';
+import DropZone from './DropZone';
 
 interface BrandSelectorProps {
   brands: BrandProfile[];
@@ -126,15 +127,48 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
               className="hidden"
               onChange={handleFileUpload}
             />
-            <button
-              onClick={() => fileRef.current?.click()}
+            <DropZone
+              accept=".txt,.md,.docx"
               disabled={uploading}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#888] hover:bg-[#f6f0f8] hover:text-[#91569c] transition-colors disabled:opacity-50"
+              onFiles={async (files) => {
+                const file = files[0];
+                if (!file) return;
+                setUploading(true);
+                try {
+                  let text = '';
+                  if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+                    text = await file.text();
+                  } else if (file.name.endsWith('.docx')) {
+                    const mammoth = await import('mammoth');
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({ arrayBuffer });
+                    text = result.value;
+                  } else {
+                    text = await file.text();
+                  }
+                  if (text.trim()) {
+                    const brand = parseBrandDocument(text, file.name);
+                    onAddBrand(brand);
+                    onSelectBrand(brand.id);
+                    setOpen(false);
+                  }
+                } catch (err) {
+                  console.error('Failed to parse brand document:', err);
+                } finally {
+                  setUploading(false);
+                }
+              }}
             >
-              <i className={`fa-solid ${uploading ? 'fa-spinner fa-spin' : 'fa-plus'} text-[10px]`}></i>
-              {uploading ? 'Parsing...' : 'Upload Brand Guidelines'}
-              <span className="ml-auto text-[8px] text-[#ceadd4]">.txt .md .docx</span>
-            </button>
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#888] hover:bg-[#f6f0f8] hover:text-[#91569c] transition-colors disabled:opacity-50"
+              >
+                <i className={`fa-solid ${uploading ? 'fa-spinner fa-spin' : 'fa-plus'} text-[10px]`}></i>
+                {uploading ? 'Parsing...' : 'Drop or upload Brand Guidelines'}
+                <span className="ml-auto text-[8px] text-[#ceadd4]">.txt .md .docx</span>
+              </button>
+            </DropZone>
           </div>
         </div>
       )}

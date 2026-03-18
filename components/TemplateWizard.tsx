@@ -285,11 +285,11 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       // If parsing found fewer than 3 stages, create defaults
       const stages: TransformationStage[] = parsedStages.length >= 3 ? parsedStages : [
         { id: 1, label: 'Current State (source image)', prompt: '(source image — no generation needed)' },
-        { id: 2, label: 'Initial Cleanup', prompt: 'Same building, same angle. Remove cables, clear debris, smooth cracked pavement. Keep overcast sky.' },
-        { id: 3, label: 'Structural Renovation', prompt: 'Same building, same angle. New thermal insulation panels on facade (bottom-up). Uniform new windows. Modern balcony railings.' },
-        { id: 4, label: 'Facade Finishing', prompt: 'Same building, same angle. Modern painted facade in warm whites with colour accent panels. Completed windows. New roof elements.' },
-        { id: 5, label: 'Landscaping', prompt: 'Same building, same angle. New paved walkways, young trees and shrubs, modern lighting, benches, bike racks.' },
-        { id: 6, label: 'Final State', prompt: 'Same building, same angle. Full mature greenery, warm golden hour lighting, clean modern European residential block.' },
+        { id: 2, label: 'Site Preparation', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding erected around full facade, protective netting draped over scaffolding poles. Old satellite dishes and tangled cables removed. Loose render chipped away exposing raw concrete underneath. Ground-level debris cleared into neat skip bins. Cracked pavement swept clean. Overcast natural daylight, photorealistic.' },
+        { id: 3, label: 'Structural Repair & Insulation', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding still in place. Bottom three floors wrapped in new rigid EPS insulation boards (light grey, visible panel grid lines, plastic anchor caps dotted across surface). Upper floors still exposed concrete awaiting insulation. New double-glazed PVC window frames installed on lower floors (white frames, closed). Old windows remain on upper floors. Reinforced concrete balcony slabs repaired — fresh grey concrete visible. Overcast daylight, photorealistic.' },
+        { id: 4, label: 'Facade Finishing', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding partially removed (remaining only on top floor). Full facade rendered in smooth silicone plaster — warm off-white base colour with accent colour panels (terracotta or sage green) marking each floor division. All windows replaced with uniform white double-glazed PVC frames. New powder-coated aluminium balcony railings (dark grey, horizontal bar design). Downpipes and guttering replaced with new dark-grey PVC. Slightly overcast daylight, photorealistic.' },
+        { id: 5, label: 'Ground Works & Landscaping', prompt: 'Same building, exact same camera angle. No people visible. All scaffolding removed, building fully finished. New interlocking concrete paver walkways (herringbone pattern, natural grey). Young deciduous trees (2-3m tall, staked) planted in tree pits with metal grates. Low ornamental shrub beds with bark mulch. Modern LED bollard lights along paths. Powder-coated steel benches. Covered bicycle rack with stainless steel stands. Fresh turf lawn areas. Soft overcast daylight, photorealistic.' },
+        { id: 6, label: 'Completed Transformation', prompt: 'Same building, exact same camera angle. No people visible. Fully renovated modern European residential block. Clean facade with warm plaster and accent panels. Mature landscaping — trees in full leaf, lush shrubs, green lawn. Warm golden-hour sunlight casting long soft shadows. Balconies with occasional potted plants. Ground-floor entrance with modern glass canopy and illuminated house number. Ambient LED path lighting glowing softly. Photorealistic, architectural photography style.' },
       ];
 
       // Stage 1 is always the source image
@@ -297,14 +297,25 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
         stages[0].imageUrl = state.beforeImage;
       }
 
-      // Build segments between consecutive stages
+      // Build segments between consecutive stages with detailed transition prompts
+      const segmentPromptDetails: Record<string, string> = {
+        '1-2': 'Locked-off camera, no camera movement. Time-lapse: scaffolding rises up the facade layer by layer, protective netting unfurls over the structure, old satellite dishes vanish, tangled cables disappear, loose render crumbles away revealing raw concrete, debris on the ground organises itself into skip bins. No people visible. Smooth, cinematic, photorealistic.',
+        '2-3': 'Locked-off camera, no camera movement. Time-lapse: insulation boards spread across the facade from bottom upward floor by floor, plastic anchor caps appear dotting the surface, old windows morph into new white PVC double-glazed frames starting from ground floor up, balcony slabs transform from cracked to fresh smooth concrete. No people visible. Smooth, cinematic, photorealistic.',
+        '3-4': 'Locked-off camera, no camera movement. Time-lapse: smooth plaster renders across the facade in a wave from bottom to top, colour appears — warm off-white with accent panels emerging at each floor line, scaffolding sections disappear from lower floors upward, new dark aluminium balcony railings materialise, fresh downpipes and guttering appear. No people visible. Smooth, cinematic, photorealistic.',
+        '4-5': 'Locked-off camera, no camera movement. Time-lapse: remaining scaffolding dissolves away, ground transforms — raw earth morphs into paved walkways in herringbone pattern, young trees rise from the ground with support stakes, shrub beds fill in with greenery, bollard lights appear along paths, benches and bike racks materialise, fresh turf rolls out across lawn areas. No people visible. Smooth, cinematic, photorealistic.',
+        '5-6': 'Locked-off camera, no camera movement. Time-lapse: daylight shifts from overcast to warm golden hour, trees mature and fill with leaves, shrubs grow lush and full, lawn deepens in colour, potted plants appear on balconies, entrance canopy glass gleams, path lights begin to glow warmly, long soft shadows stretch across the scene. No people visible. Smooth, cinematic, photorealistic.',
+      };
+
       const segments: VideoSegment[] = [];
       for (let i = 0; i < stages.length - 1; i++) {
+        const key = `${stages[i].id}-${stages[i + 1].id}`;
+        const detailedPrompt = segmentPromptDetails[key]
+          || `Locked-off camera, no camera movement. Time-lapse transition: ${stages[i].label} gradually transforms into ${stages[i + 1].label}. No people visible. Smooth, cinematic, photorealistic.`;
         segments.push({
           id: i + 1,
           startStageId: stages[i].id,
           endStageId: stages[i + 1].id,
-          prompt: `Static camera. Smooth transition: ${stages[i].label} transforms into ${stages[i + 1].label}. Gradual, cinematic change.`,
+          prompt: detailedPrompt,
         });
       }
 

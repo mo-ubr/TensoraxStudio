@@ -31,6 +31,7 @@ export interface VideoGenParams {
   endImage?: string;
   movementDescription?: string;
   duration: "5s" | "10s";
+  apiKey?: string;
   onProgress?: (message: string) => void;
 }
 
@@ -319,6 +320,7 @@ async function generateImageAISTudioStyle(params: ImageGenParams): Promise<strin
 
 export const GeminiService = {
   setApiKey,
+  getApiKey,
 
   hydrateApiKeyFromStorage(): boolean {
     const saved = getSavedApiKey();
@@ -577,7 +579,7 @@ Reply with only the single description.`;
   },
 
   async generateImage(params: ImageGenParams): Promise<string> {
-    const configuredModel = getModelForType('image') || 'gemini-3-flash-image';
+    const configuredModel = getModelForType('image') || 'gemini-2.0-flash-exp';
     console.log("GeminiService: Generating image with model:", configuredModel);
 
     const imageKey = getApiKeyForType('image') || getApiKeyForType('analysis');
@@ -615,7 +617,30 @@ Reply with only the single description.`;
       logApiError(`generateImage (${configuredModel})`, error);
     }
 
-    // 2) Fallback: Vertex AI Imagen 3
+    // 2) Fallback: try known Gemini image models
+    for (const fallbackModel of GEMINI_IMAGE_MODELS) {
+      if (fallbackModel === configuredModel) continue;
+      try {
+        const parts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> = [];
+        params.referenceImages.forEach((imgData) => {
+          const parsed = parseDataUrl(imgData);
+          if (parsed) parts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.imageBytes } });
+        });
+        parts.push({ text: imagePrompt });
+        const response = await ai.models.generateContent({
+          model: fallbackModel,
+          contents: { parts },
+          config: { responseModalities: ["IMAGE", "TEXT"], imageConfig: { aspectRatio: params.aspectRatio } },
+        });
+        const dataUrl = extractImageFromGenerateContentResponse(response);
+        if (dataUrl) return dataUrl;
+      } catch (error) {
+        errors.push(`${fallbackModel}: ${toErrorMessage(error)}`);
+        logApiError(`generateImage fallback (${fallbackModel})`, error);
+      }
+    }
+
+    // 3) Fallback: Vertex AI Imagen 3
     try {
       return await generateImageViaVertexBackend(params);
     } catch (error) {
@@ -625,7 +650,7 @@ Reply with only the single description.`;
       logApiError("generateImage Vertex backend", error);
     }
 
-    // 3) Fallback: Imagen SDK (generateImages)
+    // 4) Fallback: Imagen SDK (generateImages)
     for (const model of IMAGE_MODELS) {
       try {
         const result = await ai.models.generateImages({
@@ -654,9 +679,10 @@ Reply with only the single description.`;
   },
 
   async generateVideo(params: VideoGenParams): Promise<string> {
-    console.log("GeminiService: Generating video...", params);
-    const ai = createClient();
-    const durationSeconds = params.duration === "10s" ? 10 : 5;
+    const ai = params.apiKey ? createClientWithKey(params.apiKey) : createClient();
+    // Veo 3.1 only accepts 4, 6, or 8 as numbers. Default to 6.
+    const rawNum = params.duration === "10s" ? 8 : parseInt(params.duration) || 6;
+    const durationSeconds = rawNum <= 4 ? 4 : rawNum <= 6 ? 6 : 8;
     const startImage = parseDataUrl(params.startImage);
     const endImage = parseDataUrl(params.endImage);
     const midImage = parseDataUrl(params.midImage);
@@ -668,16 +694,27 @@ Reply with only the single description.`;
     let lastError: unknown;
     params.onProgress?.("Submitting generation request...");
 
-    for (const model of VIDEO_MODELS) {
+    // When endImage is provided, only use models that support lastFrame (veo-3.1+)
+    const modelsToTry = endImage
+      ? VIDEO_MODELS.filter(m => m.includes('3.1'))
+      : VIDEO_MODELS;
+
+    if (modelsToTry.length === 0) {
+      throw new Error("No video model supports start+end frame. Need veo-3.1-generate-preview.");
+    }
+
+    for (const model of modelsToTry) {
       try {
-        console.log(`GeminiService: Trying video model ${model}`);
+        // Must use 8 when lastFrame, referenceImages, or 1080p/4k
+        const modelDuration = (endImage || midImage) ? 8 : durationSeconds;
+        console.log(`GeminiService: Trying video model ${model}, duration: ${modelDuration}`);
         const config: Record<string, unknown> = {
-          durationSeconds,
-          aspectRatio: "16:9", // Veo often supports 16:9 natively
-          numberOfVideos: 1,
+          durationSeconds: modelDuration,
+          aspectRatio: "16:9",
         };
 
-        if (endImage) {
+        // lastFrame only supported on veo-3.1+
+        if (endImage && model.includes('3.1')) {
           config.lastFrame = endImage;
         }
 
@@ -717,12 +754,24 @@ Reply with only the single description.`;
         if (video.videoBytes) {
           const mimeType = video.mimeType || "video/mp4";
           params.onProgress?.("Finalizing output...");
-          return `data:${mimeType};base64,${video.videoBytes}`;
+          // Convert base64 to blob URL for efficient playback (data URIs are too large for video)
+          const byteString = atob(video.videoBytes);
+          const bytes = new Uint8Array(byteString.length);
+          for (let i = 0; i < byteString.length; i++) bytes[i] = byteString.charCodeAt(i);
+          const blob = new Blob([bytes], { type: mimeType });
+          return URL.createObjectURL(blob);
         }
 
         if (video.uri) {
-          params.onProgress?.("Finalizing output...");
-          return video.uri;
+          params.onProgress?.("Downloading video...");
+          // The URI requires authentication — download and create a blob URL for efficient playback
+          const apiKeyForDownload = params.apiKey || getApiKey();
+          const separator = video.uri.includes('?') ? '&' : '?';
+          const downloadUrl = `${video.uri}${separator}key=${apiKeyForDownload}`;
+          const resp = await fetch(downloadUrl);
+          if (!resp.ok) throw new Error(`Failed to download video: ${resp.status}`);
+          const blob = await resp.blob();
+          return URL.createObjectURL(blob);
         }
 
         throw new Error("No playable video URL or bytes were returned.");
@@ -733,5 +782,45 @@ Reply with only the single description.`;
     }
 
     throw new Error(`Video generation failed: ${toErrorMessage(lastError)}`);
+  },
+
+  /**
+   * Edit an image using Nano Banana (Gemini image models) via generateContent.
+   * Sends the source image + text prompt, returns a data URI of the edited image.
+   *
+   * @param opts.apiKey        Google AI API key
+   * @param opts.imageDataUri  Source image as data URI
+   * @param opts.prompt        Editing instruction
+   * @param opts.model         Gemini model name (default: gemini-3-pro-image-preview)
+   */
+  async editImage({ apiKey, imageDataUri, prompt, model }: {
+    apiKey: string;
+    imageDataUri: string;
+    prompt: string;
+    model?: string;
+  }): Promise<string> {
+    const ai = createClientWithKey(apiKey);
+    const parsed = parseDataUrl(imageDataUri);
+    if (!parsed) throw new Error("editImage: invalid source image (expected data URI).");
+
+    const useModel = model || "gemini-3-pro-image-preview";
+    console.log(`[GeminiService.editImage] model=${useModel}, prompt=${prompt.slice(0, 80)}...`);
+
+    const parts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> = [
+      { inlineData: { mimeType: parsed.mimeType, data: parsed.imageBytes } },
+      { text: prompt },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: useModel,
+      contents: { parts },
+      config: {
+        responseModalities: ["image", "text"],
+      },
+    });
+
+    const dataUrl = extractImageFromGenerateContentResponse(response);
+    if (dataUrl) return dataUrl;
+    throw new Error("editImage: Gemini returned no image data.");
   },
 };
