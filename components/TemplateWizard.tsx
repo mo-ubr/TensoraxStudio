@@ -261,6 +261,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const hasRestoredRef = useRef(false); // Prevent auto-save before initial restore
 
   const update = useCallback((partial: Partial<TemplateState>) => {
     setState(prev => ({ ...prev, ...partial }));
@@ -270,6 +271,8 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!projectId || state.isGenerating) return;
+    // Don't save until initial restore from DB is complete
+    if (!hasRestoredRef.current) return;
     // Don't save empty initial state
     if (state.stages.length === 0 && !state.beforeImage && !state.videoAnalysis) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -315,7 +318,9 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       if (Object.keys(partial).length > 0) {
         setState(prev => ({ ...prev, ...partial }));
       }
-    }).catch(() => {});
+      // Mark restore as complete — auto-save can now safely run
+      hasRestoredRef.current = true;
+    }).catch(() => { hasRestoredRef.current = true; });
   }, [projectId]);
 
   const updateStage = useCallback((id: number, partial: Partial<TransformationStage>) => {
