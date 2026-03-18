@@ -533,7 +533,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
   const generateSegment = async (segment: VideoSegment) => {
     updateSegment(segment.id, { isGenerating: true, videoUrl: undefined });
-    update({ error: undefined });
+    update({ isGenerating: true, progressMessage: `Segment ${segment.id}: Submitting to video API...`, error: undefined });
 
     try {
       const videoModel = getVideoModel();
@@ -623,9 +623,10 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       }
 
       updateSegment(segment.id, { videoUrl: resultVideoUrl, isGenerating: false });
+      update({ isGenerating: false, progressMessage: '' });
     } catch (err: any) {
       updateSegment(segment.id, { isGenerating: false });
-      update({ error: `Segment ${segment.id}: ${err.message}` });
+      update({ isGenerating: false, progressMessage: '', error: `Segment ${segment.id}: ${err.message}` });
     }
   };
 
@@ -1110,6 +1111,13 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                                 <i className="fa-solid fa-download text-[8px]"></i>Download
                               </a>
                             </div>
+                          </div>
+                        )}
+
+                        {seg.isGenerating && state.progressMessage && (
+                          <div className="mt-2 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[10px] text-[#5c3a62] flex items-center gap-2 animate-pulse">
+                            <i className="fa-solid fa-spinner fa-spin text-[#91569c]"></i>
+                            <span>{state.progressMessage}</span>
                           </div>
                         )}
 
