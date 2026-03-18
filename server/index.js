@@ -7,7 +7,7 @@
 
 import dotenv from "dotenv";
 import { resolve, dirname } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
@@ -163,6 +163,37 @@ app.post("/api/generate-prompts", async (req, res) => {
   }
 });
 
+/**
+ * Convert a local image path (e.g. /project-assets/...) to a base64 data URI
+ * so fal.ai can actually read the image. Returns the original URL if it's
+ * already a data URI or an external HTTPS URL.
+ */
+function resolveImageForFal(urlOrPath) {
+  if (!urlOrPath) return null;
+  // Already a data URI or external URL — pass through
+  if (urlOrPath.startsWith('data:') || urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+    return urlOrPath;
+  }
+  // Local path like /project-assets/xxx/frames/img.png
+  let localPath = null;
+  if (urlOrPath.startsWith('/project-assets/')) {
+    const rel = decodeURIComponent(urlOrPath.replace('/project-assets/', ''));
+    localPath = resolve(process.cwd(), 'assets/0. Projects', rel);
+  } else if (urlOrPath.startsWith('/character-assets/')) {
+    const rel = decodeURIComponent(urlOrPath.replace('/character-assets/', ''));
+    localPath = resolve(process.cwd(), 'assets/3. Characters', rel);
+  }
+  if (localPath && existsSync(localPath)) {
+    const ext = localPath.split('.').pop().toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const base64 = readFileSync(localPath).toString('base64');
+    console.log(`[resolveImage] Converted local path to data URI (${(base64.length / 1024).toFixed(0)}KB): ${urlOrPath.slice(0, 80)}`);
+    return `data:${mime};base64,${base64}`;
+  }
+  console.warn(`[resolveImage] Could not resolve local path: ${urlOrPath}`);
+  return urlOrPath;
+}
+
 // Kling video generation with SSE progress streaming
 app.post("/api/generate-video-kling", async (req, res) => {
   const { apiKey, model, startImageUrl, endImageUrl, motionVideoUrl, prompt, duration, aspectRatio, generateAudio } = req.body;
@@ -183,8 +214,8 @@ app.post("/api/generate-video-kling", async (req, res) => {
     const videoUrl = await generateKlingVideo({
       apiKey: resolvedApiKey,
       model: model || "kling-v3-standard",
-      startImageUrl,
-      endImageUrl: endImageUrl || null,
+      startImageUrl: resolveImageForFal(startImageUrl),
+      endImageUrl: resolveImageForFal(endImageUrl) || null,
       motionVideoUrl: motionVideoUrl || null,
       prompt,
       duration: duration || "5",
@@ -211,8 +242,8 @@ app.post("/api/generate-video-seedance", async (req, res) => {
 
     const videoUrl = await generateSeedanceVideo({
       apiKey: resolvedApiKey,
-      startImageUrl,
-      endImageUrl: endImageUrl || null,
+      startImageUrl: resolveImageForFal(startImageUrl),
+      endImageUrl: resolveImageForFal(endImageUrl) || null,
       prompt,
       duration: duration || "5",
       aspectRatio: aspectRatio || "auto",

@@ -54,7 +54,7 @@ function resolveEndpoint(modelName, isImageToVideo) {
 /**
  * Poll fal.ai queue until the request is COMPLETED or FAILED.
  */
-const MAX_POLL_SECONDS = 300; // 5-minute timeout
+const MAX_POLL_SECONDS = 600; // 10-minute timeout — Kling can be slow when queue is busy
 
 async function pollFalQueue(model, requestId, headers, onProgress) {
   const statusUrl = `${FAL_BASE}/${model}/requests/${requestId}/status`;
