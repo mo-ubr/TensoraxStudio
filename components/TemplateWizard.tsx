@@ -107,6 +107,110 @@ const getGeminiKey = (): string => {
   } catch { return ''; }
 };
 
+/**
+ * Use Gemini to analyse the source image and generate context-appropriate
+ * transformation stage prompts. Works for buildings, roads, bridges, parks,
+ * or any infrastructure/construction subject.
+ */
+async function generateSmartStagePrompts(
+  imageDataUri: string,
+  apiKey: string,
+): Promise<{ stages: TransformationStage[]; segments: VideoSegment[] } | null> {
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
+    const model = localStorage.getItem('tensorax_analysis_model')?.trim() || 'gemini-2.5-flash';
+
+    const base64 = imageDataUri.split(',')[1];
+    const mimeType = imageDataUri.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+
+    const systemPrompt = `You are an expert in construction, civil engineering, and architectural renovation.
+
+Analyse this image and identify what the subject is (e.g. residential building, road, bridge, park, commercial building, industrial site, public square, etc.).
+
+Then generate exactly 6 transformation stages showing a realistic renovation/construction progression from current state to completed result. Each stage should show the RESULT of that phase of work — not the process. No people, no workers visible in any stage.
+
+Use materials, techniques, and terminology specific to the subject type:
+- For BUILDINGS: scaffolding, insulation boards, render/plaster, window frames, balcony railings, facade panels, roof elements, landscaping
+- For ROADS: surface milling, base layer compaction, drainage installation, asphalt layers, line markings, signage, barriers, kerb stones
+- For BRIDGES: structural reinforcement, deck resurfacing, bearing replacement, expansion joints, parapet walls, anti-corrosion coating, lighting
+- For PARKS/PUBLIC SPACES: ground clearing, drainage, pathways, planting beds, irrigation, furniture, lighting, water features
+- For other subjects: use appropriate construction/renovation terminology
+
+CRITICAL RULES:
+- Every prompt must start with "Same [subject], exact same camera angle. No people visible."
+- Every prompt must end with "Photorealistic."
+- Include specific materials, colours, textures, and construction details
+- Each stage builds on the previous one progressively
+- Stage 1 is always the current/original state (source image)
+- Stage 6 is the fully completed transformation with attractive lighting
+
+Also generate 5 video transition prompts (one between each consecutive pair of stages) describing the visible time-lapse transformation. Each must:
+- Start with "Locked-off camera, no camera movement. Time-lapse:"
+- Describe specific visible changes (materials appearing, surfaces transforming, elements being installed)
+- Include "No people visible. Smooth, cinematic, photorealistic."
+
+Return ONLY valid JSON in this exact format (no markdown, no code fences):
+{
+  "subjectType": "residential building",
+  "stages": [
+    { "id": 1, "label": "Current State (source image)", "prompt": "(source image — no generation needed)" },
+    { "id": 2, "label": "Stage Name", "prompt": "Detailed prompt..." },
+    { "id": 3, "label": "Stage Name", "prompt": "Detailed prompt..." },
+    { "id": 4, "label": "Stage Name", "prompt": "Detailed prompt..." },
+    { "id": 5, "label": "Stage Name", "prompt": "Detailed prompt..." },
+    { "id": 6, "label": "Stage Name", "prompt": "Detailed prompt..." }
+  ],
+  "segments": [
+    { "id": 1, "prompt": "Locked-off camera transition prompt..." },
+    { "id": 2, "prompt": "Locked-off camera transition prompt..." },
+    { "id": 3, "prompt": "Locked-off camera transition prompt..." },
+    { "id": 4, "prompt": "Locked-off camera transition prompt..." },
+    { "id": 5, "prompt": "Locked-off camera transition prompt..." }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: systemPrompt },
+            { inlineData: { mimeType, data: base64 } },
+          ],
+        },
+      ],
+    });
+
+    const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Strip markdown code fences if present
+    const jsonStr = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(jsonStr);
+
+    if (!parsed.stages || parsed.stages.length < 4) return null;
+
+    const stages: TransformationStage[] = parsed.stages.map((s: any) => ({
+      id: s.id,
+      label: s.label,
+      prompt: s.prompt,
+    }));
+
+    const segments: VideoSegment[] = (parsed.segments || []).map((s: any, i: number) => ({
+      id: s.id || i + 1,
+      startStageId: i + 1,
+      endStageId: i + 2,
+      prompt: s.prompt,
+    }));
+
+    console.log(`[TemplateWizard] Smart prompts generated for: ${parsed.subjectType}`);
+    return { stages, segments };
+  } catch (err) {
+    console.warn('[TemplateWizard] Smart prompt generation failed, using defaults:', err);
+    return null;
+  }
+}
+
 /** Get the selected video model */
 const getVideoModel = (): string => {
   try { return localStorage.getItem('tensorax_video_model')?.trim() || 'veo-2.0-generate-001'; } catch { return 'veo-2.0-generate-001'; }
@@ -282,41 +386,57 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
         });
       }
 
-      // If parsing found fewer than 3 stages, create defaults
-      const stages: TransformationStage[] = parsedStages.length >= 3 ? parsedStages : [
-        { id: 1, label: 'Current State (source image)', prompt: '(source image — no generation needed)' },
-        { id: 2, label: 'Site Preparation', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding erected around full facade, protective netting draped over scaffolding poles. Old satellite dishes and tangled cables removed. Loose render chipped away exposing raw concrete underneath. Ground-level debris cleared into neat skip bins. Cracked pavement swept clean. Overcast natural daylight, photorealistic.' },
-        { id: 3, label: 'Structural Repair & Insulation', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding still in place. Bottom three floors wrapped in new rigid EPS insulation boards (light grey, visible panel grid lines, plastic anchor caps dotted across surface). Upper floors still exposed concrete awaiting insulation. New double-glazed PVC window frames installed on lower floors (white frames, closed). Old windows remain on upper floors. Reinforced concrete balcony slabs repaired — fresh grey concrete visible. Overcast daylight, photorealistic.' },
-        { id: 4, label: 'Facade Finishing', prompt: 'Same building, exact same camera angle. No people visible. Scaffolding partially removed (remaining only on top floor). Full facade rendered in smooth silicone plaster — warm off-white base colour with accent colour panels (terracotta or sage green) marking each floor division. All windows replaced with uniform white double-glazed PVC frames. New powder-coated aluminium balcony railings (dark grey, horizontal bar design). Downpipes and guttering replaced with new dark-grey PVC. Slightly overcast daylight, photorealistic.' },
-        { id: 5, label: 'Ground Works & Landscaping', prompt: 'Same building, exact same camera angle. No people visible. All scaffolding removed, building fully finished. New interlocking concrete paver walkways (herringbone pattern, natural grey). Young deciduous trees (2-3m tall, staked) planted in tree pits with metal grates. Low ornamental shrub beds with bark mulch. Modern LED bollard lights along paths. Powder-coated steel benches. Covered bicycle rack with stainless steel stands. Fresh turf lawn areas. Soft overcast daylight, photorealistic.' },
-        { id: 6, label: 'Completed Transformation', prompt: 'Same building, exact same camera angle. No people visible. Fully renovated modern European residential block. Clean facade with warm plaster and accent panels. Mature landscaping — trees in full leaf, lush shrubs, green lawn. Warm golden-hour sunlight casting long soft shadows. Balconies with occasional potted plants. Ground-floor entrance with modern glass canopy and illuminated house number. Ambient LED path lighting glowing softly. Photorealistic, architectural photography style.' },
-      ];
+      // If parsing found fewer than 3 stages, use AI to generate context-appropriate prompts
+      let stages: TransformationStage[];
+      let segments: VideoSegment[];
+
+      if (parsedStages.length >= 3) {
+        stages = parsedStages;
+        // Build generic segments for parsed stages
+        segments = [];
+        for (let i = 0; i < stages.length - 1; i++) {
+          segments.push({
+            id: i + 1,
+            startStageId: stages[i].id,
+            endStageId: stages[i + 1].id,
+            prompt: `Locked-off camera, no camera movement. Time-lapse transition: ${stages[i].label} gradually transforms into ${stages[i + 1].label}. No people visible. Smooth, cinematic, photorealistic.`,
+          });
+        }
+      } else {
+        // Use Gemini to analyse the source image and generate appropriate prompts
+        update({ progressMessage: 'Analysing source image to generate construction-appropriate stage prompts...' });
+        const smartResult = state.beforeImage
+          ? await generateSmartStagePrompts(state.beforeImage, geminiKey)
+          : null;
+
+        if (smartResult) {
+          stages = smartResult.stages;
+          segments = smartResult.segments;
+        } else {
+          // Final fallback — generic transformation stages
+          stages = [
+            { id: 1, label: 'Current State (source image)', prompt: '(source image — no generation needed)' },
+            { id: 2, label: 'Initial Preparation', prompt: 'Same subject, exact same camera angle. No people visible. Site cleared and prepared for renovation work. Temporary protective barriers and equipment staging areas visible. Damaged or deteriorated elements identified and marked. Overcast natural daylight, photorealistic.' },
+            { id: 3, label: 'Structural Work', prompt: 'Same subject, exact same camera angle. No people visible. Major structural repairs and reinforcement completed. New foundational elements installed. Core infrastructure upgraded. Fresh materials contrast with remaining original surfaces. Overcast daylight, photorealistic.' },
+            { id: 4, label: 'Surface & Finishing', prompt: 'Same subject, exact same camera angle. No people visible. New surface finishes applied — clean, modern materials and colours. All structural work covered with final layers. New fixtures and fittings installed. Slightly overcast daylight, photorealistic.' },
+            { id: 5, label: 'Surroundings & Details', prompt: 'Same subject, exact same camera angle. No people visible. Surrounding area landscaped and finished. New pathways, greenery, lighting, and street furniture installed. All construction traces removed. Soft overcast daylight, photorealistic.' },
+            { id: 6, label: 'Completed Transformation', prompt: 'Same subject, exact same camera angle. No people visible. Fully completed renovation in pristine condition. Warm golden-hour sunlight. Mature landscaping, ambient lighting glowing softly. Photorealistic, architectural photography style.' },
+          ];
+          segments = [];
+          for (let i = 0; i < stages.length - 1; i++) {
+            segments.push({
+              id: i + 1,
+              startStageId: stages[i].id,
+              endStageId: stages[i + 1].id,
+              prompt: `Locked-off camera, no camera movement. Time-lapse transition: ${stages[i].label} gradually transforms into ${stages[i + 1].label}. No people visible. Smooth, cinematic, photorealistic.`,
+            });
+          }
+        }
+      }
 
       // Stage 1 is always the source image
       if (stages[0]) {
         stages[0].imageUrl = state.beforeImage;
-      }
-
-      // Build segments between consecutive stages with detailed transition prompts
-      const segmentPromptDetails: Record<string, string> = {
-        '1-2': 'Locked-off camera, no camera movement. Time-lapse: scaffolding rises up the facade layer by layer, protective netting unfurls over the structure, old satellite dishes vanish, tangled cables disappear, loose render crumbles away revealing raw concrete, debris on the ground organises itself into skip bins. No people visible. Smooth, cinematic, photorealistic.',
-        '2-3': 'Locked-off camera, no camera movement. Time-lapse: insulation boards spread across the facade from bottom upward floor by floor, plastic anchor caps appear dotting the surface, old windows morph into new white PVC double-glazed frames starting from ground floor up, balcony slabs transform from cracked to fresh smooth concrete. No people visible. Smooth, cinematic, photorealistic.',
-        '3-4': 'Locked-off camera, no camera movement. Time-lapse: smooth plaster renders across the facade in a wave from bottom to top, colour appears — warm off-white with accent panels emerging at each floor line, scaffolding sections disappear from lower floors upward, new dark aluminium balcony railings materialise, fresh downpipes and guttering appear. No people visible. Smooth, cinematic, photorealistic.',
-        '4-5': 'Locked-off camera, no camera movement. Time-lapse: remaining scaffolding dissolves away, ground transforms — raw earth morphs into paved walkways in herringbone pattern, young trees rise from the ground with support stakes, shrub beds fill in with greenery, bollard lights appear along paths, benches and bike racks materialise, fresh turf rolls out across lawn areas. No people visible. Smooth, cinematic, photorealistic.',
-        '5-6': 'Locked-off camera, no camera movement. Time-lapse: daylight shifts from overcast to warm golden hour, trees mature and fill with leaves, shrubs grow lush and full, lawn deepens in colour, potted plants appear on balconies, entrance canopy glass gleams, path lights begin to glow warmly, long soft shadows stretch across the scene. No people visible. Smooth, cinematic, photorealistic.',
-      };
-
-      const segments: VideoSegment[] = [];
-      for (let i = 0; i < stages.length - 1; i++) {
-        const key = `${stages[i].id}-${stages[i + 1].id}`;
-        const detailedPrompt = segmentPromptDetails[key]
-          || `Locked-off camera, no camera movement. Time-lapse transition: ${stages[i].label} gradually transforms into ${stages[i + 1].label}. No people visible. Smooth, cinematic, photorealistic.`;
-        segments.push({
-          id: i + 1,
-          startStageId: stages[i].id,
-          endStageId: stages[i + 1].id,
-          prompt: detailedPrompt,
-        });
       }
 
       update({
