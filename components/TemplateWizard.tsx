@@ -97,13 +97,29 @@ const getFalVideoKey = (): string => {
   } catch { return ''; }
 };
 
-/** Get Gemini analysis key from localStorage */
+/** Get any Gemini API key from localStorage — checks all possible storage locations */
 const getGeminiKey = (): string => {
   try {
+    // 1. Per-model analysis key
     const model = localStorage.getItem('tensorax_analysis_model')?.trim() || '';
-    return localStorage.getItem(`tensorax_analysis_key__${model}`)?.trim()
-      || localStorage.getItem('tensorax_analysis_key')?.trim()
-      || '';
+    const perModel = localStorage.getItem(`tensorax_analysis_key__${model}`)?.trim();
+    if (perModel) return perModel;
+    // 2. Base analysis key
+    const base = localStorage.getItem('tensorax_analysis_key')?.trim();
+    if (base) return base;
+    // 3. Video analysis key (separate slot in Project Settings)
+    const vaModel = localStorage.getItem('tensorax_video_analysis_model')?.trim() || '';
+    const vaPerModel = localStorage.getItem(`tensorax_video_analysis_key__${vaModel}`)?.trim();
+    if (vaPerModel) return vaPerModel;
+    const vaBase = localStorage.getItem('tensorax_video_analysis_key')?.trim();
+    if (vaBase) return vaBase;
+    // 4. Any Google AI key from image generation
+    const imgModel = localStorage.getItem('tensorax_image_model')?.trim() || '';
+    const imgKey = localStorage.getItem(`tensorax_image_key__${imgModel}`)?.trim();
+    if (imgKey && imgKey.startsWith('AIza')) return imgKey;
+    const imgBase = localStorage.getItem('tensorax_image_key')?.trim();
+    if (imgBase && imgBase.startsWith('AIza')) return imgBase;
+    return '';
   } catch { return ''; }
 };
 
