@@ -59,8 +59,8 @@ const MAX_POLL_SECONDS = 300; // 5-minute timeout
 async function pollFalQueue(model, requestId, headers, onProgress) {
   const statusUrl = `${FAL_BASE}/${model}/requests/${requestId}/status`;
   const resultUrl = `${FAL_BASE}/${model}/requests/${requestId}`;
-  // Status/result polling must use GET with only Authorization — no Content-Type
-  const pollHeaders = { "Authorization": headers["Authorization"] };
+  // fal.ai queue polling requires POST (GET returns 405)
+  const pollHeaders = { "Authorization": headers["Authorization"], "Content-Type": "application/json" };
 
   let elapsed = 0;
   let lastStatus = '';
@@ -81,7 +81,7 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
     let falStatus = null;
 
     try {
-      const statusRes = await fetch(statusUrl, { method: 'GET', headers: pollHeaders });
+      const statusRes = await fetch(statusUrl, { method: 'POST', headers: pollHeaders });
       if (!statusRes.ok) {
         console.warn("[Kling] Poll error", statusRes.status);
         onProgress?.(`⚠️ Poll error (HTTP ${statusRes.status}) — retrying... (${timeStr})`);
@@ -113,7 +113,7 @@ async function pollFalQueue(model, requestId, headers, onProgress) {
     onProgress?.(statusText);
 
     if (falStatus?.status === "COMPLETED") {
-      const resultRes = await fetch(resultUrl, { method: 'GET', headers: pollHeaders });
+      const resultRes = await fetch(resultUrl, { method: 'POST', headers: pollHeaders });
       if (!resultRes.ok) throw new Error(`Kling: failed to fetch result (${resultRes.status})`);
       const result = await resultRes.json();
       const videoUrl =
