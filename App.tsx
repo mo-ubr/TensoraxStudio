@@ -1196,15 +1196,15 @@ const App: React.FC = () => {
                 <i className={`fa-solid ${tpl?.icon || 'fa-shapes'} text-[#91569c]`}></i>
                 <div>
                   <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">{tpl?.name || 'Template'}</span>
-                  <p className="text-[9px] text-[#888] mt-0.5">Configure your API keys below, then launch the template</p>
+                  <p className="text-[9px] text-[#888] mt-0.5">Configure your API keys below, then return to the template</p>
                 </div>
               </div>
               <button
                 onClick={() => setCurrentScreen('landing')}
                 className="px-5 py-2 rounded-lg bg-[#91569c] hover:bg-[#7a4685] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2"
               >
-                <i className="fa-solid fa-rocket text-[10px]"></i>
-                Launch Template
+                <i className="fa-solid fa-arrow-left text-[10px]"></i>
+                Back to Template
               </button>
             </div>
           );
@@ -1214,7 +1214,7 @@ const App: React.FC = () => {
           brands={brands}
           activeBrandId={activeBrandId}
           activeTemplateId={activeTemplateId}
-          onBack={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          onBack={() => { setCurrentScreen('landing'); }}
           onSwitchProject={() => { persistProject(null); setActiveTemplateId(null); setCurrentScreen('landing'); }}
           onUpdateProject={(updated) => {
             persistProject(updated);
