@@ -365,7 +365,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
     try {
       const geminiKey = getGeminiKey();
-      if (!geminiKey) throw new Error('No Gemini API key found. Set it in Analysis API settings.');
+      if (!geminiKey) throw new Error('No Gemini API key found. Go to Project Settings (gear icon at top right) → Analysis section and enter your Gemini key.');
 
       const res = await fetch('/api/video/analyse-uploaded-video', {
         method: 'POST',
@@ -714,6 +714,15 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
   const anyKeyframeGenerating = state.stages.some(s => s.isGenerating);
   const anySegmentGenerating = state.segments.some(s => s.isGenerating);
 
+  // Check all API keys upfront
+  const hasGeminiKey = !!getGeminiKey();
+  const hasImageKey = !!getImageEditingKey();
+  const hasVideoKey = !!getVideoKey();
+  const missingKeys: string[] = [];
+  if (!hasGeminiKey) missingKeys.push('Analysis (Gemini)');
+  if (!hasImageKey) missingKeys.push('Image Generation');
+  if (!hasVideoKey) missingKeys.push('Video Generation (fal.ai)');
+
   return (
     <div className="flex-1 flex flex-col bg-[#edecec] overflow-hidden">
       {/* Header */}
@@ -780,6 +789,24 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             </React.Fragment>
           ))}
         </div>
+
+        {/* API Key status */}
+        {missingKeys.length > 0 && (
+          <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <i className="fa-solid fa-triangle-exclamation text-amber-500 text-[10px]"></i>
+            <span className="text-[10px] text-amber-700">
+              <strong>Missing API keys:</strong> {missingKeys.join(', ')}
+            </span>
+            <span className="text-[10px] text-amber-600">— Set them in Project Settings</span>
+          </div>
+        )}
+        {missingKeys.length === 0 && (
+          <div className="mt-2 flex items-center gap-3 text-[9px] text-[#888]">
+            <span><i className="fa-solid fa-circle-check text-green-500 mr-0.5"></i> Analysis</span>
+            <span><i className="fa-solid fa-circle-check text-green-500 mr-0.5"></i> Image Gen</span>
+            <span><i className="fa-solid fa-circle-check text-green-500 mr-0.5"></i> Video Gen</span>
+          </div>
+        )}
       </div>
 
       {/* Content */}
