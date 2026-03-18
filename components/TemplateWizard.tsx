@@ -81,44 +81,33 @@ const getImageEditingKey = (): string => {
   } catch { return ''; }
 };
 
-/** Get fal.ai key for video generation (Kling/Seedance) from localStorage */
+/** Get fal.ai key for video generation — scans ALL tensorax keys for a non-Google key */
 const getFalVideoKey = (): string => {
   try {
     // Shared fal key first
     const falKey = localStorage.getItem('tensorax_fal_key')?.trim();
     if (falKey) return falKey;
-    // Search per-model keys for any fal key
-    const allKeys = Object.keys(localStorage).filter(k => k.startsWith('tensorax_video_key__'));
-    for (const lsKey of allKeys) {
-      const val = localStorage.getItem(lsKey)?.trim() || '';
+    // Scan all video-related keys for a fal.ai key (not starting with AIza)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('tensorax_video_key')) continue;
+      const val = localStorage.getItem(key)?.trim() || '';
       if (val && !val.startsWith('AIza')) return val;
     }
-    return localStorage.getItem('tensorax_video_key')?.trim() || '';
+    return '';
   } catch { return ''; }
 };
 
-/** Get any Gemini API key from localStorage — checks all possible storage locations */
+/** Get any Gemini API key from localStorage — scans ALL tensorax keys for a Google AI key */
 const getGeminiKey = (): string => {
   try {
-    // 1. Per-model analysis key
-    const model = localStorage.getItem('tensorax_analysis_model')?.trim() || '';
-    const perModel = localStorage.getItem(`tensorax_analysis_key__${model}`)?.trim();
-    if (perModel) return perModel;
-    // 2. Base analysis key
-    const base = localStorage.getItem('tensorax_analysis_key')?.trim();
-    if (base) return base;
-    // 3. Video analysis key (separate slot in Project Settings)
-    const vaModel = localStorage.getItem('tensorax_video_analysis_model')?.trim() || '';
-    const vaPerModel = localStorage.getItem(`tensorax_video_analysis_key__${vaModel}`)?.trim();
-    if (vaPerModel) return vaPerModel;
-    const vaBase = localStorage.getItem('tensorax_video_analysis_key')?.trim();
-    if (vaBase) return vaBase;
-    // 4. Any Google AI key from image generation
-    const imgModel = localStorage.getItem('tensorax_image_model')?.trim() || '';
-    const imgKey = localStorage.getItem(`tensorax_image_key__${imgModel}`)?.trim();
-    if (imgKey && imgKey.startsWith('AIza')) return imgKey;
-    const imgBase = localStorage.getItem('tensorax_image_key')?.trim();
-    if (imgBase && imgBase.startsWith('AIza')) return imgBase;
+    // Scan every tensorax key in localStorage for a Google AI key (starts with AIza)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('tensorax_')) continue;
+      const val = localStorage.getItem(key)?.trim() || '';
+      if (val && val.startsWith('AIza')) return val;
+    }
     return '';
   } catch { return ''; }
 };
@@ -829,8 +818,77 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
 
-          {/* ═══ STEP 0: Upload Media ═══ */}
+          {/* ═══ STEP 0: Settings ═══ */}
           {state.step === 0 && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide mb-4">
+                  <i className="fa-solid fa-sliders text-[#91569c] mr-2"></i>API Keys & Models
+                </h2>
+                <p className="text-[10px] text-[#888] mb-4">All keys are pre-loaded from your last session. Change them here if needed.</p>
+                <div className="space-y-3">
+                  {/* Analysis key */}
+                  <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
+                    <i className="fa-solid fa-eye text-[#91569c] w-5 text-center"></i>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Analysis (Gemini)</span>
+                    </div>
+                    {hasGeminiKey
+                      ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set (AIza...{getGeminiKey().slice(-4)})</span>
+                      : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
+                    }
+                  </div>
+                  {/* Image gen key */}
+                  <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
+                    <i className="fa-solid fa-image text-[#91569c] w-5 text-center"></i>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Image Generation (Gemini)</span>
+                    </div>
+                    {hasImageKey
+                      ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set</span>
+                      : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
+                    }
+                  </div>
+                  {/* Video gen key */}
+                  <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
+                    <i className="fa-solid fa-video text-[#91569c] w-5 text-center"></i>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Video Generation (fal.ai)</span>
+                    </div>
+                    {hasVideoKey
+                      ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set</span>
+                      : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
+                    }
+                  </div>
+                </div>
+                {missingKeys.length > 0 && (
+                  <p className="text-[10px] text-amber-600 mt-3"><i className="fa-solid fa-info-circle mr-1"></i>Missing keys? Click <strong>Full Settings</strong> below to configure them.</p>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button onClick={onCancel} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
+                  <i className="fa-solid fa-arrow-left mr-1"></i> Cancel
+                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => {
+                    // Navigate to full Project Settings — the parent App handles this
+                    const settingsBtn = document.querySelector('[data-action="open-settings"]') as HTMLButtonElement;
+                    if (settingsBtn) settingsBtn.click();
+                  }} className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors">
+                    <i className="fa-solid fa-gear mr-1"></i>Full Settings
+                  </button>
+                  <button onClick={() => update({ step: 1 })} disabled={missingKeys.length > 0}
+                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
+                    <i className="fa-solid fa-arrow-right"></i>Next: Upload & Analyse
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ STEP 1: Upload & Analyse ═══ */}
+          {state.step === 1 && !state.stages.length && (
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 {/* Image upload */}
@@ -917,8 +975,8 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             </div>
           )}
 
-          {/* ═══ STEP 1: Define Stages ═══ */}
-          {state.step === 1 && (
+          {/* ═══ STEP 1 continued: Define Stages (after analysis) ═══ */}
+          {state.step === 1 && state.stages.length > 0 && (
             <div className="space-y-4 animate-fade-in">
               {/* Analysis summary (collapsible) */}
               <details className="bg-white border border-[#e0d6e3] rounded-xl shadow-sm">
@@ -1013,7 +1071,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             </div>
           )}
 
-          {/* ═══ STEP 2: Generate Keyframes ═══ */}
+          {/* ═══ STEP 2: Generate Images (Keyframes) ═══ */}
           {state.step === 2 && (
             <div className="space-y-4 animate-fade-in">
               <div className="bg-white border border-[#e0d6e3] rounded-xl p-4 shadow-sm">
@@ -1115,7 +1173,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
             </div>
           )}
 
-          {/* ═══ STEP 3: Generate Video Segments ═══ */}
+          {/* ═══ STEP 3: Generate Videos ═══ */}
           {state.step === 3 && (
             <div className="space-y-4 animate-fade-in">
               {/* Segment editor & generator */}

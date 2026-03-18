@@ -154,7 +154,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     name: 'What If? Transformation',
     description: 'Upload a reference video and starting image. The AI extracts transformation stages, generates keyframe images for each stage, then creates video segments between them.',
     icon: 'fa-wand-magic-sparkles',
-    steps: ['Upload Media', 'Define Stages', 'Generate Keyframes', 'Generate Video'],
+    steps: ['Settings', 'Upload & Analyse', 'Generate Images', 'Generate Videos', 'Concatenate'],
     defaultPrompt: '',
   },
 ];
