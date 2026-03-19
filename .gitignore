@@ -20,6 +20,8 @@ Tensorax-Key.json
 *.db-wal
 *.db-shm
 assets/.tmp-video/
+assets/test-fixtures/
+public/test-refs/*.mp4
 
 # Editor directories and files
 .vscode/*

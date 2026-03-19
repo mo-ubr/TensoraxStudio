@@ -144,50 +144,57 @@ interface ProjectSettingsProps {
 
 const ProjectDirectory: React.FC<{ project: Project; onUpdateProject: (p: Project) => void }> = ({ project, onUpdateProject }) => {
   const [dirPath, setDirPath] = useState('');
-  const [folders, setFolders] = useState<string[]>([]);
-  const [showPicker, setShowPicker] = useState(false);
-  const [customSlug, setCustomSlug] = useState(project.slug);
+  const [isPicking, setIsPicking] = useState(false);
 
   useEffect(() => {
     fetch(`/api/db/projects/${project.id}/directory`)
       .then(r => r.json())
-      .then(d => { setDirPath(d.path); setCustomSlug(d.slug); })
+      .then(d => { setDirPath(d.path); })
       .catch(() => {});
   }, [project.id, project.slug]);
-
-  const loadFolders = async () => {
-    try {
-      const r = await fetch('/api/db/project-folders');
-      const d = await r.json();
-      setFolders(d.folders || []);
-    } catch { /* ignore */ }
-  };
 
   const openFolder = async () => {
     await fetch(`/api/db/projects/${project.id}/open-folder`, { method: 'POST' });
   };
 
-  const changeSlug = async (newSlug: string) => {
-    if (!newSlug.trim() || newSlug.trim() === project.slug) {
-      setShowPicker(false);
-      return;
-    }
+  const browseFolder = async () => {
+    setIsPicking(true);
     try {
-      const r = await fetch(`/api/db/projects/${project.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: newSlug.trim() }),
-      });
-      const updated = await r.json();
-      onUpdateProject(updated);
-      setCustomSlug(newSlug.trim());
-      setDirPath('');
-      fetch(`/api/db/projects/${project.id}/directory`)
-        .then(r2 => r2.json())
-        .then(d => setDirPath(d.path))
-        .catch(() => {});
+      const r = await fetch(`/api/db/projects/${project.id}/pick-directory`, { method: 'POST' });
+      const d = await r.json();
+      if (!d.cancelled && d.path) {
+        setDirPath(d.path);
+      }
     } catch { /* ignore */ }
-    setShowPicker(false);
+    setIsPicking(false);
+  };
+
+  const setDirectoryFromInput = async (path: string) => {
+    if (!path.trim()) return;
+    try {
+      const r = await fetch(`/api/db/projects/${project.id}/set-directory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: path.trim() }),
+      });
+      const d = await r.json();
+      if (d.path) setDirPath(d.path);
+    } catch { /* ignore */ }
+  };
+
+  const resetToDefault = async () => {
+    try {
+      const r = await fetch(`/api/db/projects/${project.id}/set-directory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: '' }),
+      });
+      const d = await r.json();
+      // Reload to get default path
+      const r2 = await fetch(`/api/db/projects/${project.id}/directory`);
+      const d2 = await r2.json();
+      setDirPath(d2.path);
+    } catch { /* ignore */ }
   };
 
   return (
@@ -200,9 +207,31 @@ const ProjectDirectory: React.FC<{ project: Project; onUpdateProject: (p: Projec
         <div className="bg-[#f6f0f8] rounded-lg p-3">
           <span className="text-[8px] font-black text-[#888] uppercase tracking-wider block mb-1.5">Save Location</span>
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[10px] text-[#3a3a3a] font-mono truncate" title={dirPath}>
-              {dirPath || `assets/0. Projects/${project.slug}`}
-            </div>
+            <input
+              type="text"
+              value={dirPath}
+              onChange={(e) => setDirPath(e.target.value)}
+              onBlur={(e) => setDirectoryFromInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') setDirectoryFromInput(dirPath); }}
+              className="flex-1 bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[10px] text-[#3a3a3a] font-mono outline-none focus:ring-2 focus:ring-[#91569c]/30"
+              title={dirPath}
+              placeholder="Select a folder for project files..."
+            />
+            <button
+              onClick={browseFolder}
+              disabled={isPicking}
+              className="px-3 py-2 rounded-lg bg-[#91569c] text-white text-[9px] font-bold uppercase tracking-wider hover:bg-[#5c3a62] transition-colors disabled:opacity-50"
+              title="Browse for folder"
+            >
+              {isPicking ? (
+                <i className="fa-solid fa-spinner fa-spin text-[10px]"></i>
+              ) : (
+                <>
+                  <i className="fa-solid fa-folder-open text-[10px] mr-1"></i>
+                  Browse
+                </>
+              )}
+            </button>
             <button
               onClick={openFolder}
               className="px-2.5 py-2 rounded-lg border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors"
@@ -211,53 +240,8 @@ const ProjectDirectory: React.FC<{ project: Project; onUpdateProject: (p: Projec
               <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
             </button>
           </div>
-        </div>
-
-        <div className="bg-[#f6f0f8] rounded-lg p-3">
-          <span className="text-[8px] font-black text-[#888] uppercase tracking-wider block mb-1.5">Folder Name</span>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={customSlug}
-              onChange={(e) => setCustomSlug(e.target.value.replace(/[^a-zA-Z0-9\s_-]/g, '').replace(/\s+/g, '_'))}
-              onKeyDown={(e) => { if (e.key === 'Enter') changeSlug(customSlug); }}
-              className="flex-1 bg-white border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] font-bold text-[#5c3a62] outline-none focus:ring-2 focus:ring-[#91569c]/30"
-            />
-            {customSlug !== project.slug && (
-              <button
-                onClick={() => changeSlug(customSlug)}
-                className="px-3 py-2 rounded-lg bg-[#91569c] text-white text-[9px] font-bold uppercase tracking-wider hover:bg-[#5c3a62] transition-colors"
-              >
-                Save
-              </button>
-            )}
-            <button
-              onClick={() => { setShowPicker(!showPicker); if (!showPicker) loadFolders(); }}
-              className="px-2.5 py-2 rounded-lg border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors"
-              title="Browse existing folders"
-            >
-              <i className="fa-solid fa-folder-tree text-[10px]"></i>
-            </button>
-          </div>
-          {showPicker && folders.length > 0 && (
-            <div className="mt-2 bg-white border border-[#ceadd4] rounded-lg max-h-40 overflow-y-auto">
-              {folders.map(f => (
-                <button
-                  key={f}
-                  onClick={() => { setCustomSlug(f); changeSlug(f); }}
-                  className={`w-full text-left px-3 py-2 text-[10px] hover:bg-[#f6f0f8] transition-colors flex items-center gap-2 ${
-                    f === project.slug ? 'font-bold text-[#91569c] bg-[#f6f0f8]' : 'text-[#3a3a3a]'
-                  }`}
-                >
-                  <i className={`fa-solid fa-folder text-[8px] ${f === project.slug ? 'text-[#91569c]' : 'text-[#ceadd4]'}`}></i>
-                  {f}
-                  {f === project.slug && <span className="ml-auto text-[8px] text-[#91569c]">current</span>}
-                </button>
-              ))}
-            </div>
-          )}
           <p className="text-[9px] text-[#888] mt-1.5">
-            All generated files (concepts, images, frames, videos) are saved here.
+            All generated files (concepts, images, frames, videos) are saved here. Click Browse to choose any folder on your machine.
           </p>
         </div>
       </div>

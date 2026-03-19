@@ -1,0 +1,5 @@
+file '/c/Users/marie/Documents/MyFiles/11 Apps/TensoraxStudio/public/test-refs/segment-1.mp4'
+file '/c/Users/marie/Documents/MyFiles/11 Apps/TensoraxStudio/public/test-refs/segment-2.mp4'
+file '/c/Users/marie/Documents/MyFiles/11 Apps/TensoraxStudio/public/test-refs/segment-3.mp4'
+file '/c/Users/marie/Documents/MyFiles/11 Apps/TensoraxStudio/public/test-refs/segment-4.mp4'
+file '/c/Users/marie/Documents/MyFiles/11 Apps/TensoraxStudio/public/test-refs/segment-5.mp4'

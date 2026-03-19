@@ -7,10 +7,71 @@
  * Get your key at: https://fal.ai/dashboard/keys
  */
 
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const FAL_BASE = "https://queue.fal.run";
+const FAL_UPLOAD = "https://fal.ai/api/storage/upload";
 const MERGE_ENDPOINT = "fal-ai/ffmpeg-api/merge-videos";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Upload a local file to fal.ai storage and return the CDN URL.
+ * Local paths start with "/" and are resolved relative to public/ (dev) or dist/ (prod).
+ */
+async function uploadLocalToFal(localPath, apiKey) {
+  // Resolve to filesystem path — try public/ first (dev), then dist/ (prod)
+  const projectRoot = resolve(__dirname, "..");
+  let filePath = resolve(projectRoot, "public", localPath.replace(/^\//, ""));
+  const { existsSync } = await import("fs");
+  if (!existsSync(filePath)) {
+    filePath = resolve(projectRoot, "dist", localPath.replace(/^\//, ""));
+  }
+
+  console.log(`[MergeVideos] Uploading local file to fal.ai: ${filePath}`);
+  const fileData = readFileSync(filePath);
+  const blob = new Blob([fileData], { type: "video/mp4" });
+
+  const form = new FormData();
+  form.append("file", blob, localPath.split("/").pop());
+
+  const res = await fetch(FAL_UPLOAD, {
+    method: "POST",
+    headers: { "Authorization": `Key ${apiKey.trim()}` },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`fal.ai upload failed (${res.status}): ${err}`);
+  }
+
+  const result = await res.json();
+  const cdnUrl = result.url || result.file_url || result.access_url;
+  if (!cdnUrl) throw new Error("fal.ai upload: no URL in response. Got: " + JSON.stringify(result).slice(0, 300));
+  console.log(`[MergeVideos] Uploaded → ${cdnUrl}`);
+  return cdnUrl;
+}
+
+/**
+ * Resolve video URLs — upload any local paths to fal.ai storage first.
+ */
+async function resolveVideoUrls(videoUrls, apiKey, onProgress) {
+  const resolved = [];
+  for (let i = 0; i < videoUrls.length; i++) {
+    const url = videoUrls[i];
+    if (url.startsWith("/") || url.startsWith("./")) {
+      onProgress?.(`Uploading local file ${i + 1}/${videoUrls.length} to fal.ai...`);
+      resolved.push(await uploadLocalToFal(url, apiKey));
+    } else {
+      resolved.push(url);
+    }
+  }
+  return resolved;
+}
 
 /**
  * Poll fal.ai queue until COMPLETED or FAILED.
@@ -66,8 +127,11 @@ export async function mergeVideos({ apiKey, videoUrls, resolution, onProgress })
     "Content-Type": "application/json",
   };
 
+  // Upload any local files to fal.ai storage first
+  const resolvedUrls = await resolveVideoUrls(videoUrls, apiKey, onProgress);
+
   // fal.ai allows max 5 per call — chain merges if more
-  let urls = [...videoUrls];
+  let urls = [...resolvedUrls];
 
   while (urls.length > 1) {
     const batch = urls.splice(0, 5);

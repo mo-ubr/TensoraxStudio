@@ -105,6 +105,24 @@ app.get("/api/character-files", async (_req, res) => {
 
 app.use("/character-assets", express.static(CHARACTERS_DIR));
 app.use("/project-assets", express.static(resolve(process.cwd(), "assets/0. Projects")));
+app.use("/test-fixtures", express.static(resolve(process.cwd(), "assets/test-fixtures")));
+
+// API: list test fixture videos
+app.get("/api/test-fixtures/videos", async (req, res) => {
+  try {
+    const videosDir = resolve(process.cwd(), "assets/test-fixtures/videos");
+    const files = await readdir(videosDir);
+    const videoFiles = files.filter(f => /\.(mp4|webm|mov)$/i.test(f));
+    const results = [];
+    for (const f of videoFiles) {
+      const s = await stat(join(videosDir, f));
+      results.push({ name: f, size: s.size, url: `/test-fixtures/videos/${encodeURIComponent(f)}` });
+    }
+    res.json(results);
+  } catch (err) {
+    res.json([]);
+  }
+});
 
 app.post("/api/generate-image", async (req, res) => {
   try {
@@ -259,11 +277,75 @@ app.post("/api/generate-video-seedance", async (req, res) => {
 
 // ─── Video Merge / Stitch ────────────────────────────────────────────────────
 
+/** Local ffmpeg merge — no API key needed */
+async function mergeVideosLocal(videoUrls) {
+  let ffmpegPath;
+  try {
+    const installer = await import("@ffmpeg-installer/ffmpeg");
+    ffmpegPath = installer.default?.path || installer.path;
+  } catch { throw new Error("@ffmpeg-installer/ffmpeg not installed"); }
+
+  const { execSync } = await import("child_process");
+  const projectRoot = resolve(__dirname, "..");
+  const tmpDir = resolve(projectRoot, "assets", ".tmp-video");
+  await mkdir(tmpDir, { recursive: true });
+
+  // Resolve local paths to absolute filesystem paths
+  const resolvedPaths = videoUrls.map(u => {
+    if (u.startsWith("/") || u.startsWith("./")) {
+      const rel = u.replace(/^\.?\//, "");
+      const tryPublic = resolve(projectRoot, "public", rel);
+      if (existsSync(tryPublic)) return tryPublic;
+      const tryDist = resolve(projectRoot, "dist", rel);
+      if (existsSync(tryDist)) return tryDist;
+      throw new Error(`Local video not found: ${u}`);
+    }
+    return u; // remote URL — can't handle locally
+  });
+
+  // If any are remote URLs, can't do local merge
+  if (resolvedPaths.some(p => p.startsWith("http"))) {
+    throw new Error("Local merge only supports local files");
+  }
+
+  const listFile = join(tmpDir, `concat-${Date.now()}.txt`);
+  const outFile = join(tmpDir, `merged-${Date.now()}.mp4`);
+  const listContent = resolvedPaths.map(p => `file '${p.replace(/\\/g, "/")}'`).join("\n");
+  const { writeFileSync, unlinkSync } = await import("fs");
+  writeFileSync(listFile, listContent);
+
+  console.log("[MergeVideos-Local] Concatenating", resolvedPaths.length, "videos with ffmpeg");
+  execSync(`"${ffmpegPath}" -f concat -safe 0 -i "${listFile}" -c copy "${outFile}" -y`, { stdio: "pipe", timeout: 120000 });
+  unlinkSync(listFile);
+
+  // Serve via /project-assets or a temp route — move to public
+  const finalName = `final-video-${Date.now()}.mp4`;
+  const publicOut = resolve(projectRoot, "public", "test-refs", finalName);
+  const { renameSync } = await import("fs");
+  renameSync(outFile, publicOut);
+
+  const videoUrl = `/test-refs/${finalName}`;
+  console.log("[MergeVideos-Local] Done →", videoUrl);
+  return videoUrl;
+}
+
 app.post("/api/merge-videos", async (req, res) => {
   try {
     const { apiKey, videoUrls, resolution } = req.body;
-    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
 
+    // Try local ffmpeg first (free, fast, no API key needed)
+    try {
+      const allLocal = videoUrls.every(u => u.startsWith("/") || u.startsWith("./"));
+      if (allLocal) {
+        const videoUrl = await mergeVideosLocal(videoUrls);
+        return res.json({ videoUrl });
+      }
+    } catch (localErr) {
+      console.warn("[MergeVideos] Local merge failed, trying fal.ai:", localErr.message);
+    }
+
+    // Fall back to fal.ai
+    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
     const videoUrl = await mergeVideos({
       apiKey: resolvedApiKey,
       videoUrls,

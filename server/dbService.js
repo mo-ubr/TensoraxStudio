@@ -292,7 +292,26 @@ router.post("/projects/:id/unlink", (req, res) => {
   }
 });
 
-// ─── Project directory info ──────────────────────────────────────────────────
+// ─── Project directory helpers ───────────────────────────────────────────────
+
+/** Map internal subfolder names to Inputs/Outputs structure */
+const IO_MAP = {
+  concepts: "Inputs",      // prompts, analysis text
+  images: "Outputs",       // generated keyframe images
+  frames: "Outputs",       // generated frames
+  videos: "Outputs",       // generated video segments + final
+};
+
+/** Get the effective project directory — custom if set, otherwise default */
+function getProjectDir(project) {
+  try {
+    const meta = JSON.parse(project.metadata || "{}");
+    if (meta.customDirectory && meta.customDirectory.trim()) {
+      return meta.customDirectory.trim();
+    }
+  } catch { /* ignore */ }
+  return join(ASSETS_ROOT, SUBFOLDER_MAP.projects, project.slug);
+}
 
 router.get("/projects/:id/directory", (req, res) => {
   try {
@@ -300,8 +319,121 @@ router.get("/projects/:id/directory", (req, res) => {
     const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
     if (!p) return res.status(404).json({ error: "Project not found" });
 
-    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
+    const projectDir = getProjectDir(p);
     res.json({ path: projectDir, slug: p.slug });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Pick a custom directory for project assets (opens native folder picker on Windows)
+router.post("/projects/:id/pick-directory", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    // Use PowerShell folder picker dialog on Windows
+    const psScript = `Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Select project directory for ${p.name.replace(/'/g, "''")}'; $f.ShowNewFolderButton = $true; if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath } else { '' }`;
+    const { stdout } = await execAsync(`powershell -Command "${psScript.replace(/"/g, '\\"')}"`, { timeout: 60000 });
+    const chosenPath = stdout.trim();
+
+    if (!chosenPath) {
+      return res.json({ cancelled: true, path: getProjectDir(p) });
+    }
+
+    // Store in project metadata
+    const meta = JSON.parse(p.metadata || "{}");
+    meta.customDirectory = chosenPath;
+    d.prepare("UPDATE projects SET metadata = ?, updatedAt = ? WHERE id = ?")
+      .run(JSON.stringify(meta), now(), p.id);
+
+    // Create Inputs/Outputs subfolders in the chosen directory
+    await mkdir(join(chosenPath, "Inputs"), { recursive: true });
+    await mkdir(join(chosenPath, "Outputs"), { recursive: true });
+
+    console.log(`[DB] Project "${p.name}" directory set to: ${chosenPath}`);
+    res.json({ path: chosenPath, slug: p.slug });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Set directory from a typed path (no dialog)
+router.post("/projects/:id/set-directory", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const { path: dirPath } = req.body;
+
+    // Store in project metadata (empty string = reset to default)
+    const meta = JSON.parse(p.metadata || "{}");
+    meta.customDirectory = (dirPath || "").trim();
+    d.prepare("UPDATE projects SET metadata = ?, updatedAt = ? WHERE id = ?")
+      .run(JSON.stringify(meta), now(), p.id);
+
+    if (dirPath && dirPath.trim()) {
+      // Create Inputs/Outputs subfolders
+      await mkdir(join(dirPath.trim(), "Inputs"), { recursive: true });
+      await mkdir(join(dirPath.trim(), "Outputs"), { recursive: true });
+      console.log(`[DB] Project "${p.name}" directory set to: ${dirPath.trim()}`);
+      res.json({ path: dirPath.trim(), slug: p.slug });
+    } else {
+      const defaultDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
+      console.log(`[DB] Project "${p.name}" directory reset to default: ${defaultDir}`);
+      res.json({ path: defaultDir, slug: p.slug });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get output directory contents for a project
+router.get("/projects/:id/outputs", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    const hasCustomDir = (() => { try { const m = JSON.parse(p.metadata || "{}"); return !!(m.customDirectory && m.customDirectory.trim()); } catch { return false; } })();
+    const outputDir = hasCustomDir ? join(projectDir, "Outputs") : join(projectDir, "videos");
+
+    await mkdir(outputDir, { recursive: true });
+    const entries = await readdir(outputDir, { withFileTypes: true });
+    const files = entries.filter(e => e.isFile()).map(e => ({
+      name: e.name,
+      path: join(outputDir, e.name),
+      url: `/api/db/projects/${p.id}/output-file/${encodeURIComponent(e.name)}`,
+    }));
+    res.json({ outputDir, files });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Serve a file from the project output directory
+router.get("/projects/:id/output-file/:filename", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    const hasCustomDir = (() => { try { const m = JSON.parse(p.metadata || "{}"); return !!(m.customDirectory && m.customDirectory.trim()); } catch { return false; } })();
+    const outputDir = hasCustomDir ? join(projectDir, "Outputs") : join(projectDir, "videos");
+    const filePath = join(outputDir, decodeURIComponent(req.params.filename));
+
+    const { existsSync } = await import("fs");
+    if (!existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+
+    res.sendFile(filePath);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -325,7 +457,7 @@ router.post("/projects/:id/open-folder", async (req, res) => {
     const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
     if (!p) return res.status(404).json({ error: "Project not found" });
 
-    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
+    const projectDir = getProjectDir(p);
     await mkdir(projectDir, { recursive: true });
 
     const { exec } = await import("child_process");
@@ -351,8 +483,15 @@ router.post("/projects/:id/files", async (req, res) => {
     const { filename, data, subfolder } = req.body;
     if (!filename || !data) return res.status(400).json({ error: "Missing filename or data" });
 
-    const projectDir = join(ASSETS_ROOT, SUBFOLDER_MAP.projects, p.slug);
-    const targetDir = subfolder ? join(projectDir, subfolder) : projectDir;
+    const projectDir = getProjectDir(p);
+    // If project has a custom directory, use Inputs/Outputs structure
+    const hasCustomDir = (() => { try { const m = JSON.parse(p.metadata || "{}"); return !!(m.customDirectory && m.customDirectory.trim()); } catch { return false; } })();
+    let targetDir;
+    if (hasCustomDir && subfolder && IO_MAP[subfolder]) {
+      targetDir = join(projectDir, IO_MAP[subfolder]);
+    } else {
+      targetDir = subfolder ? join(projectDir, subfolder) : projectDir;
+    }
     await mkdir(targetDir, { recursive: true });
 
     const filePath = join(targetDir, filename);
@@ -363,6 +502,13 @@ router.post("/projects/:id/files", async (req, res) => {
       } else {
         await writeFile(filePath, data, "utf-8");
       }
+    } else if (data.startsWith("http://") || data.startsWith("https://")) {
+      // Download external URL (e.g. fal.ai CDN) and save locally
+      console.log(`[DB] Downloading external file: ${data.slice(0, 80)}...`);
+      const response = await fetch(data);
+      if (!response.ok) throw new Error(`Failed to download ${data}: ${response.status}`);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await writeFile(filePath, buffer);
     } else {
       await writeFile(filePath, data, "utf-8");
     }

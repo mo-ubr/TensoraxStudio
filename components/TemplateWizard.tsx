@@ -1,7 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { PROJECT_TEMPLATES, TemplateState, TransformationStage, VideoSegment, type TemplateId } from '../types';
 import { DB } from '../services/projectDB';
 import { GeminiService } from '../services/geminiService';
+import { loadBrands } from '../services/brandData';
 import DropZone from './DropZone';
 
 /**
@@ -295,6 +296,8 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
         videoAnalysis: state.videoAnalysis,
         beforeImage: state.beforeImage,
         finalVideoUrl: state.finalVideoUrl,
+        outputFormat: state.outputFormat,
+        brandId: state.brandId,
       };
       DB.saveMetadata(projectId, { wizardState }).catch(e => console.warn('[TemplateWizard] Failed to save state:', e));
     }, 2000);
@@ -316,6 +319,8 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
         if (typeof saved.videoAnalysis === 'string') partial.videoAnalysis = saved.videoAnalysis;
         if (typeof saved.beforeImage === 'string') partial.beforeImage = saved.beforeImage;
         if (typeof saved.finalVideoUrl === 'string') partial.finalVideoUrl = saved.finalVideoUrl;
+        if (typeof saved.outputFormat === 'string') partial.outputFormat = saved.outputFormat;
+        if (typeof saved.brandId === 'string') partial.brandId = saved.brandId;
       }
 
       // Fallback: load from ProjectSettings uploads if no saved wizard state
@@ -479,6 +484,29 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
         progressMessage: '',
         step: 1,
       });
+
+      // Auto-save analysis text, before image, and all prompts to project assets
+      if (projectId) {
+        DB.saveProjectFile(projectId, 'video-analysis.txt', result.analysis, 'concepts')
+          .catch(e => console.warn('[TemplateWizard] Failed to save analysis:', e));
+        if (state.beforeImage) {
+          DB.saveProjectFile(projectId, 'before-image.png', state.beforeImage, 'images')
+            .catch(e => console.warn('[TemplateWizard] Failed to save before image:', e));
+        }
+        // Save all stage prompts
+        for (const s of stages) {
+          const safeName = (s.label || `stage-${s.id}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+          DB.saveProjectFile(projectId, `stage-${s.id}-${safeName}-prompt.txt`, s.prompt, 'concepts')
+            .catch(e => console.warn('[TemplateWizard] Failed to save stage prompt:', e));
+        }
+        // Save all segment prompts
+        for (const seg of segments) {
+          const startLabel = (stages.find(s => s.id === seg.startStageId)?.label || `stage-${seg.startStageId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+          const endLabel = (stages.find(s => s.id === seg.endStageId)?.label || `stage-${seg.endStageId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+          DB.saveProjectFile(projectId, `segment-${seg.id}-${startLabel}-to-${endLabel}-prompt.txt`, seg.prompt, 'concepts')
+            .catch(e => console.warn('[TemplateWizard] Failed to save segment prompt:', e));
+        }
+      }
     } catch (err: any) {
       update({ isGenerating: false, progressMessage: '', error: err.message });
     }
@@ -537,6 +565,15 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       }
 
       updateStage(stage.id, { imageUrl: resultImageUrl, isGenerating: false });
+
+      // Auto-save keyframe image + prompt to project directory
+      if (projectId && resultImageUrl) {
+        const safeName = (stage.label || `stage-${stage.id}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        DB.saveProjectFile(projectId, `stage-${stage.id}-${safeName}.png`, resultImageUrl, 'images')
+          .catch(e => console.warn('[TemplateWizard] Failed to save keyframe:', e));
+        DB.saveProjectFile(projectId, `stage-${stage.id}-${safeName}-prompt.txt`, stage.prompt, 'concepts')
+          .catch(e => console.warn('[TemplateWizard] Failed to save keyframe prompt:', e));
+      }
     } catch (err: any) {
       updateStage(stage.id, { isGenerating: false });
       update({ error: `Stage ${stage.id}: ${err.message}` });
@@ -660,6 +697,16 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
       updateSegment(segment.id, { videoUrl: resultVideoUrl, isGenerating: false });
       update({ isGenerating: false, progressMessage: '' });
+
+      // Auto-save video segment + prompt to project directory
+      if (projectId && resultVideoUrl) {
+        const startLabel = (state.stages.find(s => s.id === segment.startStageId)?.label || `stage-${segment.startStageId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const endLabel = (state.stages.find(s => s.id === segment.endStageId)?.label || `stage-${segment.endStageId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+        DB.saveProjectFile(projectId, `segment-${segment.id}-${startLabel}-to-${endLabel}.mp4`, resultVideoUrl, 'videos')
+          .catch(e => console.warn('[TemplateWizard] Failed to save video segment:', e));
+        DB.saveProjectFile(projectId, `segment-${segment.id}-${startLabel}-to-${endLabel}-prompt.txt`, segment.prompt, 'concepts')
+          .catch(e => console.warn('[TemplateWizard] Failed to save segment prompt:', e));
+      }
     } catch (err: any) {
       updateSegment(segment.id, { isGenerating: false });
       update({ isGenerating: false, progressMessage: '', error: `Segment ${segment.id}: ${err.message}` });
@@ -702,15 +749,17 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
           || apiKey)
         : apiKey;
 
-      if (!falKey) throw new Error('No fal.ai API key found. Set it in Project Settings → Video Generation.');
+      // Only require API key if there are remote URLs — local files use ffmpeg
+      const allLocal = videoUrls.every(u => u.startsWith('/') || u.startsWith('./'));
+      if (!falKey && !allLocal) throw new Error('No fal.ai API key found. Set it in Project Settings → Video Generation.');
 
       const res = await fetch('/api/merge-videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          apiKey: falKey,
+          apiKey: falKey || '',
           videoUrls,
-          resolution: 'landscape_16_9',
+          resolution: state.outputFormat || 'landscape_16_9',
         }),
       });
 
@@ -721,6 +770,12 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
 
       const result = await res.json();
       update({ finalVideoUrl: result.videoUrl, isGenerating: false, progressMessage: '' });
+
+      // Auto-save final video to project directory
+      if (projectId && result.videoUrl) {
+        DB.saveProjectFile(projectId, 'final-video.mp4', result.videoUrl, 'videos')
+          .catch(e => console.warn('[TemplateWizard] Failed to save final video:', e));
+      }
     } catch (err: any) {
       update({ isGenerating: false, progressMessage: '', error: `Stitch failed: ${err.message}` });
     }
@@ -764,20 +819,24 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
               const base = '/project-assets/_/frames';
               const testStages: TransformationStage[] = [
                 { id: 1, label: 'Original State', prompt: 'A weathered Soviet-era panel block building facade — cracked concrete panels, rusted balcony railings, peeling paint, overgrown vegetation. Street-level view, natural daylight.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene1_Frame1.png')}` },
-                { id: 2, label: 'Early Renovation', prompt: 'The same panel block after initial work — scaffolding erected, old facade panels removed, exposed concrete structure visible, construction materials staged nearby.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene2_Frame1.png')}` },
-                { id: 3, label: 'Mid Renovation', prompt: 'The panel block mid-renovation — new insulation panels applied, fresh render on lower floors, modern window frames being installed, workers on scaffolding.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene3_Frame1.png')}` },
-                { id: 4, label: 'Completed', prompt: 'The fully renovated panel block — modern colourful facade, new balcony railings, energy-efficient windows, landscaped entrance, vibrant and welcoming. Same angle, golden hour.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene5_Frame1.png')}` },
+                { id: 2, label: 'Demolition Begins', prompt: 'The same panel block with scaffolding erected, old facade panels being removed, exposed concrete structure visible, construction materials staged nearby.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene2_Frame1.png')}` },
+                { id: 3, label: 'Structural Work', prompt: 'The panel block stripped to its concrete skeleton — insulation boards being fixed, fresh plaster applied to lower floors, new aluminium window frames lifted into position.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene3_Frame1.png')}` },
+                { id: 4, label: 'New Facade', prompt: 'The panel block with new facade panels being installed — colourful cladding on upper floors, modern balcony railings fitted, windows glazed, lower floors nearly complete.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene4_Frame1.png')}` },
+                { id: 5, label: 'Finishing Touches', prompt: 'The nearly completed panel block — all facade panels in place, landscaping being planted around the entrance, final paint touch-ups, scaffolding partially removed.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene5_Frame1.png')}` },
+                { id: 6, label: 'Completed', prompt: 'The fully renovated panel block — modern colourful facade, gleaming balcony railings, energy-efficient windows, lush landscaped entrance, vibrant and welcoming. Same angle, golden hour.', imageUrl: `${base}/${encodeURIComponent('Панелен_Блок_Scene5_Frame2.png')}` },
               ];
               const testSegments: VideoSegment[] = [
-                { id: 1, startStageId: 1, endStageId: 2, prompt: 'Time-lapse transition: scaffolding rises around the old panel block, workers remove deteriorated facade panels piece by piece, dust clouds drift in the breeze, a crane lifts away old railings.' },
-                { id: 2, startStageId: 2, endStageId: 3, prompt: 'Construction montage: insulation boards are fixed to the bare structure, fresh plaster is applied, new aluminium window frames are lifted into position, glass panes fitted. Workers move with purpose.' },
-                { id: 3, startStageId: 3, endStageId: 4, prompt: 'Final transformation: scaffolding dismantled and lowered, colourful facade panels revealed, new balcony railings gleam, landscaping planted around the entrance, residents gather for a ribbon-cutting at golden hour.' },
+                { id: 1, startStageId: 1, endStageId: 2, prompt: 'Time-lapse transition: scaffolding rises around the old panel block, workers begin removing deteriorated facade panels piece by piece, dust clouds drift in the breeze.', videoUrl: '/test-refs/segment-1.mp4' },
+                { id: 2, startStageId: 2, endStageId: 3, prompt: 'Demolition continues: remaining old panels stripped away, concrete skeleton exposed, insulation boards arrive on trucks and are hoisted up to workers on scaffolding.', videoUrl: '/test-refs/segment-2.mp4' },
+                { id: 3, startStageId: 3, endStageId: 4, prompt: 'Construction montage: fresh plaster applied, new aluminium window frames lifted into position, colourful facade cladding panels bolted into place floor by floor.', videoUrl: '/test-refs/segment-3.mp4' },
+                { id: 4, startStageId: 4, endStageId: 5, prompt: 'Finishing phase: remaining scaffolding sections removed, landscaping crews plant trees and shrubs, painters add final touches to the entrance canopy.', videoUrl: '/test-refs/segment-4.mp4' },
+                { id: 5, startStageId: 5, endStageId: 6, prompt: 'Grand reveal: last scaffolding dismantled, golden-hour light sweeps across the vibrant new facade, residents gather at the landscaped entrance for a ribbon-cutting celebration.', videoUrl: '/test-refs/segment-5.mp4' },
               ];
               update({
-                step: 3,
+                step: 4,
                 stages: testStages,
                 segments: testSegments,
-                videoAnalysis: 'Test data loaded — 4-stage panel block renovation using real AI-generated keyframes.',
+                videoAnalysis: 'Test data loaded — 6-stage panel block renovation with 5 real AI-generated video segments.',
                 beforeImage: `${base}/${encodeURIComponent('Панелен_Блок_Scene1_Frame1.png')}`,
               });
             }}
@@ -834,43 +893,35 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
 
-          {/* ═══ STEP 0: Settings ═══ */}
+          {/* ═══ STEP 0: Settings (API Keys + Format + Uploads) ═══ */}
           {state.step === 0 && (
             <div className="space-y-4 animate-fade-in">
+              {/* API Keys */}
               <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
                 <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide mb-4">
                   <i className="fa-solid fa-sliders text-[#91569c] mr-2"></i>API Keys & Models
                 </h2>
                 <p className="text-[10px] text-[#888] mb-4">All keys are pre-loaded from your last session. Change them here if needed.</p>
                 <div className="space-y-3">
-                  {/* Analysis key */}
                   <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
                     <i className="fa-solid fa-eye text-[#91569c] w-5 text-center"></i>
-                    <div className="flex-1">
-                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Analysis (Gemini)</span>
-                    </div>
+                    <div className="flex-1"><span className="text-[10px] font-bold text-[#5c3a62] uppercase">Analysis (Gemini)</span></div>
                     {hasGeminiKey
                       ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set (AIza...{getGeminiKey().slice(-4)})</span>
                       : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
                     }
                   </div>
-                  {/* Image gen key */}
                   <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
                     <i className="fa-solid fa-image text-[#91569c] w-5 text-center"></i>
-                    <div className="flex-1">
-                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Image Generation (Gemini)</span>
-                    </div>
+                    <div className="flex-1"><span className="text-[10px] font-bold text-[#5c3a62] uppercase">Image Generation (Gemini)</span></div>
                     {hasImageKey
                       ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set</span>
                       : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
                     }
                   </div>
-                  {/* Video gen key */}
                   <div className="flex items-center gap-3 bg-[#f6f0f8] rounded-lg px-4 py-3">
                     <i className="fa-solid fa-video text-[#91569c] w-5 text-center"></i>
-                    <div className="flex-1">
-                      <span className="text-[10px] font-bold text-[#5c3a62] uppercase">Video Generation (fal.ai)</span>
-                    </div>
+                    <div className="flex-1"><span className="text-[10px] font-bold text-[#5c3a62] uppercase">Video Generation (fal.ai)</span></div>
                     {hasVideoKey
                       ? <span className="text-[10px] text-green-600 font-bold"><i className="fa-solid fa-circle-check mr-1"></i>Key set</span>
                       : <span className="text-[10px] text-red-500 font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i>Missing</span>
@@ -882,32 +933,67 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                 )}
               </div>
 
-              <div className="flex justify-between items-center">
-                <button onClick={onCancel} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
-                  <i className="fa-solid fa-arrow-left mr-1"></i> Cancel
-                </button>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => {
-                    // Navigate to full Project Settings — the parent App handles this
-                    const settingsBtn = document.querySelector('[data-action="open-settings"]') as HTMLButtonElement;
-                    if (settingsBtn) settingsBtn.click();
-                  }} className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors">
-                    <i className="fa-solid fa-gear mr-1"></i>Full Settings
-                  </button>
-                  <button onClick={() => update({ step: 1 })} disabled={missingKeys.length > 0}
-                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
-                    <i className="fa-solid fa-arrow-right"></i>Next: Upload & Analyse
-                  </button>
+              {/* Output Format */}
+              <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide mb-4">
+                  <i className="fa-solid fa-crop text-[#91569c] mr-2"></i>Output Format
+                </h2>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'landscape_16_9', label: '16:9 Landscape', icon: 'fa-display' },
+                    { value: 'portrait_9_16', label: '9:16 Portrait', icon: 'fa-mobile-screen' },
+                    { value: 'square_1_1', label: '1:1 Square', icon: 'fa-square' },
+                  ].map(fmt => (
+                    <button
+                      key={fmt.value}
+                      onClick={() => update({ outputFormat: fmt.value })}
+                      className={`flex-1 py-3 px-4 rounded-lg border-2 text-center transition-all ${
+                        state.outputFormat === fmt.value || (!(state.outputFormat) && fmt.value === 'landscape_16_9')
+                          ? 'border-[#91569c] bg-[#f6f0f8] text-[#5c3a62]'
+                          : 'border-[#e0d6e3] hover:border-[#ceadd4] text-[#888]'
+                      }`}
+                    >
+                      <i className={`fa-solid ${fmt.icon} text-lg mb-1 block`}></i>
+                      <span className="text-[10px] font-bold uppercase">{fmt.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* ═══ STEP 1: Upload & Analyse ═══ */}
-          {state.step === 1 && !state.stages.length && (
-            <div className="space-y-4 animate-fade-in">
+              {/* Brand */}
+              <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+                <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide mb-4">
+                  <i className="fa-solid fa-tag text-[#91569c] mr-2"></i>Brand
+                </h2>
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={() => update({ brandId: '' })}
+                    className={`py-2.5 px-4 rounded-lg border-2 text-[10px] font-bold uppercase transition-all ${
+                      !state.brandId
+                        ? 'border-[#91569c] bg-[#f6f0f8] text-[#5c3a62]'
+                        : 'border-[#e0d6e3] hover:border-[#ceadd4] text-[#888]'
+                    }`}
+                  >
+                    <i className="fa-solid fa-ban mr-1 text-[9px]"></i>No Brand
+                  </button>
+                  {loadBrands().map(brand => (
+                    <button
+                      key={brand.id}
+                      onClick={() => update({ brandId: brand.id })}
+                      className={`py-2.5 px-4 rounded-lg border-2 text-[10px] font-bold uppercase transition-all ${
+                        state.brandId === brand.id
+                          ? 'border-[#91569c] bg-[#f6f0f8] text-[#5c3a62]'
+                          : 'border-[#e0d6e3] hover:border-[#ceadd4] text-[#888]'
+                      }`}
+                    >
+                      {brand.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Source Image + Reference Video uploads */}
               <div className="grid grid-cols-2 gap-4">
-                {/* Image upload */}
                 <div className="bg-white border border-[#e0d6e3] rounded-xl p-4 shadow-sm">
                   <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide mb-3">
                     <i className="fa-solid fa-image text-[#91569c] mr-1.5"></i>Source Image
@@ -934,7 +1020,6 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                   </DropZone>
                 </div>
 
-                {/* Video upload — sample embedded by default */}
                 <div className="bg-white border border-[#e0d6e3] rounded-xl p-4 shadow-sm">
                   <h3 className="text-xs font-bold text-[#5c3a62] uppercase tracking-wide mb-3">
                     <i className="fa-solid fa-film text-[#91569c] mr-1.5"></i>Reference Video
@@ -971,29 +1056,60 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                 </div>
               </div>
 
-              {state.error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-xs text-red-700">
-                  <i className="fa-solid fa-circle-exclamation mr-1.5"></i>{state.error}
-                </div>
-              )}
-
               <div className="flex justify-between items-center">
                 <button onClick={onCancel} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
                   <i className="fa-solid fa-arrow-left mr-1"></i> Cancel
                 </button>
-                <div className="flex items-center gap-2">
-                  <button onClick={analyseVideo} disabled={!canProceedStep0 || state.isGenerating}
+                <div className="flex items-center gap-3">
+                  <button onClick={() => {
+                    const settingsBtn = document.querySelector('[data-action="open-settings"]') as HTMLButtonElement;
+                    if (settingsBtn) settingsBtn.click();
+                  }} className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors">
+                    <i className="fa-solid fa-gear mr-1"></i>Full Settings
+                  </button>
+                  <button onClick={() => update({ step: 1 })} disabled={missingKeys.length > 0 || !state.beforeImage}
                     className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
-                    {state.isGenerating ? <><i className="fa-solid fa-spinner fa-spin"></i>{state.progressMessage}</> : <><i className="fa-solid fa-magnifying-glass-chart"></i>Analyse Video</>}
+                    <i className="fa-solid fa-arrow-right"></i>Next: Analyse
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ═══ STEP 1 continued: Define Stages (after analysis) ═══ */}
-          {state.step === 1 && state.stages.length > 0 && (
+          {/* ═══ STEP 1: Analyse ═══ */}
+          {state.step === 1 && (
             <div className="space-y-4 animate-fade-in">
+              {/* Source image + video thumbnails (read-only summary) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white border border-[#e0d6e3] rounded-xl p-3 shadow-sm">
+                  <h3 className="text-[9px] font-bold text-[#888] uppercase tracking-wider mb-2">Source Image</h3>
+                  {state.beforeImage ? (
+                    <img src={state.beforeImage} alt="Source" className="w-full rounded-lg border border-[#e0d6e3] object-contain max-h-[150px]" />
+                  ) : (
+                    <p className="text-[10px] text-red-500"><i className="fa-solid fa-triangle-exclamation mr-1"></i>No image uploaded — go back to Settings</p>
+                  )}
+                </div>
+                <div className="bg-white border border-[#e0d6e3] rounded-xl p-3 shadow-sm">
+                  <h3 className="text-[9px] font-bold text-[#888] uppercase tracking-wider mb-2">Reference Video</h3>
+                  <video src={state.referenceVideo} controls muted className="w-full rounded-lg border border-[#e0d6e3] max-h-[150px]" />
+                  <p className="text-[8px] text-[#888] mt-1 truncate">{state.referenceVideoName}</p>
+                </div>
+              </div>
+
+              {/* Analyse button — shown when no stages yet */}
+              {!state.stages.length && (
+                <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm text-center">
+                  <p className="text-[11px] text-[#5c3a62] mb-4">Upload your source image and reference video in Settings, then click Analyse to extract transformation stages.</p>
+                  <button onClick={analyseVideo} disabled={!canProceedStep0 || state.isGenerating}
+                    className="px-6 py-3 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-2 mx-auto shadow-lg">
+                    {state.isGenerating ? <><i className="fa-solid fa-spinner fa-spin"></i>{state.progressMessage}</> : <><i className="fa-solid fa-magnifying-glass-chart"></i>Analyse Video</>}
+                  </button>
+                </div>
+              )}
+
+              {/* Analysis results + stages editor — shown after analysis */}
+              {state.stages.length > 0 && (
+                <>
               {/* Analysis summary (collapsible) */}
               <details className="bg-white border border-[#e0d6e3] rounded-xl shadow-sm">
                 <summary className="px-4 py-3 cursor-pointer text-xs font-bold text-[#5c3a62] uppercase tracking-wide">
@@ -1069,6 +1185,9 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                 </div>
               </div>
 
+              </>
+              )}
+
               {state.error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-xs text-red-700">
                   <i className="fa-solid fa-circle-exclamation mr-1.5"></i>{state.error}
@@ -1079,10 +1198,18 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                 <button onClick={() => update({ step: 0 })} className="px-3 py-1.5 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">
                   <i className="fa-solid fa-arrow-left mr-1"></i> Back
                 </button>
-                <button onClick={() => update({ step: 2 })} disabled={state.stages.length < 3}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
-                  <i className="fa-solid fa-images"></i>Generate Keyframes
-                </button>
+                <div className="flex items-center gap-2">
+                  {state.stages.length > 0 && (
+                    <button onClick={analyseVideo} disabled={!canProceedStep0 || state.isGenerating}
+                      className="px-4 py-2 rounded-xl text-[10px] font-bold uppercase border border-[#ceadd4] text-[#91569c] hover:bg-[#f6f0f8] transition-colors disabled:opacity-40 flex items-center gap-1.5">
+                      <i className="fa-solid fa-rotate-right text-[9px]"></i>Re-analyse
+                    </button>
+                  )}
+                  <button onClick={() => update({ step: 2 })} disabled={state.stages.length < 3}
+                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 flex items-center gap-1.5 shadow-lg">
+                    <i className="fa-solid fa-images"></i>Generate Keyframes
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1329,7 +1456,7 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                     </h4>
                     <video src={state.finalVideoUrl} controls className="w-full rounded-lg border border-[#e0d6e3]" style={{ maxHeight: 400 }} />
                     <div className="flex items-center gap-3 mt-2">
-                      <a href={state.finalVideoUrl} download="final-transformation.mp4"
+                      <a href={projectId ? `/api/db/projects/${projectId}/output-file/final-video.mp4` : state.finalVideoUrl} download="final-video.mp4"
                         className="text-[10px] font-bold text-[#91569c] uppercase hover:underline flex items-center gap-1">
                         <i className="fa-solid fa-download text-[9px]"></i>Download Final Video
                       </a>
@@ -1337,6 +1464,12 @@ export const TemplateWizard: React.FC<TemplateWizardProps> = ({ templateId, proj
                         className="text-[10px] font-bold text-[#888] uppercase hover:text-[#5c3a62] flex items-center gap-1">
                         <i className="fa-solid fa-rotate-right text-[9px]"></i>Re-stitch
                       </button>
+                      {projectId && (
+                        <button onClick={() => fetch(`/api/db/projects/${projectId}/open-folder`, { method: 'POST' })}
+                          className="text-[10px] font-bold text-[#888] uppercase hover:text-[#5c3a62] flex items-center gap-1">
+                          <i className="fa-solid fa-folder-open text-[9px]"></i>Open Output Folder
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
