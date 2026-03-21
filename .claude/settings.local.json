@@ -1,28 +1,15 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
-      "Bash(powershell -c \"Add-Type -AssemblyName System.Speech; \\(New-Object System.Speech.Synthesis.SpeechSynthesizer\\).Speak\\(''Done''\\)\")",
-      "Bash(curl -s http://localhost:5182/api/health)",
-      "Bash(curl -s http://localhost:5180 -o /dev/null -w \"%{http_code}\")",
-      "Bash(timeout 10)",
-      "Bash(powershell -c \"Start-Sleep -Seconds 8; Invoke-WebRequest -Uri http://localhost:5180 -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode\")",
-      "Bash(powershell -c \"Add-Type -AssemblyName System.Speech; \\(New-Object System.Speech.Synthesis.SpeechSynthesizer\\).Speak\\(''Mariella to do. Please try generating the segment again.''\\)\")",
-      "Bash(netstat -ano)",
-      "Bash(findstr \":5180 :5182\")",
-      "Bash(findstr LISTENING)",
-      "Bash(powershell -c \"Add-Type -AssemblyName System.Speech; \\(New-Object System.Speech.Synthesis.SpeechSynthesizer\\).Speak\\(''I need permission''\\)\")",
-      "WebFetch(domain:claude.ai)",
-      "Bash(claude config:*)",
-      "Bash(where claude:*)",
-      "Bash(\"C:\\\\Users\\\\marie\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\claude.exe\" config:*)",
-      "Bash(powershell -c \"Get-Content $PROFILE | Select-String ''cc''\")",
-      "Bash(powershell -c \"Write-Host $PROFILE\")",
-      "Bash(powershell -c \"[System.Environment]::GetFolderPath\\(''MyDocuments''\\)\")",
-      "Read(//c/Users/marie/Saved Games/DoNotUseOneDrive!!!!/Documents/PowerShell/**)",
-      "Read(//c/Users/marie/Saved Games/DoNotUseOneDrive!!!!/Documents/WindowsPowerShell/**)",
-      "Bash(mkdir -p \"C:/Users/marie/Saved Games/DoNotUseOneDrive!!!!/Documents/PowerShell\")",
-      "Bash(\"C:/Users/marie/Saved Games/DoNotUseOneDrive!!!!/Documents/PowerShell/Microsoft.PowerShell_profile.ps1\":*)"
-    ],
-    "defaultMode": "bypassPermissions"
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Agent(*)",
+      "WebFetch(*)"
+    ]
   }
 }

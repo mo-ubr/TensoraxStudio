@@ -152,7 +152,18 @@ router.get("/", (_req, res) => {
 router.get("/projects", (_req, res) => {
   try {
     const rows = getDB().prepare("SELECT * FROM projects ORDER BY createdAt DESC").all();
-    res.json(rows.map(projectRow));
+    // List endpoint: return lightweight project objects without full metadata
+    // (metadata can be huge — MB of base64 images in wizard state)
+    res.json(rows.map(r => {
+      const full = projectRow(r);
+      // Keep only the templateId from metadata if present, drop the rest
+      const { metadata, ...rest } = full;
+      const lightweight = { ...rest };
+      if (metadata && metadata.templateId) {
+        lightweight.templateId = metadata.templateId;
+      }
+      return lightweight;
+    }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

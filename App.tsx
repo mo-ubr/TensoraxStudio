@@ -393,6 +393,65 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
   const sectionContext = activeSection === 'project' ? `The user is viewing Project Settings for "${activeProject.name}". They can configure source material, character references, brand, aspect ratio, and API keys. Help them set up their project.` : '';
   const combinedContext = [assistantContext, sectionContext].filter(Boolean).join('\n');
 
+  // For template projects, show a dedicated "Continue Template" UI
+  const activeTemplate = activeTemplateId ? PROJECT_TEMPLATES.find(t => t.id === activeTemplateId) : null;
+
+  if (activeTemplate) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+        <div className="w-full max-w-lg space-y-6 animate-fade-in">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] flex items-center justify-center mx-auto mb-4">
+              <i className={`fa-solid ${activeTemplate.icon} text-3xl text-[#91569c]`}></i>
+            </div>
+            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</h2>
+            <p className="text-sm text-[#888] mt-1">Template: {activeTemplate.name}</p>
+          </div>
+
+          {/* Template steps overview */}
+          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <i className="fa-solid fa-list-check text-[#91569c]"></i>
+              <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">Template Steps</span>
+            </div>
+            <div className="space-y-2">
+              {activeTemplate.steps.map((step, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#f6f0f8]/50">
+                  <span className="w-6 h-6 rounded-full bg-[#91569c]/10 flex items-center justify-center text-[10px] font-bold text-[#91569c]">{i + 1}</span>
+                  <span className="text-xs font-medium text-[#5c3a62]">{step}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => onNavigate('project-settings')}
+              className="flex-1 py-3 rounded-xl border border-[#e0d6e3] bg-white hover:bg-[#f6f0f8] text-[#5c3a62] font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-sliders text-[10px]"></i>
+              Project Settings
+            </button>
+            <button
+              onClick={() => onNavigate('concept')}
+              className="flex-[2] py-3 rounded-xl bg-[#91569c] hover:bg-[#7a4685] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              <i className={`fa-solid ${activeTemplate.icon} text-sm`}></i>
+              Continue Template
+            </button>
+          </div>
+
+          <button
+            onClick={onNewProject}
+            className="w-full text-center px-4 py-2 text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+          >
+            <i className="fa-solid fa-arrow-left mr-1.5"></i> Switch Project
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex bg-[#edecec] overflow-hidden">
       {/* Left nav */}
@@ -580,8 +639,18 @@ const App: React.FC = () => {
 
   const persistProject = (p: Project | null) => {
     setActiveProject(p);
-    if (p) localStorage.setItem('tensorax_active_project', JSON.stringify(p));
-    else localStorage.removeItem('tensorax_active_project');
+    try {
+      if (p) {
+        // Strip metadata from localStorage — it can be huge (MB of base64 images)
+        // Only store essential project fields needed for state restoration
+        const { metadata, ...lightweight } = p as Project & { metadata?: unknown };
+        localStorage.setItem('tensorax_active_project', JSON.stringify(lightweight));
+      } else {
+        localStorage.removeItem('tensorax_active_project');
+      }
+    } catch (e) {
+      console.warn('[App] localStorage write failed:', e);
+    }
   };
 
   const handleCreateProject = async (data: NewProjectData | string) => {
@@ -611,15 +680,32 @@ const App: React.FC = () => {
   const handleSelectProject = (p: Project) => {
     persistProject(p);
     // Auto-detect template projects and restore activeTemplateId
+    // Primary: check description field (legacy/current approach)
     const templateMatch = p.description?.match(/Template:\s*([\w-]+)/i);
     if (templateMatch) {
       const detectedTemplate = templateMatch[1] as TemplateId;
       if (PROJECT_TEMPLATES.find(t => t.id === detectedTemplate)) {
+        console.log('[App] Detected template project (from description):', detectedTemplate);
         setActiveTemplateId(detectedTemplate);
+        setCurrentScreen('project-settings');
+        return;
       }
-    } else {
-      setActiveTemplateId(null);
     }
+    // Fallback: check project metadata for templateId
+    if (p.id) {
+      DB.getMetadata(p.id).then(meta => {
+        if (meta.templateId && typeof meta.templateId === 'string') {
+          const metaTemplateId = meta.templateId as TemplateId;
+          if (PROJECT_TEMPLATES.find(t => t.id === metaTemplateId)) {
+            console.log('[App] Detected template project (from metadata):', metaTemplateId);
+            setActiveTemplateId(metaTemplateId);
+            setCurrentScreen('project-settings');
+            return;
+          }
+        }
+      }).catch(() => {});
+    }
+    setActiveTemplateId(null);
     setCurrentScreen('landing');
   };
 
@@ -664,10 +750,16 @@ const App: React.FC = () => {
     if (!pendingTemplateId || !templateProjectName.trim()) return;
     try {
       const name = templateProjectName.trim();
+      let projectId = activeProject?.id;
       if (!activeProject) {
         const project = await DB.createProject({ name, status: 'active', brandId: activeBrandId, description: `Template: ${pendingTemplateId}`, characterIds: [], sceneryIds: [], clothingIds: [], conceptIds: [], imageIds: [], videoIds: [], notes: '' });
         persistProject(project);
         setAllProjects(prev => [...prev, project]);
+        projectId = project.id;
+      }
+      // Also store templateId in project metadata for robust detection on reopen
+      if (projectId) {
+        DB.saveMetadata(projectId, { templateId: pendingTemplateId }).catch(e => console.warn('[App] Failed to save templateId metadata:', e));
       }
       setActiveTemplateId(pendingTemplateId);
       setPendingTemplateId(null);
@@ -1261,9 +1353,20 @@ const App: React.FC = () => {
                 {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
                   <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
                 ) : null; })()}
-                <div className="ml-3">
-                  <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
-                </div>
+                {!activeTemplateId && (
+                  <div className="ml-3">
+                    <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
+                  </div>
+                )}
+                {activeTemplateId && (() => {
+                  const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
+                  return tpl ? (
+                    <span className="ml-3 text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded flex items-center gap-1">
+                      <i className={`fa-solid ${tpl.icon} text-[8px]`}></i>
+                      {tpl.name}
+                    </span>
+                  ) : null;
+                })()}
               </div>
             )}
             <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
