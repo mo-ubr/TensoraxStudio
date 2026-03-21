@@ -687,7 +687,7 @@ const App: React.FC = () => {
       if (PROJECT_TEMPLATES.find(t => t.id === detectedTemplate)) {
         console.log('[App] Detected template project (from description):', detectedTemplate);
         setActiveTemplateId(detectedTemplate);
-        setCurrentScreen('project-settings');
+        setCurrentScreen('template-wizard');
         return;
       }
     }
@@ -699,7 +699,7 @@ const App: React.FC = () => {
           if (PROJECT_TEMPLATES.find(t => t.id === metaTemplateId)) {
             console.log('[App] Detected template project (from metadata):', metaTemplateId);
             setActiveTemplateId(metaTemplateId);
-            setCurrentScreen('project-settings');
+            setCurrentScreen('template-wizard');
             return;
           }
         }
