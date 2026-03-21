@@ -277,7 +277,18 @@ app.post("/api/generate-video-seedance", async (req, res) => {
 
 // ─── Video Merge / Stitch ────────────────────────────────────────────────────
 
-/** Local ffmpeg merge — no API key needed */
+/** Download a remote URL to a local temp file */
+async function downloadToFile(url, destPath) {
+  console.log(`[MergeVideos-Local] Downloading ${url.substring(0, 80)}...`);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed (${res.status}): ${url.substring(0, 80)}`);
+  const { writeFileSync } = await import("fs");
+  const buffer = Buffer.from(await res.arrayBuffer());
+  writeFileSync(destPath, buffer);
+  console.log(`[MergeVideos-Local] Downloaded → ${destPath} (${(buffer.length / 1024 / 1024).toFixed(1)} MB)`);
+}
+
+/** Local ffmpeg merge — downloads remote URLs first, no API key needed */
 async function mergeVideosLocal(videoUrls) {
   let ffmpegPath;
   try {
@@ -290,9 +301,14 @@ async function mergeVideosLocal(videoUrls) {
   const tmpDir = resolve(projectRoot, "assets", ".tmp-video");
   await mkdir(tmpDir, { recursive: true });
 
-  // Resolve local paths to absolute filesystem paths
-  const resolvedPaths = videoUrls.map(u => {
-    if (u.startsWith("/") || u.startsWith("./")) {
+  // Resolve all paths — download remote URLs in parallel for speed
+  console.log(`[MergeVideos-Local] Resolving ${videoUrls.length} video URLs...`);
+  const resolvedPaths = await Promise.all(videoUrls.map(async (u, i) => {
+    if (u.startsWith("http://") || u.startsWith("https://")) {
+      const tmpFile = join(tmpDir, `segment-${i}-${Date.now()}.mp4`);
+      await downloadToFile(u, tmpFile);
+      return tmpFile;
+    } else if (u.startsWith("/") || u.startsWith("./")) {
       const rel = u.replace(/^\.?\//, "");
       const tryPublic = resolve(projectRoot, "public", rel);
       if (existsSync(tryPublic)) return tryPublic;
@@ -300,13 +316,8 @@ async function mergeVideosLocal(videoUrls) {
       if (existsSync(tryDist)) return tryDist;
       throw new Error(`Local video not found: ${u}`);
     }
-    return u; // remote URL — can't handle locally
-  });
-
-  // If any are remote URLs, can't do local merge
-  if (resolvedPaths.some(p => p.startsWith("http"))) {
-    throw new Error("Local merge only supports local files");
-  }
+    return u;
+  }));
 
   const listFile = join(tmpDir, `concat-${Date.now()}.txt`);
   const outFile = join(tmpDir, `merged-${Date.now()}.mp4`);
@@ -315,8 +326,15 @@ async function mergeVideosLocal(videoUrls) {
   writeFileSync(listFile, listContent);
 
   console.log("[MergeVideos-Local] Concatenating", resolvedPaths.length, "videos with ffmpeg");
-  execSync(`"${ffmpegPath}" -f concat -safe 0 -i "${listFile}" -c copy "${outFile}" -y`, { stdio: "pipe", timeout: 120000 });
+  execSync(`"${ffmpegPath}" -f concat -safe 0 -i "${listFile}" -c copy "${outFile}" -y`, { stdio: "pipe", timeout: 300000 });
   unlinkSync(listFile);
+
+  // Clean up downloaded temp segment files
+  for (const p of resolvedPaths) {
+    if (p.startsWith(tmpDir)) {
+      try { unlinkSync(p); } catch {}
+    }
+  }
 
   // Serve via /project-assets or a temp route — move to public
   const finalName = `final-video-${Date.now()}.mp4`;
@@ -331,27 +349,10 @@ async function mergeVideosLocal(videoUrls) {
 
 app.post("/api/merge-videos", async (req, res) => {
   try {
-    const { apiKey, videoUrls, resolution } = req.body;
+    const { videoUrls } = req.body;
 
-    // Try local ffmpeg first (free, fast, no API key needed)
-    try {
-      const allLocal = videoUrls.every(u => u.startsWith("/") || u.startsWith("./"));
-      if (allLocal) {
-        const videoUrl = await mergeVideosLocal(videoUrls);
-        return res.json({ videoUrl });
-      }
-    } catch (localErr) {
-      console.warn("[MergeVideos] Local merge failed, trying fal.ai:", localErr.message);
-    }
-
-    // Fall back to fal.ai
-    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
-    const videoUrl = await mergeVideos({
-      apiKey: resolvedApiKey,
-      videoUrls,
-      resolution: resolution || undefined,
-      onProgress: (msg) => { console.log("[MergeVideos]", msg); },
-    });
+    // Always use local ffmpeg — downloads remote URLs automatically, no API key needed
+    const videoUrl = await mergeVideosLocal(videoUrls);
     res.json({ videoUrl });
   } catch (err) {
     console.error("[MergeVideos API]", err);
