@@ -15,6 +15,8 @@ import { DB, type Project } from './services/projectDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
 import { TemplateWizard } from './components/TemplateWizard';
+import { Sidebar } from './components/Sidebar';
+import { GlobalSettings } from './components/GlobalSettings';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -167,14 +169,17 @@ interface LandingPageProps {
   pipelineName: string;
   onStartTemplate: (templateId: TemplateId) => void;
   activeTemplateId: TemplateId | null;
+  /** If set, LandingPage opens directly to this sub-view */
+  initialView?: 'home' | 'projects' | 'templates';
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId }) => {
-  const [showWizard, setShowWizard] = useState(false);
-  const [showProjectName, setShowProjectName] = useState(false);
-  const [projectName, setProjectName] = useState('');
-  const [showContentType, setShowContentType] = useState(false);
-  const [showPipelineWizard, setShowPipelineWizard] = useState(false);
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId, initialView }) => {
+  const [dashboardView, setDashboardView] = useState<'home' | 'projects' | 'templates'>(initialView ?? 'home');
+
+  // Sync with initialView prop when it changes
+  useEffect(() => {
+    setDashboardView(initialView ?? 'home');
+  }, [initialView]);
   const [activeSection, setActiveSection] = useState<'none' | 'project'>('project');
 
   const pipelineSteps = [
@@ -184,85 +189,55 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
     { id: 'video', label: 'Video', icon: 'fa-video', description: 'Video Generation' },
   ];
 
-  const contentTypes = [
-    { id: 'text', label: 'Text Document', icon: 'fa-file-lines', description: 'Screenplay, brief, article, or other written content' },
-    { id: 'image', label: 'Image', icon: 'fa-image', description: 'Key visuals, adverts, or branded imagery' },
-    { id: 'video', label: 'Video', icon: 'fa-video', description: 'Promotional video, explainer, or social content' },
-  ];
+  /** Format a date string for display */
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return dateStr; }
+  };
 
   if (!activeProject) {
-    if (showWizard) {
-      return <NewProjectWizard brands={brands} onComplete={onCreateProject} onCancel={() => { setShowWizard(false); setShowContentType(false); }} />;
-    }
-
-    if (showPipelineWizard || pipelineActive) {
-      return (
-        <PipelineWizard
-          projectName={pipelineActive ? pipelineName : projectName}
-          initialStep={pipelineActive ? pipelineStep : 0}
-          onComplete={(result) => {
-            console.log('[PipelineWizard] result:', result);
-            setShowPipelineWizard(false);
-            setShowContentType(false);
-          }}
-          onCancel={() => { setShowPipelineWizard(false); }}
-          onNavigateToCreate={(step, sourceDocContent) => {
-            const screenMap: Record<string, 'concept' | 'images' | 'scenes'> = {
-              screenplay: 'concept',
-              characters: 'images',
-              scenes: 'scenes',
-            };
-            onStartPipeline(projectName, screenMap[step], sourceDocContent);
-          }}
-        />
-      );
-    }
-
-    /* showWizard is now handled above (before !activeProject block) to support template → project flow */
-
-    if (showContentType) {
+    /* ── Projects list view ── */
+    if (dashboardView === 'projects') {
       return (
         <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-          <div className="w-full max-w-md space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What do you want to create?</h2>
-              <p className="text-sm text-[#888] mt-1">Choose the type of content for your project</p>
+          <div className="w-full max-w-lg space-y-5 animate-fade-in">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Your Projects</h2>
+              <p className="text-sm text-[#888] mt-1">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''}</p>
             </div>
 
-            <div className="space-y-3">
-              {contentTypes.map(ct => (
-                <button
-                  key={ct.id}
-                  onClick={() => {
-                    // Map content type to scope
-                    const scopeMap: Record<string, string> = {
-                      text: 'blog',
-                      image: 'image-advert',
-                      video: 'video-advert',
-                    };
-                    onCreateProject({
-                      name: projectName.trim(),
-                      brandId: '',
-                      scope: scopeMap[ct.id] || ct.id,
-                      brief: '',
-                    });
-                  }}
-                  className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
-                >
-                  <div className="w-11 h-11 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-                    <i className={`fa-solid ${ct.icon} text-lg text-[#91569c]`}></i>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">{ct.label}</span>
-                    <p className="text-[10px] text-[#888] mt-0.5">{ct.description}</p>
-                  </div>
-                  <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
-                </button>
-              ))}
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+              {allProjects.map(p => {
+                const tpl = p.description?.match(/Template:\s*([\w-]+)/i)?.[1] ?? '';
+                const tplLabel = tpl ? PROJECT_TEMPLATES.find(t => t.id === tpl)?.name ?? tpl : '';
+                const statusColour = p.status === 'completed' ? 'bg-blue-400' : p.status === 'archived' ? 'bg-gray-400' : 'bg-green-400';
+
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onSelectProject(p)}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${statusColour} flex-shrink-0`} title={p.status} />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors block truncate">{p.name}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-[#888]">{formatDate(p.createdAt)}</span>
+                        {tplLabel && (
+                          <span className="text-[9px] font-bold uppercase tracking-wide text-[#91569c] bg-[#f6f0f8] px-2 py-0.5 rounded-full">{tplLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
+                  </button>
+                );
+              })}
             </div>
 
             <button
-              onClick={() => { setShowContentType(false); }}
+              onClick={() => setDashboardView('home')}
               className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
             >
               <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
@@ -272,119 +247,90 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       );
     }
 
-    if (showProjectName) {
+    /* ── Template selection view ── */
+    if (dashboardView === 'templates') {
       return (
         <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-          <div className="w-full max-w-md space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
-              <div className="w-14 h-14 rounded-xl bg-[#f6f0f8] flex items-center justify-center mx-auto mb-4">
-                <i className="fa-solid fa-pen text-2xl text-[#91569c]"></i>
-              </div>
-              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What will be the name of your project?</h2>
-              <p className="text-sm text-[#888] mt-1">Give your project a descriptive name</p>
+          <div className="w-full max-w-lg space-y-5 animate-fade-in">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Choose a Template</h2>
+              <p className="text-sm text-[#888] mt-1">Select a template to start your new project</p>
             </div>
 
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && projectName.trim()) setShowContentType(true);
-              }}
-              placeholder="e.g. NEXT Gift Card Campaign"
-              autoFocus
-              className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
-            />
-
-            <div className="flex justify-between">
-              <button onClick={() => { setShowProjectName(false); setProjectName(''); }} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
-                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
-              </button>
-              <button
-                onClick={() => setShowContentType(true)}
-                disabled={!projectName.trim()}
-                className="px-6 py-2.5 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next <i className="fa-solid fa-arrow-right ml-1.5"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-        <div className="w-full max-w-md space-y-6 animate-fade-in">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
-            <p className="text-sm text-[#888] mt-1">Open an existing project or start a new one</p>
-          </div>
-
-          {/* Open existing project */}
-          {allProjects.length > 0 && (
-            <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <i className="fa-solid fa-folder-open text-lg text-[#91569c]"></i>
-                <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Open Project</span>
-              </div>
-              <select
-                onChange={(e) => {
-                  const p = allProjects.find(x => x.id === e.target.value);
-                  if (p) onSelectProject(p);
-                }}
-                defaultValue=""
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer"
-              >
-                <option value="" disabled>Select a project...</option>
-                {allProjects.map(p => {
-                  const tpl = p.description?.startsWith('Template:') ? p.description.replace('Template: ', '') : '';
-                  const suffix = tpl ? ` [${tpl}]` : '';
-                  return <option key={p.id} value={p.id}>{p.name}{suffix}</option>;
-                })}
-              </select>
-              <p className="text-[10px] text-[#888] mt-2">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''} available</p>
-            </div>
-          )}
-
-          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
-
-          {/* Use template */}
-          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <i className="fa-solid fa-shapes text-lg text-[#91569c]"></i>
-              <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Use Template</span>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {PROJECT_TEMPLATES.map(t => (
                 <button
                   key={t.id}
                   onClick={() => onStartTemplate(t.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-[#e0d6e3] bg-[#f6f0f8]/50 hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-left group"
+                  className="w-full flex items-center gap-4 px-5 py-5 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-                    <i className={`fa-solid ${t.icon} text-[#91569c]`}></i>
+                  <div className="w-12 h-12 rounded-xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+                    <i className={`fa-solid ${t.icon} text-xl text-[#91569c]`}></i>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">{t.name}</span>
-                    <p className="text-[9px] text-[#888] mt-0.5 leading-relaxed">{t.description}</p>
+                    <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">{t.name}</span>
+                    <p className="text-[10px] text-[#888] mt-1 leading-relaxed">{t.description}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {t.steps.map(s => (
+                        <span key={s} className="text-[8px] font-bold uppercase tracking-wide text-[#91569c]/70 bg-[#f6f0f8] px-2 py-0.5 rounded-full">{s}</span>
+                      ))}
+                    </div>
                   </div>
                   <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setDashboardView('home')}
+              className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+            >
+              <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Home: two-card dashboard ── */
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+        <div className="w-full max-w-lg space-y-6 animate-fade-in">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
+            <p className="text-sm text-[#888] mt-1">What would you like to do?</p>
           </div>
 
-          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Open Existing Project */}
+            <button
+              onClick={() => setDashboardView('projects')}
+              disabled={allProjects.length === 0}
+              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-[#e0d6e3]"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors group-disabled:group-hover:bg-[#f6f0f8]">
+                <i className="fa-solid fa-folder-open text-2xl text-[#91569c]"></i>
+              </div>
+              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">Open Project</span>
+              <span className="text-[10px] text-[#888]">
+                {allProjects.length > 0
+                  ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''}`
+                  : 'No projects yet'}
+              </span>
+            </button>
 
-          {/* Start new project — opens wizard */}
-          <button
-            onClick={() => setShowProjectName(true)}
-            className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
-          >
-            <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
-            <span className="font-black uppercase tracking-wider text-xs">Start New Project</span>
-          </button>
+            {/* Create New Project */}
+            <button
+              onClick={() => setDashboardView('templates')}
+              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors">
+                <i className="fa-solid fa-plus text-2xl text-[#91569c]"></i>
+              </div>
+              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">New Project</span>
+              <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} template{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -601,8 +547,29 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
+  const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
+
+  /** Sidebar navigation handler */
+  const handleSidebarNav = (screen: string) => {
+    if (screen === 'templates') {
+      setLandingInitialView('templates');
+      setCurrentScreen('landing');
+    } else if (screen === 'assets') {
+      // Placeholder — future asset library screen
+      setCurrentScreen('landing');
+    } else {
+      setLandingInitialView(undefined);
+      setCurrentScreen(screen as any);
+    }
+  };
+
+  /** Get the sidebar's active screen based on current state */
+  const sidebarActiveScreen = currentScreen === 'settings' ? 'settings'
+    : currentScreen === 'project-settings' ? 'settings'
+    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
+    : currentScreen;
   const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
   const [assistantContext, setAssistantContext] = useState('');
   const conceptActionRef = useRef<((action: import('./components/ChatBot').AssistantAction) => void) | null>(null);
@@ -1232,19 +1199,29 @@ const App: React.FC = () => {
     }
   };
 
+  // ─── Shared top header ─────────────────────────────────────────────────────
+  const TopHeader = (
+    <header className="h-14 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
+      <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
+      {activeProject && (
+        <div className="mx-auto flex items-center gap-3">
+          <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
+          {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
+          ) : null; })()}
+        </div>
+      )}
+    </header>
+  );
+
   // Template wizard — renders after project is created and user clicks "Launch Template"
   if (activeProject && activeTemplateId && currentScreen !== 'project-settings') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }} />
-          <div className="mx-auto flex items-center gap-3">
-            <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-            {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-            ) : null; })()}
-          </div>
-        </header>
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex flex-col flex-1 min-w-0">
         <TemplateWizard
           templateId={activeTemplateId}
           projectId={activeProject.id}
@@ -1255,31 +1232,17 @@ const App: React.FC = () => {
           }}
           onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
         />
-      </div>
+      </div></div></div>
     );
   }
 
   if (currentScreen === 'project-settings' && activeProject) {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
-              <i className="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-7 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
-          </div>
-          <div className="mx-auto flex items-center gap-3">
-            <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-            {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-            ) : null; })()}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Project Settings</span>
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-          </div>
-        </header>
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex flex-col flex-1 min-w-0">
         {activeTemplateId && (() => {
           const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
           return (
@@ -1315,29 +1278,18 @@ const App: React.FC = () => {
           onNavigate={(screen) => setCurrentScreen(screen as any)}
           onBrandChange={(brandId) => { setActiveBrandIdState(brandId); setActiveBrandId(brandId); }}
         />
-      </div>
+      </div></div></div>
     );
   }
 
   if (currentScreen === 'projects') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          {activeProject && (
-            <div className="mx-auto flex items-center gap-3">
-              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-              ) : null; })()}
-              <div className="ml-3">
-                <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
-              </div>
-            </div>
-          )}
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-        </header>
-        <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
       </div>
     );
   }
@@ -1345,32 +1297,10 @@ const App: React.FC = () => {
   if (currentScreen === 'landing') {
     return (
       <div className="flex flex-col h-screen bg-[#edecec]">
-         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-            {activeProject && (
-              <div className="mx-auto flex items-center gap-3">
-                <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-                {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-                ) : null; })()}
-                {!activeTemplateId && (
-                  <div className="ml-3">
-                    <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
-                  </div>
-                )}
-                {activeTemplateId && (() => {
-                  const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
-                  return tpl ? (
-                    <span className="ml-3 text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded flex items-center gap-1">
-                      <i className={`fa-solid ${tpl.icon} text-[8px]`}></i>
-                      {tpl.name}
-                    </span>
-                  ) : null;
-                })()}
-              </div>
-            )}
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-          </header>
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex flex-col flex-1 min-w-0">
           <LandingPage
             onNavigate={(screen) => {
               if (screen === 'concept:screenplay') {
@@ -1402,6 +1332,7 @@ const App: React.FC = () => {
             pipelineName={pipelineName}
             onStartTemplate={handleStartTemplate}
             activeTemplateId={activeTemplateId}
+            initialView={landingInitialView}
           />
 
           {/* Template project name dialog */}
@@ -1446,6 +1377,18 @@ const App: React.FC = () => {
               </div>
             </div>
           )}
+      </div></div></div>
+    );
+  }
+
+  if (currentScreen === 'settings') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <GlobalSettings />
+        </div>
       </div>
     );
   }
@@ -1453,21 +1396,13 @@ const App: React.FC = () => {
   if (currentScreen === 'concept') {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentScreen('landing')}
-              className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1"
-            >
-              <i className="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          </div>
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="mx-auto">
             <PipelineNav current="concept" onNavigate={(s) => setCurrentScreen(s as any)} />
-          </div>
-          <div className="flex items-center gap-2">
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </div>
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -1520,24 +1455,21 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+      </div></div></div>
     );
   }
 
   if (currentScreen === 'images') {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
-              <i className="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          </div>
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="mx-auto">
             <PipelineNav current="images" onNavigate={(s) => setCurrentScreen(s as any)} />
           </div>
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
           <div className="flex-1 min-w-0">
@@ -1547,22 +1479,17 @@ const App: React.FC = () => {
             <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
           </aside>
         </div>
-      </div>
+      </div></div></div>
     );
   }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-      <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setCurrentScreen('landing')}
-            className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1"
-          >
-            <i className="fa-solid fa-arrow-left text-sm"></i>
-          </button>
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-        </div>
+      {TopHeader}
+      <div className="flex flex-1 min-h-0">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
+      <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
         <div className="mx-auto">
           <PipelineNav current={currentScreen} onNavigate={(s) => setCurrentScreen(s as any)} />
         </div>
@@ -1577,7 +1504,6 @@ const App: React.FC = () => {
               {isZipping ? 'Zipping...' : 'Download Zip'}
             </button>
           )}
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </div>
       </header>
 
@@ -1895,7 +1821,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
         .animate-fade-in { animation: fadeIn 0.8s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-    </div>
+    </div></div></div>
   );
 };
 
