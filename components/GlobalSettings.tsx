@@ -51,7 +51,7 @@ const API_SLOTS: ApiSlot[] = [
     id: 'image', label: 'Image Generation', icon: 'fa-image',
     baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model',
     models: [
-      { group: 'Gemini (Recommended)', models: ['gemini-2.5-flash-image', 'imagen-3.0-capability'] },
+      { group: 'Gemini (Recommended)', models: ['gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image', 'imagen-3.0-capability'] },
       { group: 'OpenAI', models: ['dall-e-3'] },
     ],
   },
