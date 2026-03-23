@@ -15,6 +15,7 @@ import { DB, type Project } from './services/projectDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
 import { TemplateWizard } from './components/TemplateWizard';
+import { Sidebar } from './components/Sidebar';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -167,10 +168,17 @@ interface LandingPageProps {
   pipelineName: string;
   onStartTemplate: (templateId: TemplateId) => void;
   activeTemplateId: TemplateId | null;
+  /** If set, LandingPage opens directly to this sub-view */
+  initialView?: 'home' | 'projects' | 'templates';
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId }) => {
-  const [dashboardView, setDashboardView] = useState<'home' | 'projects' | 'templates'>('home');
+const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId, initialView }) => {
+  const [dashboardView, setDashboardView] = useState<'home' | 'projects' | 'templates'>(initialView ?? 'home');
+
+  // Sync with initialView prop when it changes
+  useEffect(() => {
+    setDashboardView(initialView ?? 'home');
+  }, [initialView]);
   const [activeSection, setActiveSection] = useState<'none' | 'project'>('project');
 
   const pipelineSteps = [
@@ -540,6 +548,26 @@ const App: React.FC = () => {
   );
   const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
+  const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
+
+  /** Sidebar navigation handler */
+  const handleSidebarNav = (screen: string) => {
+    if (screen === 'templates') {
+      setLandingInitialView('templates');
+      setCurrentScreen('landing');
+    } else if (screen === 'assets') {
+      // Placeholder — future asset library screen
+      setCurrentScreen('landing');
+    } else {
+      setLandingInitialView(undefined);
+      setCurrentScreen(screen as any);
+    }
+  };
+
+  /** Get the sidebar's active screen based on current state */
+  const sidebarActiveScreen = currentScreen === 'project-settings' ? 'project-settings'
+    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
+    : currentScreen;
   const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
   const [assistantContext, setAssistantContext] = useState('');
   const conceptActionRef = useRef<((action: import('./components/ChatBot').AssistantAction) => void) | null>(null);
@@ -1172,9 +1200,10 @@ const App: React.FC = () => {
   // Template wizard — renders after project is created and user clicks "Launch Template"
   if (activeProject && activeTemplateId && currentScreen !== 'project-settings') {
     return (
-      <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }} />
+      <div className="flex h-screen bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="mx-auto flex items-center gap-3">
             <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
             {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
@@ -1192,19 +1221,20 @@ const App: React.FC = () => {
           }}
           onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
         />
-      </div>
+      </div></div>
     );
   }
 
   if (currentScreen === 'project-settings' && activeProject) {
     return (
-      <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
+      <div className="flex h-screen bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="flex items-center gap-2">
             <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
               <i className="fa-solid fa-arrow-left text-sm"></i>
             </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-7 cursor-pointer" onClick={() => setCurrentScreen('landing')} />
           </div>
           <div className="mx-auto flex items-center gap-3">
             <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
@@ -1212,10 +1242,7 @@ const App: React.FC = () => {
               <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
             ) : null; })()}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Project Settings</span>
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#888]">Project Settings</span>
         </header>
         {activeTemplateId && (() => {
           const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
@@ -1252,62 +1279,25 @@ const App: React.FC = () => {
           onNavigate={(screen) => setCurrentScreen(screen as any)}
           onBrandChange={(brandId) => { setActiveBrandIdState(brandId); setActiveBrandId(brandId); }}
         />
-      </div>
+      </div></div>
     );
   }
 
   if (currentScreen === 'projects') {
     return (
-      <div className="flex flex-col h-screen bg-[#edecec]">
-        <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          {activeProject && (
-            <div className="mx-auto flex items-center gap-3">
-              <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-              {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-              ) : null; })()}
-              <div className="ml-3">
-                <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
-              </div>
-            </div>
-          )}
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-        </header>
+      <div className="flex h-screen bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
         <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
-      </div>
+      </div></div>
     );
   }
 
   if (currentScreen === 'landing') {
     return (
-      <div className="flex flex-col h-screen bg-[#edecec]">
-         <header className="h-14 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-            {activeProject && (
-              <div className="mx-auto flex items-center gap-3">
-                <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
-                {(() => { const b = brands.find(x => x.id === activeBrandId); return b ? (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded">{b.name}</span>
-                ) : null; })()}
-                {!activeTemplateId && (
-                  <div className="ml-3">
-                    <PipelineNav current="" onNavigate={(s) => setCurrentScreen(s as any)} />
-                  </div>
-                )}
-                {activeTemplateId && (() => {
-                  const tpl = PROJECT_TEMPLATES.find(t => t.id === activeTemplateId);
-                  return tpl ? (
-                    <span className="ml-3 text-[9px] font-bold uppercase tracking-wider text-[#91569c] bg-[#f6f0f8] border border-[#ceadd4] px-2 py-0.5 rounded flex items-center gap-1">
-                      <i className={`fa-solid ${tpl.icon} text-[8px]`}></i>
-                      {tpl.name}
-                    </span>
-                  ) : null;
-                })()}
-              </div>
-            )}
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
-          </header>
+      <div className="flex h-screen bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
           <LandingPage
             onNavigate={(screen) => {
               if (screen === 'concept:screenplay') {
@@ -1339,6 +1329,7 @@ const App: React.FC = () => {
             pipelineName={pipelineName}
             onStartTemplate={handleStartTemplate}
             activeTemplateId={activeTemplateId}
+            initialView={landingInitialView}
           />
 
           {/* Template project name dialog */}
@@ -1383,28 +1374,18 @@ const App: React.FC = () => {
               </div>
             </div>
           )}
-      </div>
+      </div></div>
     );
   }
 
   if (currentScreen === 'concept') {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentScreen('landing')}
-              className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1"
-            >
-              <i className="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          </div>
+      <div className="flex h-screen overflow-hidden bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="mx-auto">
             <PipelineNav current="concept" onNavigate={(s) => setCurrentScreen(s as any)} />
-          </div>
-          <div className="flex items-center gap-2">
-            <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
           </div>
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -1457,24 +1438,19 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+      </div></div>
     );
   }
 
   if (currentScreen === 'images') {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-        <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCurrentScreen('landing')} className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1">
-              <i className="fa-solid fa-arrow-left text-sm"></i>
-            </button>
-            <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-          </div>
+      <div className="flex h-screen overflow-hidden bg-[#edecec]">
+        <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+        <div className="flex flex-col flex-1 min-w-0">
+        <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
           <div className="mx-auto">
             <PipelineNav current="images" onNavigate={(s) => setCurrentScreen(s as any)} />
           </div>
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </header>
         <div className="flex flex-1 min-h-0 overflow-hidden">
           <div className="flex-1 min-w-0">
@@ -1484,22 +1460,15 @@ const App: React.FC = () => {
             <ChatBotBoundary><ChatBot projectContext={assistantContext} onAction={handleAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
           </aside>
         </div>
-      </div>
+      </div></div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#edecec]">
-      <header className="h-12 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setCurrentScreen('landing')}
-            className="text-[#91569c]/80 hover:text-[#91569c] transition-colors p-1"
-          >
-            <i className="fa-solid fa-arrow-left text-sm"></i>
-          </button>
-          <img src="/logo-main.png" alt="TensorAx Studio" className="h-6 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
-        </div>
+    <div className="flex h-screen overflow-hidden bg-[#edecec]">
+      <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+      <div className="flex flex-col flex-1 min-w-0">
+      <header className="h-10 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-5 z-20 shadow-sm">
         <div className="mx-auto">
           <PipelineNav current={currentScreen} onNavigate={(s) => setCurrentScreen(s as any)} />
         </div>
@@ -1514,7 +1483,6 @@ const App: React.FC = () => {
               {isZipping ? 'Zipping...' : 'Download Zip'}
             </button>
           )}
-          <ApiKeyButton onClick={() => setCurrentScreen('project-settings')} />
         </div>
       </header>
 
@@ -1832,7 +1800,7 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
         .animate-fade-in { animation: fadeIn 0.8s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-    </div>
+    </div></div>
   );
 };
 
