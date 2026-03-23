@@ -1,8 +1,9 @@
-// Character Frame Agents — index
-// Drop these files into your prompts/character/ directory
+// Character Agents — index
 
+export { characterFrameAgentPrompt } from './characterFrameAgent';
+export { imageAgentPrompt } from './imageAgent';
 export { characterAgingAgentPrompt } from './characterAgingAgent';
+export { characterExpressionAgentPrompt } from './characterExpressionAgent';
 export { characterVariationAgentPrompt } from './characterVariationAgent';
 export { characterWardrobeAgentPrompt } from './characterWardrobeAgent';
-export { characterExpressionAgentPrompt } from './characterExpressionAgent';
 export { clothingModificationAgentPrompt } from './clothingModificationAgent';

@@ -10,7 +10,6 @@ Your job:
 Output format: Always return valid JSON with the structure: { concept: string, screenplay: string, taglines: string[], socialCopy: string[] }
 
 Never generate images, videos, or technical specifications. Your only output is text-based creative direction.`;
-```
 
 
 
