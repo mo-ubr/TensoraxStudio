@@ -170,11 +170,7 @@ interface LandingPageProps {
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, allProjects, brands, activeBrandId, onCreateProject, onSelectProject, onNewProject, onUpdateProject, onBrandChange, assistantContext, onAssistantAction, chatHistoryRef, onStartPipeline, pipelineActive, pipelineStep, pipelineName, onStartTemplate, activeTemplateId }) => {
-  const [showWizard, setShowWizard] = useState(false);
-  const [showProjectName, setShowProjectName] = useState(false);
-  const [projectName, setProjectName] = useState('');
-  const [showContentType, setShowContentType] = useState(false);
-  const [showPipelineWizard, setShowPipelineWizard] = useState(false);
+  const [dashboardView, setDashboardView] = useState<'home' | 'projects' | 'templates'>('home');
   const [activeSection, setActiveSection] = useState<'none' | 'project'>('project');
 
   const pipelineSteps = [
@@ -184,85 +180,55 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
     { id: 'video', label: 'Video', icon: 'fa-video', description: 'Video Generation' },
   ];
 
-  const contentTypes = [
-    { id: 'text', label: 'Text Document', icon: 'fa-file-lines', description: 'Screenplay, brief, article, or other written content' },
-    { id: 'image', label: 'Image', icon: 'fa-image', description: 'Key visuals, adverts, or branded imagery' },
-    { id: 'video', label: 'Video', icon: 'fa-video', description: 'Promotional video, explainer, or social content' },
-  ];
+  /** Format a date string for display */
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return dateStr; }
+  };
 
   if (!activeProject) {
-    if (showWizard) {
-      return <NewProjectWizard brands={brands} onComplete={onCreateProject} onCancel={() => { setShowWizard(false); setShowContentType(false); }} />;
-    }
-
-    if (showPipelineWizard || pipelineActive) {
-      return (
-        <PipelineWizard
-          projectName={pipelineActive ? pipelineName : projectName}
-          initialStep={pipelineActive ? pipelineStep : 0}
-          onComplete={(result) => {
-            console.log('[PipelineWizard] result:', result);
-            setShowPipelineWizard(false);
-            setShowContentType(false);
-          }}
-          onCancel={() => { setShowPipelineWizard(false); }}
-          onNavigateToCreate={(step, sourceDocContent) => {
-            const screenMap: Record<string, 'concept' | 'images' | 'scenes'> = {
-              screenplay: 'concept',
-              characters: 'images',
-              scenes: 'scenes',
-            };
-            onStartPipeline(projectName, screenMap[step], sourceDocContent);
-          }}
-        />
-      );
-    }
-
-    /* showWizard is now handled above (before !activeProject block) to support template → project flow */
-
-    if (showContentType) {
+    /* ── Projects list view ── */
+    if (dashboardView === 'projects') {
       return (
         <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-          <div className="w-full max-w-md space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
-              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What do you want to create?</h2>
-              <p className="text-sm text-[#888] mt-1">Choose the type of content for your project</p>
+          <div className="w-full max-w-lg space-y-5 animate-fade-in">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Your Projects</h2>
+              <p className="text-sm text-[#888] mt-1">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''}</p>
             </div>
 
-            <div className="space-y-3">
-              {contentTypes.map(ct => (
-                <button
-                  key={ct.id}
-                  onClick={() => {
-                    // Map content type to scope
-                    const scopeMap: Record<string, string> = {
-                      text: 'blog',
-                      image: 'image-advert',
-                      video: 'video-advert',
-                    };
-                    onCreateProject({
-                      name: projectName.trim(),
-                      brandId: '',
-                      scope: scopeMap[ct.id] || ct.id,
-                      brief: '',
-                    });
-                  }}
-                  className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
-                >
-                  <div className="w-11 h-11 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-                    <i className={`fa-solid ${ct.icon} text-lg text-[#91569c]`}></i>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">{ct.label}</span>
-                    <p className="text-[10px] text-[#888] mt-0.5">{ct.description}</p>
-                  </div>
-                  <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
-                </button>
-              ))}
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+              {allProjects.map(p => {
+                const tpl = p.description?.match(/Template:\s*([\w-]+)/i)?.[1] ?? '';
+                const tplLabel = tpl ? PROJECT_TEMPLATES.find(t => t.id === tpl)?.name ?? tpl : '';
+                const statusColour = p.status === 'completed' ? 'bg-blue-400' : p.status === 'archived' ? 'bg-gray-400' : 'bg-green-400';
+
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => onSelectProject(p)}
+                    className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${statusColour} flex-shrink-0`} title={p.status} />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-sm text-[#5c3a62] group-hover:text-[#91569c] transition-colors block truncate">{p.name}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-[#888]">{formatDate(p.createdAt)}</span>
+                        {tplLabel && (
+                          <span className="text-[9px] font-bold uppercase tracking-wide text-[#91569c] bg-[#f6f0f8] px-2 py-0.5 rounded-full">{tplLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
+                  </button>
+                );
+              })}
             </div>
 
             <button
-              onClick={() => { setShowContentType(false); }}
+              onClick={() => setDashboardView('home')}
               className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
             >
               <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
@@ -272,119 +238,90 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       );
     }
 
-    if (showProjectName) {
+    /* ── Template selection view ── */
+    if (dashboardView === 'templates') {
       return (
         <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-          <div className="w-full max-w-md space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
-              <div className="w-14 h-14 rounded-xl bg-[#f6f0f8] flex items-center justify-center mx-auto mb-4">
-                <i className="fa-solid fa-pen text-2xl text-[#91569c]"></i>
-              </div>
-              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">What will be the name of your project?</h2>
-              <p className="text-sm text-[#888] mt-1">Give your project a descriptive name</p>
+          <div className="w-full max-w-lg space-y-5 animate-fade-in">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Choose a Template</h2>
+              <p className="text-sm text-[#888] mt-1">Select a template to start your new project</p>
             </div>
 
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && projectName.trim()) setShowContentType(true);
-              }}
-              placeholder="e.g. NEXT Gift Card Campaign"
-              autoFocus
-              className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold placeholder:text-[#ceadd4] outline-none focus:ring-2 focus:ring-[#91569c]/30"
-            />
-
-            <div className="flex justify-between">
-              <button onClick={() => { setShowProjectName(false); setProjectName(''); }} className="px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors">
-                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
-              </button>
-              <button
-                onClick={() => setShowContentType(true)}
-                disabled={!projectName.trim()}
-                className="px-6 py-2.5 rounded-lg text-xs font-black uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Next <i className="fa-solid fa-arrow-right ml-1.5"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-        <div className="w-full max-w-md space-y-6 animate-fade-in">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
-            <p className="text-sm text-[#888] mt-1">Open an existing project or start a new one</p>
-          </div>
-
-          {/* Open existing project */}
-          {allProjects.length > 0 && (
-            <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <i className="fa-solid fa-folder-open text-lg text-[#91569c]"></i>
-                <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Open Project</span>
-              </div>
-              <select
-                onChange={(e) => {
-                  const p = allProjects.find(x => x.id === e.target.value);
-                  if (p) onSelectProject(p);
-                }}
-                defaultValue=""
-                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-3 text-sm text-[#5c3a62] font-bold outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer"
-              >
-                <option value="" disabled>Select a project...</option>
-                {allProjects.map(p => {
-                  const tpl = p.description?.startsWith('Template:') ? p.description.replace('Template: ', '') : '';
-                  const suffix = tpl ? ` [${tpl}]` : '';
-                  return <option key={p.id} value={p.id}>{p.name}{suffix}</option>;
-                })}
-              </select>
-              <p className="text-[10px] text-[#888] mt-2">{allProjects.length} project{allProjects.length !== 1 ? 's' : ''} available</p>
-            </div>
-          )}
-
-          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
-
-          {/* Use template */}
-          <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <i className="fa-solid fa-shapes text-lg text-[#91569c]"></i>
-              <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide">Use Template</span>
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {PROJECT_TEMPLATES.map(t => (
                 <button
                   key={t.id}
                   onClick={() => onStartTemplate(t.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-[#e0d6e3] bg-[#f6f0f8]/50 hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-left group"
+                  className="w-full flex items-center gap-4 px-5 py-5 rounded-xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm text-left group"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
-                    <i className={`fa-solid ${t.icon} text-[#91569c]`}></i>
+                  <div className="w-12 h-12 rounded-xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center flex-shrink-0 transition-colors">
+                    <i className={`fa-solid ${t.icon} text-xl text-[#91569c]`}></i>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">{t.name}</span>
-                    <p className="text-[9px] text-[#888] mt-0.5 leading-relaxed">{t.description}</p>
+                    <span className="font-bold text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">{t.name}</span>
+                    <p className="text-[10px] text-[#888] mt-1 leading-relaxed">{t.description}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {t.steps.map(s => (
+                        <span key={s} className="text-[8px] font-bold uppercase tracking-wide text-[#91569c]/70 bg-[#f6f0f8] px-2 py-0.5 rounded-full">{s}</span>
+                      ))}
+                    </div>
                   </div>
                   <i className="fa-solid fa-chevron-right text-[#ceadd4] group-hover:text-[#91569c] transition-colors"></i>
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setDashboardView('home')}
+              className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+            >
+              <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Home: two-card dashboard ── */
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
+        <div className="w-full max-w-lg space-y-6 animate-fade-in">
+          <div className="text-center mb-8">
+            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
+            <p className="text-sm text-[#888] mt-1">What would you like to do?</p>
           </div>
 
-          <div className="text-center text-[10px] text-[#ceadd4] uppercase tracking-widest font-bold">or</div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Open Existing Project */}
+            <button
+              onClick={() => setDashboardView('projects')}
+              disabled={allProjects.length === 0}
+              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-[#e0d6e3]"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors group-disabled:group-hover:bg-[#f6f0f8]">
+                <i className="fa-solid fa-folder-open text-2xl text-[#91569c]"></i>
+              </div>
+              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">Open Project</span>
+              <span className="text-[10px] text-[#888]">
+                {allProjects.length > 0
+                  ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''}`
+                  : 'No projects yet'}
+              </span>
+            </button>
 
-          {/* Start new project — opens wizard */}
-          <button
-            onClick={() => setShowProjectName(true)}
-            className="w-full py-4 rounded-xl border-2 border-dashed border-[#ceadd4] hover:border-[#91569c] bg-white/50 hover:bg-white text-[#888] hover:text-[#91569c] transition-all flex items-center justify-center gap-3 group shadow-sm"
-          >
-            <i className="fa-solid fa-plus group-hover:scale-110 transition-transform"></i>
-            <span className="font-black uppercase tracking-wider text-xs">Start New Project</span>
-          </button>
+            {/* Create New Project */}
+            <button
+              onClick={() => setDashboardView('templates')}
+              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors">
+                <i className="fa-solid fa-plus text-2xl text-[#91569c]"></i>
+              </div>
+              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">New Project</span>
+              <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} template{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
+            </button>
+          </div>
         </div>
       </div>
     );
