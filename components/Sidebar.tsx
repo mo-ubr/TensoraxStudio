@@ -66,11 +66,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onT
 
   return (
     <aside className="w-[72px] flex-shrink-0 h-full bg-white border-r border-[#e0d6e3] flex flex-col items-center select-none">
-      {/* Logo */}
-      <SidebarLogo onClick={() => onNavigate('landing')} />
-
       {/* Nav items */}
-      <nav className="flex-1 w-full flex flex-col items-center gap-1 px-1.5">
+      <nav className="flex-1 w-full flex flex-col items-center gap-1 px-1.5 pt-3">
         {NAV_ITEMS.map(item => {
           const active = isActive(item);
           return (
