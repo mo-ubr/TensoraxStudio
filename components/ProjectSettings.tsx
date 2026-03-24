@@ -7,7 +7,7 @@ interface ApiSlot {
   label: string;
   icon: string;
   description: string;
-  provider: 'google' | 'anthropic' | 'fal';
+  provider: 'google' | 'anthropic' | 'fal' | 'shotstack';
   keyStorageKey: string;
   modelStorageKey: string;
   defaultModel: string;
@@ -85,6 +85,19 @@ const API_SLOTS: ApiSlot[] = [
       { group: 'Google Veo', items: ['veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
       { group: 'Kling V3 (fal.ai)', items: ['kling-v3-standard', 'kling-v3-pro'] },
       { group: 'Kling O3 Omni (fal.ai)', items: ['kling-o3-standard', 'kling-o3-pro'] },
+    ],
+  },
+  {
+    id: 'video-composition',
+    label: 'Video Composition (Shotstack)',
+    icon: 'fa-wand-magic-sparkles',
+    description: 'Composes final video with text, music, transitions, and branding',
+    provider: 'shotstack',
+    keyStorageKey: 'tensorax_shotstack_key',
+    modelStorageKey: 'tensorax_shotstack_model',
+    defaultModel: 'shotstack-v1',
+    models: [
+      { group: 'Shotstack', items: ['shotstack-v1'] },
     ],
   },
 ];

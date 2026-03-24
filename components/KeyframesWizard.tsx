@@ -79,6 +79,17 @@ const getVideoKey = (): string => {
   } catch { return ''; }
 };
 
+/** Get Shotstack API key from localStorage or env */
+const getShotstackKey = (): string => {
+  try {
+    const perModel = localStorage.getItem('tensorax_shotstack_key__shotstack-v1')?.trim();
+    if (perModel) return perModel;
+    const base = localStorage.getItem('tensorax_shotstack_key')?.trim();
+    if (base) return base;
+    return '';
+  } catch { return ''; }
+};
+
 export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, projectId, onComplete, onCancel }) => {
   const template = PROJECT_TEMPLATES.find(t => t.id === templateId)!;
 
@@ -92,6 +103,12 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
   const [progressMessage, setProgressMessage] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Composition options (Shotstack)
+  const [titleText, setTitleText] = useState('');
+  const [musicUrl, setMusicUrl] = useState('');
+  const [brandingUrl, setBrandingUrl] = useState('');
+  const [transition, setTransition] = useState('fade');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nextIdRef = useRef(1);
@@ -112,6 +129,10 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
         if (typeof saved.finalVideoUrl === 'string') setFinalVideoUrl(saved.finalVideoUrl);
         if (typeof saved.outputFormat === 'string') setOutputFormat(saved.outputFormat);
         if (saved.segmentDuration === '5' || saved.segmentDuration === '10') setSegmentDuration(saved.segmentDuration);
+        if (typeof saved.titleText === 'string') setTitleText(saved.titleText);
+        if (typeof saved.musicUrl === 'string') setMusicUrl(saved.musicUrl);
+        if (typeof saved.brandingUrl === 'string') setBrandingUrl(saved.brandingUrl);
+        if (typeof saved.transition === 'string') setTransition(saved.transition);
       }
       hasRestoredRef.current = true;
     }).catch(() => { hasRestoredRef.current = true; });
@@ -131,11 +152,15 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
         finalVideoUrl,
         outputFormat,
         segmentDuration,
+        titleText,
+        musicUrl,
+        brandingUrl,
+        transition,
       };
       DB.saveMetadata(projectId, { kfWizardState }).catch(e => console.warn('[KeyframesWizard] Failed to save state:', e));
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [projectId, step, frames, segments, finalVideoUrl, isGenerating, outputFormat, segmentDuration]);
+  }, [projectId, step, frames, segments, finalVideoUrl, isGenerating, outputFormat, segmentDuration, titleText, musicUrl, brandingUrl, transition]);
 
   // ── Frame management ───────────────────────────────────────────────────────
   const addFiles = async (files: File[]) => {
@@ -300,29 +325,165 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
     setProgressMessage('');
   };
 
-  // ── Stitch all segments ────────────────────────────────────────────────────
-  const stitchAllSegments = async () => {
+  // ── Compose / Stitch all segments ────────────────────────────────────────
+  const hasShotstackKey = !!getShotstackKey();
+
+  const composeWithShotstack = async () => {
+    const videoUrls = segments.sort((a, b) => a.id - b.id).map(s => s.videoUrl).filter(Boolean) as string[];
+    if (videoUrls.length < 1) { setError('Need at least 1 completed segment.'); return; }
+
+    setIsGenerating(true);
+    setProgressMessage('Building Shotstack composition...');
+    setError(undefined);
+
+    try {
+      const shotstackKey = getShotstackKey();
+      if (!shotstackKey) throw new Error('No Shotstack API key. Set it in Project Settings → Video Composition.');
+
+      // Build the Shotstack Edit JSON
+      const aspectRatio = outputFormat === 'portrait_9_16' ? '9:16' : outputFormat === 'square_1_1' ? '1:1' : '16:9';
+      const segDur = parseInt(segmentDuration);
+      const totalDuration = videoUrls.length * segDur;
+
+      // Build video track (Track 2 — main visuals)
+      const videoClips = videoUrls.map((url, i) => ({
+        asset: { type: 'video', src: url, volume: 0 },
+        start: i * segDur,
+        length: segDur,
+        fit: 'cover',
+        transition: i > 0 ? { in: transition || 'fade' } : undefined,
+      }));
+
+      const tracks: any[] = [];
+
+      // Track 0: Branding overlay (if provided)
+      if (brandingUrl.trim()) {
+        tracks.push({
+          clips: [{
+            asset: { type: 'image', src: brandingUrl.trim() },
+            start: 0,
+            length: totalDuration,
+            fit: 'none',
+            scale: 0.15,
+            position: 'topRight',
+            offset: { x: -0.03, y: -0.03 },
+            opacity: 0.7,
+          }],
+        });
+      }
+
+      // Track 1: Title text overlay (if provided)
+      if (titleText.trim()) {
+        tracks.push({
+          clips: [{
+            asset: {
+              type: 'html',
+              html: `<div style="font-family:Poppins,sans-serif;font-size:48px;font-weight:700;color:white;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.7);padding:20px;">${titleText.trim()}</div>`,
+              width: aspectRatio === '9:16' ? 1080 : 1920,
+              height: 200,
+            },
+            start: 0,
+            length: 4,
+            position: 'center',
+            transition: { in: 'fade', out: 'fade' },
+          }],
+        });
+      }
+
+      // Track 2: Video segments
+      tracks.push({ clips: videoClips });
+
+      const timeline: any = {
+        background: '#000000',
+        tracks,
+        cache: true,
+      };
+
+      // Soundtrack: Background music (if provided)
+      if (musicUrl.trim()) {
+        timeline.soundtrack = {
+          src: musicUrl.trim(),
+          effect: 'fadeInFadeOut',
+          volume: 0.2,
+        };
+      }
+
+      const edit = {
+        timeline,
+        output: {
+          format: 'mp4',
+          resolution: '1080',
+          aspectRatio,
+          fps: 25,
+          quality: 'high',
+        },
+      };
+
+      // Call Shotstack via SSE endpoint
+      setProgressMessage('Sending to Shotstack for rendering...');
+      const resultVideoUrl = await new Promise<string>((resolve, reject) => {
+        fetch('/api/compose-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: shotstackKey, edit }),
+        }).then(async (res) => {
+          if (!res.ok || !res.body) {
+            const err = await res.text().catch(() => `HTTP ${res.status}`);
+            return reject(new Error(err));
+          }
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            let currentEvent = '';
+            for (const line of lines) {
+              if (line.startsWith('event: ')) currentEvent = line.slice(7).trim();
+              else if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (currentEvent === 'progress') setProgressMessage(data.message);
+                  else if (currentEvent === 'done') { resolve(data.videoUrl); return; }
+                  else if (currentEvent === 'error') { reject(new Error(data.error)); return; }
+                } catch { /* skip */ }
+              }
+            }
+          }
+          reject(new Error('Stream ended without result'));
+        }).catch(reject);
+      });
+
+      setFinalVideoUrl(resultVideoUrl);
+      setIsGenerating(false);
+      setProgressMessage('');
+
+      if (projectId && resultVideoUrl) {
+        DB.saveProjectFile(projectId, 'final-video.mp4', resultVideoUrl, 'videos').catch(() => {});
+      }
+    } catch (err: any) {
+      setIsGenerating(false);
+      setProgressMessage('');
+      setError(`Composition failed: ${err.message}`);
+    }
+  };
+
+  const stitchWithFfmpeg = async () => {
     const videoUrls = segments.sort((a, b) => a.id - b.id).map(s => s.videoUrl).filter(Boolean) as string[];
     if (videoUrls.length < 2) { setError('Need at least 2 completed segments to stitch.'); return; }
 
     setIsGenerating(true);
-    setProgressMessage('Stitching segments into final video...');
+    setProgressMessage('Stitching segments (ffmpeg)...');
     setError(undefined);
 
     try {
-      const apiKey = getVideoKey();
-      const falKey = isVeoModel(getVideoModel())
-        ? (localStorage.getItem('tensorax_video_key__kling-v3-standard')?.trim()
-          || localStorage.getItem('tensorax_video_key')?.trim()
-          || apiKey)
-        : apiKey;
-      const allLocal = videoUrls.every(u => u.startsWith('/') || u.startsWith('./'));
-      if (!falKey && !allLocal) throw new Error('No fal.ai API key found. Set it in Project Settings → Video Generation.');
-
       const res = await fetch('/api/merge-videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: falKey || '', videoUrls, resolution: outputFormat }),
+        body: JSON.stringify({ videoUrls, resolution: outputFormat }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
@@ -669,22 +830,107 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
             </div>
           )}
 
-          {/* ═══ STEP 2: Stitch ═══ */}
+          {/* ═══ STEP 2: Compose / Stitch ═══ */}
           {step === 2 && (
             <div className="space-y-4 animate-fade-in">
+
+              {/* Shotstack composition options (only if key is set) */}
+              {hasShotstackKey && (
+                <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
+                  <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide mb-1">
+                    <i className="fa-solid fa-wand-magic-sparkles text-[#91569c] mr-2"></i>Composition Options
+                  </h2>
+                  <p className="text-[9px] text-[#888] mb-4">
+                    <i className="fa-solid fa-circle-check text-green-500 mr-1"></i>Shotstack connected — add text, music, branding, and transitions
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#5c3a62] uppercase mb-1">Title Text</label>
+                      <input
+                        type="text"
+                        value={titleText}
+                        onChange={(e) => setTitleText(e.target.value)}
+                        placeholder="Optional title card at the start"
+                        className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] outline-none focus:ring-1 focus:ring-[#91569c]/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#5c3a62] uppercase mb-1">Background Music URL</label>
+                      <input
+                        type="text"
+                        value={musicUrl}
+                        onChange={(e) => setMusicUrl(e.target.value)}
+                        placeholder="https://... (MP3 or WAV)"
+                        className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] outline-none focus:ring-1 focus:ring-[#91569c]/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#5c3a62] uppercase mb-1">Branding Overlay URL</label>
+                      <input
+                        type="text"
+                        value={brandingUrl}
+                        onChange={(e) => setBrandingUrl(e.target.value)}
+                        placeholder="https://... logo/watermark PNG"
+                        className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] outline-none focus:ring-1 focus:ring-[#91569c]/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#5c3a62] uppercase mb-1">Transition</label>
+                      <select
+                        value={transition}
+                        onChange={(e) => setTransition(e.target.value)}
+                        className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2 text-[11px] outline-none focus:ring-1 focus:ring-[#91569c]/50"
+                      >
+                        <option value="fade">Fade</option>
+                        <option value="wipeLeft">Wipe Left</option>
+                        <option value="wipeRight">Wipe Right</option>
+                        <option value="slideLeft">Slide Left</option>
+                        <option value="slideRight">Slide Right</option>
+                        <option value="zoom">Zoom</option>
+                        <option value="reveal">Reveal</option>
+                        <option value="none">Cut (no transition)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!hasShotstackKey && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <p className="text-[10px] text-amber-700">
+                    <i className="fa-solid fa-info-circle mr-1"></i>
+                    <strong>No Shotstack key set</strong> — using basic ffmpeg stitch (no text, music, or transitions).
+                    Add a key in Project Settings → Video Composition to unlock full composition.
+                  </p>
+                </div>
+              )}
+
               <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">
                     <i className="fa-solid fa-film text-[#91569c] mr-2"></i>Final Video
                   </h2>
-                  <button
-                    onClick={stitchAllSegments}
-                    disabled={isGenerating}
-                    className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 transition-colors flex items-center gap-1"
-                  >
-                    <i className="fa-solid fa-link text-[8px]"></i>
-                    {finalVideoUrl ? 'Re-stitch' : 'Stitch Now'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {hasShotstackKey ? (
+                      <button
+                        onClick={composeWithShotstack}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 transition-colors flex items-center gap-1"
+                      >
+                        <i className="fa-solid fa-wand-magic-sparkles text-[8px]"></i>
+                        {finalVideoUrl ? 'Re-compose' : 'Compose with Shotstack'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stitchWithFfmpeg}
+                        disabled={isGenerating}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-40 transition-colors flex items-center gap-1"
+                      >
+                        <i className="fa-solid fa-link text-[8px]"></i>
+                        {finalVideoUrl ? 'Re-stitch' : 'Stitch (ffmpeg)'}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {progressMessage && (
@@ -742,7 +988,7 @@ export const KeyframesWizard: React.FC<KeyframesWizardProps> = ({ templateId, pr
                 <button onClick={() => onComplete({
                   templateId,
                   step: 2,
-                  stages: frames.map((f, i) => ({ id: f.id, label: f.name, prompt: '', imageUrl: f.dataUri })),
+                  stages: frames.map((f) => ({ id: f.id, label: f.name, prompt: '', imageUrl: f.dataUri })),
                   segments,
                   finalVideoUrl,
                   outputFormat,
