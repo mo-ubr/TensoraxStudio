@@ -51,6 +51,8 @@ export { createCampaignOrchestrator } from './campaignOrchestrator';
 export type { CampaignPhase, CampaignConfig } from './campaignOrchestrator';
 export { createCompositionOrchestrator } from './compositionOrchestrator';
 export type { CompositionInputs } from './compositionOrchestrator';
+export { createImageAssemblyOrchestrator } from './imageAssemblyOrchestrator';
+export type { ImageAssemblyInputs } from './imageAssemblyOrchestrator';
 
 // Agent runner (re-export for convenience)
 export { runAgent, runAgentsParallel, runAgentChain } from '../agentRunner';

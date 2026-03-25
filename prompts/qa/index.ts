@@ -1,0 +1,1 @@
+export { qaConsistencyAgentPrompt } from './qaConsistencyAgent';
