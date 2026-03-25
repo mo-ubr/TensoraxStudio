@@ -74,11 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onT
             <button
               key={item.id}
               onClick={() => {
-                if (item.id === 'templates' && onTemplates) {
-                  onTemplates();
-                } else {
-                  onNavigate(item.screen);
-                }
+                onNavigate(item.id === 'templates' ? 'templates' : item.screen);
               }}
               className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl transition-all
                 ${active

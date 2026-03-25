@@ -19,6 +19,8 @@ import { KeyframesWizard } from './components/KeyframesWizard';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSettings } from './components/GlobalSettings';
 import { TemplateConfigFacility } from './components/TemplateConfigFacility';
+import { TemplateLibrary } from './components/TemplateLibrary';
+import { TemplateRunner } from './components/TemplateRunner';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -557,16 +559,16 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
+  const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
   const [showTemplateConfig, setShowTemplateConfig] = useState(false);
 
   /** Sidebar navigation handler */
   const handleSidebarNav = (screen: string) => {
     if (screen === 'templates') {
-      setLandingInitialView('templates');
-      setCurrentScreen('landing');
+      setCurrentScreen('template-library');
     } else if (screen === 'assets') {
       // Placeholder — future asset library screen
       setCurrentScreen('landing');
@@ -583,6 +585,7 @@ const App: React.FC = () => {
   /** Get the sidebar's active screen based on current state */
   const sidebarActiveScreen = currentScreen === 'settings' ? 'settings'
     : currentScreen === 'project-settings' ? 'settings'
+    : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
     : currentScreen;
   const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
@@ -1317,6 +1320,55 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'template-library') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <TemplateLibrary
+            onSelectTemplate={(id) => {
+              setSelectedRunnerTemplateId(id);
+              setCurrentScreen('template-runner');
+            }}
+            onConfigureTemplates={() => {
+              setLandingInitialView('templates');
+              setCurrentScreen('landing');
+            }}
+            onBack={() => {
+              setCurrentScreen('landing');
+              setLandingInitialView(undefined);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'template-runner' && selectedRunnerTemplateId) {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <TemplateRunner
+            templateId={selectedRunnerTemplateId}
+            projectId={activeProject?.id}
+            onComplete={(results) => {
+              console.log('[TemplateRunner] Pipeline completed:', results);
+              setSelectedRunnerTemplateId(null);
+              setCurrentScreen('template-library');
+            }}
+            onCancel={() => {
+              setSelectedRunnerTemplateId(null);
+              setCurrentScreen('template-library');
+            }}
+          />
         </div>
       </div>
     );
