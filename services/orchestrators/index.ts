@@ -36,6 +36,9 @@ export type {
   VoiceoverOutput,
   PostingOutput,
   SchedulingOutput,
+  DevBackendOutput,
+  DevFrontendOutput,
+  DevQAOutput,
 } from './types';
 
 // Orchestrators
@@ -49,6 +52,11 @@ export { createEditingOrchestrator } from './editingOrchestrator';
 export { createDistributionOrchestrator } from './distributionOrchestrator';
 export { createCampaignOrchestrator } from './campaignOrchestrator';
 export type { CampaignPhase, CampaignConfig } from './campaignOrchestrator';
+export { createCompositionOrchestrator } from './compositionOrchestrator';
+export type { CompositionInputs } from './compositionOrchestrator';
+export { createImageAssemblyOrchestrator } from './imageAssemblyOrchestrator';
+export type { ImageAssemblyInputs } from './imageAssemblyOrchestrator';
+export { createDevOrchestrator } from './devOrchestrator';
 
 // Agent runner (re-export for convenience)
 export { runAgent, runAgentsParallel, runAgentChain } from '../agentRunner';

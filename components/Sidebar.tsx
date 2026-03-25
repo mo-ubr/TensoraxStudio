@@ -42,6 +42,20 @@ const SidebarLogo: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   );
 };
 
+/** Studio icon — geometric hexagonal arrow matching the TensorAx brand mark */
+const StudioIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 390 440" fill="currentColor" className={className}>
+    {/* Top chevron */}
+    <polygon points="195,0 390,110 330,110 195,35 60,110 0,110" />
+    {/* Left pillar */}
+    <polygon points="60,140 140,140 140,380 105,400 60,380" />
+    {/* Center pillar */}
+    <polygon points="165,170 225,170 225,420 195,440 165,420" />
+    {/* Right pillar */}
+    <polygon points="250,140 330,140 330,380 285,400 250,380" />
+  </svg>
+);
+
 interface NavItem {
   id: string;
   label: string;
@@ -50,7 +64,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'home',      label: 'Home',      icon: 'fa-house',    screen: 'landing' },
+  { id: 'studio',    label: 'Studio',    icon: 'fa-terminal', screen: 'studio' },
+  { id: 'projects',  label: 'Projects',  icon: 'fa-folder-open', screen: 'projects' },
   { id: 'templates', label: 'Templates', icon: 'fa-shapes',   screen: 'templates' },
   { id: 'assets',    label: 'Assets',    icon: 'fa-images',   screen: 'assets' },
   { id: 'settings',  label: 'Settings',  icon: 'fa-gear',     screen: 'settings' },
@@ -74,11 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onT
             <button
               key={item.id}
               onClick={() => {
-                if (item.id === 'templates' && onTemplates) {
-                  onTemplates();
-                } else {
-                  onNavigate(item.screen);
-                }
+                onNavigate(item.id === 'templates' ? 'templates' : item.screen);
               }}
               className={`w-full flex flex-col items-center justify-center gap-0.5 py-2.5 rounded-xl transition-all
                 ${active
@@ -87,7 +98,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onT
                 }`}
               title={item.label}
             >
-              <i className={`fa-solid ${item.icon} text-base`} />
+              {item.id === 'studio' ? (
+                <StudioIcon className="w-4 h-4" />
+              ) : (
+                <i className={`fa-solid ${item.icon} text-base`} />
+              )}
               <span className={`text-[8px] font-bold uppercase tracking-wider leading-none mt-0.5
                 ${active ? 'text-[#91569c]' : ''}`}>
                 {item.label}

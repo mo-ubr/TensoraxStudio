@@ -24,9 +24,12 @@ import { generateKlingVideo } from "./klingService.js";
 import { generateSeedanceVideo } from "./seedanceService.js";
 import { mergeVideos } from "./mergeVideosService.js";
 import { generateFluxKontextImage } from "./fluxKontextService.js";
+import { renderShotstackVideo } from "./shotstackService.js";
 import { listFiles, getFileMetadata, downloadFile, uploadFile, createFolder } from "./driveService.js";
 import dbRouter from "./dbService.js";
 import videoAnalysisRouter from "./videoAnalysis.js";
+import templateRouter from "./templateRoutes.js";
+import pipelineRouter from "./pipelineRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5182;
@@ -45,6 +48,8 @@ app.use(express.json({ limit: "50mb" }));
 
 app.use("/api/db", dbRouter);
 app.use("/api/video", videoAnalysisRouter);
+app.use("/api/templates", templateRouter);
+app.use("/api/pipeline", pipelineRouter);
 
 import { writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join } from "path";
@@ -357,6 +362,50 @@ app.post("/api/merge-videos", async (req, res) => {
   } catch (err) {
     console.error("[MergeVideos API]", err);
     res.status(500).json({ error: err.message || "Video merge failed." });
+  }
+});
+
+// ─── Shotstack Composition (Video Composition with text, music, transitions) ──
+
+app.post("/api/compose-video", async (req, res) => {
+  const { apiKey, edit, environment } = req.body;
+  const resolvedApiKey = (apiKey || "").trim() || process.env.SHOTSTACK_API_KEY || "";
+
+  if (!resolvedApiKey) {
+    return res.status(400).json({ error: "No Shotstack API key provided." });
+  }
+
+  if (!edit || !edit.timeline || !edit.output) {
+    return res.status(400).json({ error: "Invalid edit: must contain timeline and output." });
+  }
+
+  // SSE streaming for progress
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+  });
+
+  const sendSSE = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const videoUrl = await renderShotstackVideo({
+      apiKey: resolvedApiKey,
+      environment: environment || "v1",
+      edit,
+      onProgress: (msg) => {
+        console.log("[Shotstack]", msg);
+        sendSSE("progress", { message: msg });
+      },
+    });
+    sendSSE("done", { videoUrl });
+  } catch (err) {
+    console.error("[Shotstack API Error]", err);
+    sendSSE("error", { error: err.message || "Shotstack composition failed." });
+  } finally {
+    res.end();
   }
 });
 

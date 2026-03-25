@@ -18,7 +18,7 @@ Mariella Ostend, owner of UBR Retail (mariella.ostend@ubr-retail.com). Non-coder
 
 Claude Code must run git commits automatically at these three moments. Do not ask Mariella — just do it.
 
-1. **Start of every session**: Before any work begins, commit and push everything that's currently uncommitted. Then run `cc.bat`.
+1. **Start of every session**: Before any work begins, commit and push everything that's currently uncommitted. Then start the dev server (`npm run dev`) and open http://localhost:5180 in Chrome.
 2. **Before any major change**: Before starting risky work (database changes, major refactors, deleting files, rewriting modules), commit and push first so there's a safe rollback point.
 3. **End of every session**: After the final task is done, commit and push all work.
 

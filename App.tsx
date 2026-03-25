@@ -15,8 +15,13 @@ import { DB, type Project } from './services/projectDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
 import { TemplateWizard } from './components/TemplateWizard';
+import { KeyframesWizard } from './components/KeyframesWizard';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSettings } from './components/GlobalSettings';
+import { TemplateConfigFacility } from './components/TemplateConfigFacility';
+import { TemplateLibrary } from './components/TemplateLibrary';
+import { TemplateRunner } from './components/TemplateRunner';
+import { StudioLayout } from './components/StudioLayout';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -281,12 +286,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               ))}
             </div>
 
-            <button
-              onClick={() => setDashboardView('home')}
-              className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
-            >
-              <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDashboardView('home')}
+                className="flex-1 text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+              >
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+              </button>
+              <button
+                onClick={() => setShowTemplateConfig(true)}
+                className="px-4 py-2 rounded-lg border border-[#e0d6e3] text-xs font-bold uppercase text-[#888] hover:text-[#91569c] hover:border-[#91569c]/40 transition-colors"
+              >
+                <i className="fa-solid fa-gear mr-1.5"></i> Configure Templates
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -547,18 +560,28 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
+  const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
+  const [showTemplateConfig, setShowTemplateConfig] = useState(false);
 
   /** Sidebar navigation handler */
   const handleSidebarNav = (screen: string) => {
-    if (screen === 'templates') {
-      setLandingInitialView('templates');
+    if (screen === 'studio') {
+      setCurrentScreen('studio');
+    } else if (screen === 'projects') {
+      setLandingInitialView('projects');
       setCurrentScreen('landing');
+    } else if (screen === 'templates') {
+      setCurrentScreen('template-library');
     } else if (screen === 'assets') {
       // Placeholder — future asset library screen
       setCurrentScreen('landing');
+    } else if (screen === 'settings') {
+      // Map sidebar "Settings" to project-settings when a project is active
+      setLandingInitialView(undefined);
+      setCurrentScreen(activeProject ? 'project-settings' : 'landing');
     } else {
       setLandingInitialView(undefined);
       setCurrentScreen(screen as any);
@@ -568,7 +591,9 @@ const App: React.FC = () => {
   /** Get the sidebar's active screen based on current state */
   const sidebarActiveScreen = currentScreen === 'settings' ? 'settings'
     : currentScreen === 'project-settings' ? 'settings'
-    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
+    : currentScreen === 'studio' ? 'studio'
+    : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
+    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
     : currentScreen;
   const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
   const [assistantContext, setAssistantContext] = useState('');
@@ -1222,16 +1247,29 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <div className="flex flex-col flex-1 min-w-0">
-        <TemplateWizard
-          templateId={activeTemplateId}
-          projectId={activeProject.id}
-          onComplete={(result) => {
-            console.log('[TemplateWizard] completed:', result.templateId, result.videoUrl ? 'with video' : 'no video');
-            setActiveTemplateId(null);
-            setCurrentScreen('landing');
-          }}
-          onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
-        />
+        {activeTemplateId === 'video-from-keyframes' ? (
+          <KeyframesWizard
+            templateId={activeTemplateId}
+            projectId={activeProject.id}
+            onComplete={(result) => {
+              console.log('[KeyframesWizard] completed:', result.templateId, result.finalVideoUrl ? 'with video' : 'no video');
+              setActiveTemplateId(null);
+              setCurrentScreen('landing');
+            }}
+            onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          />
+        ) : (
+          <TemplateWizard
+            templateId={activeTemplateId}
+            projectId={activeProject.id}
+            onComplete={(result) => {
+              console.log('[TemplateWizard] completed:', result.templateId, result.videoUrl ? 'with video' : 'no video');
+              setActiveTemplateId(null);
+              setCurrentScreen('landing');
+            }}
+            onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          />
+        )}
       </div></div></div>
     );
   }
@@ -1289,6 +1327,77 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'studio') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <StudioLayout
+            projectContext={null}
+            brand={null}
+            activeProject={activeProject}
+            onAction={() => {}}
+            onStartTemplate={(templateId) => {
+              setSelectedRunnerTemplateId(templateId);
+              setCurrentScreen('template-runner');
+            }}
+            onNavigate={(screen) => setCurrentScreen(screen as any)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'template-library') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <TemplateLibrary
+            onSelectTemplate={(id) => {
+              setSelectedRunnerTemplateId(id);
+              setCurrentScreen('template-runner');
+            }}
+            onConfigureTemplates={() => {
+              setLandingInitialView('templates');
+              setCurrentScreen('landing');
+            }}
+            onBack={() => {
+              setCurrentScreen('landing');
+              setLandingInitialView(undefined);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'template-runner' && selectedRunnerTemplateId) {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <TemplateRunner
+            templateId={selectedRunnerTemplateId}
+            projectId={activeProject?.id}
+            onComplete={(results) => {
+              console.log('[TemplateRunner] Pipeline completed:', results);
+              setSelectedRunnerTemplateId(null);
+              setCurrentScreen('template-library');
+            }}
+            onCancel={() => {
+              setSelectedRunnerTemplateId(null);
+              setCurrentScreen('template-library');
+            }}
+          />
         </div>
       </div>
     );
@@ -1813,6 +1922,17 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Configuration Facility overlay */}
+      {showTemplateConfig && (
+        <TemplateConfigFacility
+          onClose={() => setShowTemplateConfig(false)}
+          onUseTemplate={(id) => {
+            setShowTemplateConfig(false);
+            // TODO: wire to template launch when template configs drive wizards
+          }}
+        />
       )}
 
       <style>{`

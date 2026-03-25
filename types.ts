@@ -102,7 +102,7 @@ export interface BrandProfile {
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
-export type TemplateId = 'what-if-transformation';
+export type TemplateId = 'what-if-transformation' | 'video-from-keyframes';
 
 export interface ProjectTemplate {
   id: TemplateId;
@@ -157,6 +157,14 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     description: 'Upload a reference video and starting image. The AI extracts transformation stages, generates keyframe images for each stage, then creates video segments between them.',
     icon: 'fa-wand-magic-sparkles',
     steps: ['Settings', 'Analyse', 'Generate Images', 'Generate Videos', 'Concatenate'],
+    defaultPrompt: '',
+  },
+  {
+    id: 'video-from-keyframes',
+    name: 'Video from Key Frames',
+    description: 'Upload keyframe images in sequence. AI generates video segments between each pair, then stitches them into one final video.',
+    icon: 'fa-images',
+    steps: ['Upload Frames', 'Generate Videos', 'Stitch'],
     defaultPrompt: '',
   },
 ];
