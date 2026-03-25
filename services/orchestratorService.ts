@@ -16,6 +16,7 @@ export type MasterActionType =
   | 'run_template'
   | 'run_single_agent'
   | 'show_pipeline'
+  | 'build_template'
   | 'set_field'
   | 'navigate'
   | 'upload_request'
@@ -164,6 +165,9 @@ Embed these tags in your responses. They are parsed and executed automatically �
 [ACTION:UPLOAD_REQUEST:description of files needed]
   Ask the user to upload specific files. Example: [ACTION:UPLOAD_REQUEST:Upload 3-5 product photos for the campaign]
 
+[ACTION:BUILD_TEMPLATE:brief description of what to build]
+  Trigger the Dev Agent pipeline (Backend Dev → Frontend Dev → QA) to generate a new custom template from scratch. Use this when the user's request doesn't match any existing template and needs a completely new pipeline design. Example: [ACTION:BUILD_TEMPLATE:A social media campaign that generates product photos, writes platform-specific captions, and schedules posts across Instagram and TikTok]
+
 [ACTION:SET_FIELD:fieldName:value]
   Set a project field. Valid fields: aim, cta, targetAudience, videoType, format, duration, tone`);
 
@@ -236,6 +240,10 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
           // Malformed JSON — skip
           console.warn('[OrchestratorService] Failed to parse SHOW_PIPELINE JSON:', payload);
         }
+        break;
+      }
+      case 'BUILD_TEMPLATE': {
+        actions.push({ type: 'build_template', description: payload?.trim() });
         break;
       }
       case 'SET_FIELD': {

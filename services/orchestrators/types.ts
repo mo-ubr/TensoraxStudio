@@ -83,6 +83,118 @@ export interface ProjectContext {
     postingPackages?: unknown;
     schedule?: unknown;
   };
+
+  /** Dev agent outputs (from DevOrchestrator) — used when building custom templates via the 3-agent dev pipeline */
+  dev?: {
+    /** User's original brief describing what they want built */
+    userBrief?: string;
+    /** Step 1 output: Backend Dev agent produces the raw TemplateConfig JSON (teams, agents, sequence, steps) */
+    backendLogic?: DevBackendOutput;
+    /** Step 2 output: Frontend Dev agent produces the UI configuration (customFields, input requirements) */
+    frontendUI?: DevFrontendOutput;
+    /** Step 3 output: QA agent validates both outputs and produces a pass/fail report */
+    qaReport?: DevQAOutput;
+    /** Number of revision cycles completed (QA rejection → Backend retry) */
+    revisionCount?: number;
+  };
+}
+
+// ─── Dev agent output types ─────────────────────────────────────────────────
+
+/** Step 1: Backend Dev agent output — the raw pipeline logic */
+export interface DevBackendOutput {
+  /** The generated TemplateConfig (without UI-specific fields) */
+  templateConfig: {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    category: 'marketing' | 'training' | 'social' | 'live' | 'custom';
+    teams: Array<{
+      teamId: string;
+      agents: string[];
+      sequence?: string[];
+      parallel?: string[][];
+      notes?: string;
+    }>;
+    steps: Array<{
+      order: number;
+      name: string;
+      teamId: string;
+      agents: string[];
+      requiresReview: boolean;
+      description: string;
+    }>;
+    defaults?: {
+      provider?: string;
+      aspectRatio?: string;
+      segmentDuration?: number;
+      transition?: string;
+    };
+    outputs: {
+      primary: 'video' | 'image' | 'mixed';
+      formats?: string[];
+      usesShotstack?: boolean;
+    };
+    tags?: string[];
+  };
+  /** Reasoning for why these teams/agents were chosen */
+  reasoning: string;
+  /** Any assumptions the agent made */
+  assumptions: string[];
+}
+
+/** Step 2: Frontend Dev agent output — the UI configuration */
+export interface DevFrontendOutput {
+  /** Custom input fields the user needs to fill before running the template */
+  customFields: Array<{
+    id: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select' | 'number' | 'toggle';
+    options?: string[];
+    defaultValue?: string | number | boolean;
+    required?: boolean;
+    helpText?: string;
+  }>;
+  /** Input requirements */
+  inputs: {
+    requiresSourceImages?: boolean;
+    minImages?: number;
+    requiresReferenceVideo?: boolean;
+    requiresBrief?: boolean;
+    requiresBrand?: boolean;
+  };
+  /** Suggested wizard step groupings for the UI */
+  wizardSteps?: Array<{
+    name: string;
+    fieldIds: string[];
+    description: string;
+  }>;
+  /** Notes about the UI design decisions */
+  notes: string;
+}
+
+/** Step 3: QA agent output — validation report */
+export interface DevQAOutput {
+  /** Overall result */
+  verdict: 'pass' | 'fail' | 'pass_with_warnings';
+  /** List of checks performed */
+  checks: Array<{
+    name: string;
+    status: 'pass' | 'fail' | 'warning';
+    details: string;
+  }>;
+  /** Specific issues found (if verdict is fail) */
+  issues: Array<{
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    component: 'backend' | 'frontend' | 'both';
+    description: string;
+    suggestedFix: string;
+  }>;
+  /** Feedback to send back to Backend Dev if revision needed */
+  revisionFeedback?: string;
+  /** Summary for the user */
+  summary: string;
 }
 
 // ─── Orchestrator configuration ─────────────────────────────────────────────

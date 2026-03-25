@@ -1,6 +1,6 @@
 # Agent Teams — Master Reference Guide
 
-> **Last updated:** 2026-03-25 (v3 — added Master Orchestrator Studio, 3-tier architecture, PipelineComposer, AgentCatalogue)
+> **Last updated:** 2026-03-25 (v4 — added Dev Agent Pipeline: 3 dev agents + devOrchestrator + ProjectContext.dev namespace)
 > **Maintainer:** Update this file every time the agent/team architecture changes.
 
 ---
@@ -178,8 +178,38 @@ Backend/Frontend/QA dev agents callable from orchestrator for custom Shotstack s
 | `UPLOAD_REQUEST` | `[ACTION:UPLOAD_REQUEST:desc]` | Request file upload |
 | `SET_FIELD` | `[ACTION:SET_FIELD:field:value]` | Set project field (legacy compat) |
 
+### Tier 3: Dev Agent Pipeline (Phase 3 — built, not yet wired to UI)
+
+3-agent pipeline for building custom templates from natural language:
+
+```
+User Brief → Backend Dev Agent → Frontend Dev Agent → QA Gate
+                 ↑                                        |
+                 └──── revision feedback (max 3 retries) ←┘
+```
+
+| Step | Agent | Input | Output | Stored In |
+|------|-------|-------|--------|-----------|
+| 1 | `backendDevAgent` | Brief + brand + QA feedback | TemplateConfig JSON (teams, agents, steps) | `ProjectContext.dev.backendLogic` |
+| 2 | `frontendDevAgent` | Brief + backend JSON | customFields, inputs, wizard steps | `ProjectContext.dev.frontendUI` |
+| 3 | `qaDevAgent` | Brief + backend + frontend | Pass/fail report with revision feedback | `ProjectContext.dev.qaReport` |
+
+**Key files:**
+- `prompts/dev/backendDevAgent.ts` — Includes condensed TemplateConfig schema + all 43 agent IDs + hard rules
+- `prompts/dev/frontendDevAgent.ts` — UI field generation guidelines
+- `prompts/dev/qaDevAgent.ts` — 5-check validation (schema, referential integrity, pipeline logic, frontend, brief alignment)
+- `services/orchestrators/devOrchestrator.ts` — Pipeline with retry loop (max 3 revisions)
+- `services/orchestrators/types.ts` — `DevBackendOutput`, `DevFrontendOutput`, `DevQAOutput` types + `ProjectContext.dev`
+
+**ACTION trigger:** `[ACTION:BUILD_TEMPLATE:description]` from Master Orchestrator
+
 ### Architecture Note: Agent Statelessness
 Agents are single-purpose execution units with no memory between invocations. The Master Orchestrator is a **stateful Gemini chat** (multi-turn conversation via `GeminiService.createChat()`), but the agents it dispatches are stateless. All inter-agent state flows through `ProjectContext`. The orchestrator's system prompt contains a condensed agent catalogue and template registry — not the full agent prompts.
+
+Each dev agent receives only what it needs via `buildInput()`:
+- Backend Dev gets: brief, brand, QA feedback (if retry)
+- Frontend Dev gets: brief, backend's TemplateConfig
+- QA gets: brief, backend config, frontend fields, revision count
 
 ---
 
