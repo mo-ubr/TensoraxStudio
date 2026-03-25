@@ -1,6 +1,6 @@
 # Agent Teams — Master Reference Guide
 
-> **Last updated:** 2026-03-25 (v2 — added REST API, Template Library UI, Pipeline Runner, test suite)
+> **Last updated:** 2026-03-25 (v3 — added Master Orchestrator Studio, 3-tier architecture, PipelineComposer, AgentCatalogue)
 > **Maintainer:** Update this file every time the agent/team architecture changes.
 
 ---
@@ -141,6 +141,45 @@ Think of it like a film production:
 6. Result stored back in `ProjectContext`
 7. If `requiresReview: true`, execution pauses for user approval
 8. Repeat until all steps complete
+
+---
+
+## 3b. Master Orchestrator (3-Tier Architecture)
+
+### Tier 1: Template Launcher (existing)
+5 built-in templates as quick-start cards in Template Library. User picks one, runs pipeline.
+
+### Tier 2: Master Orchestrator Chat (Studio screen)
+Full-width conversational interface at `/studio`. Capabilities:
+- **Template dispatch** — "Run the What-If template" emits `[ACTION:RUN_TEMPLATE:what-if-transformation]`
+- **Freeform composition** — "Take photos, write copy, schedule posts" emits `[ACTION:SHOW_PIPELINE:{...}]` with proposed steps
+- **Single-agent calls** — "Rewrite this copy" emits `[ACTION:RUN_AGENT:copywriter:input]`
+- **File drag-and-drop** — Images/videos shown as thumbnails, base64 injected into context
+
+### Tier 3: Dev Sandbox (future Phase 3)
+Backend/Frontend/QA dev agents callable from orchestrator for custom Shotstack schemas, one-off integrations, etc.
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `services/orchestratorService.ts` | System prompt builder, action parser, PipelinePlan types |
+| `components/MasterOrchestrator.tsx` | Full-width chat panel with Gemini |
+| `components/PipelineComposer.tsx` | Interactive plan-review UI (inline in chat) |
+| `components/AgentCataloguePanel.tsx` | Searchable agent browser modal |
+| `components/StudioLayout.tsx` | Layout wrapper for Studio screen |
+
+### Extended ACTION Protocol
+| Action | Format | Purpose |
+|--------|--------|---------|
+| `RUN_TEMPLATE` | `[ACTION:RUN_TEMPLATE:templateId]` | Launch a template |
+| `RUN_AGENT` | `[ACTION:RUN_AGENT:agentId:input]` | Single agent call |
+| `SHOW_PIPELINE` | `[ACTION:SHOW_PIPELINE:JSON]` | Propose pipeline for review |
+| `NAVIGATE` | `[ACTION:NAVIGATE:screen]` | Screen navigation |
+| `UPLOAD_REQUEST` | `[ACTION:UPLOAD_REQUEST:desc]` | Request file upload |
+| `SET_FIELD` | `[ACTION:SET_FIELD:field:value]` | Set project field (legacy compat) |
+
+### Architecture Note: Agent Statelessness
+Agents are single-purpose execution units with no memory between invocations. The Master Orchestrator is a **stateful Gemini chat** (multi-turn conversation via `GeminiService.createChat()`), but the agents it dispatches are stateless. All inter-agent state flows through `ProjectContext`. The orchestrator's system prompt contains a condensed agent catalogue and template registry — not the full agent prompts.
 
 ---
 
