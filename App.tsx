@@ -18,6 +18,7 @@ import { TemplateWizard } from './components/TemplateWizard';
 import { KeyframesWizard } from './components/KeyframesWizard';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSettings } from './components/GlobalSettings';
+import { TemplateConfigFacility } from './components/TemplateConfigFacility';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -282,12 +283,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               ))}
             </div>
 
-            <button
-              onClick={() => setDashboardView('home')}
-              className="w-full text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
-            >
-              <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setDashboardView('home')}
+                className="flex-1 text-center px-4 py-2 text-xs font-bold uppercase text-[#888] hover:text-[#5c3a62] transition-colors"
+              >
+                <i className="fa-solid fa-arrow-left mr-1.5"></i> Back
+              </button>
+              <button
+                onClick={() => setShowTemplateConfig(true)}
+                className="px-4 py-2 rounded-lg border border-[#e0d6e3] text-xs font-bold uppercase text-[#888] hover:text-[#91569c] hover:border-[#91569c]/40 transition-colors"
+              >
+                <i className="fa-solid fa-gear mr-1.5"></i> Configure Templates
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -551,6 +560,7 @@ const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
+  const [showTemplateConfig, setShowTemplateConfig] = useState(false);
 
   /** Sidebar navigation handler */
   const handleSidebarNav = (screen: string) => {
@@ -1831,6 +1841,17 @@ className="flex-shrink-0 py-1.5 sm:py-2 px-2 sm:px-4 rounded-lg text-[10px] sm:t
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Configuration Facility overlay */}
+      {showTemplateConfig && (
+        <TemplateConfigFacility
+          onClose={() => setShowTemplateConfig(false)}
+          onUseTemplate={(id) => {
+            setShowTemplateConfig(false);
+            // TODO: wire to template launch when template configs drive wizards
+          }}
+        />
       )}
 
       <style>{`
