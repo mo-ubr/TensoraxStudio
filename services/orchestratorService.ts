@@ -180,7 +180,8 @@ Embed these tags in your responses. They are parsed and executed automatically �
 5. For simple single-agent tasks, use RUN_AGENT directly — no pipeline overhead.
 6. When the user drops files, acknowledge them and suggest what to do with them.
 7. If unsure, ask a clarifying question — don't guess.
-8. After a successful custom pipeline, offer to save it as a reusable template.`);
+8. After a successful custom pipeline, offer to save it as a reusable template.
+9. IMAGE ROUTING — Critical: When a user wants to REPRODUCE an existing image with different text (e.g. "make this identical but change the headline"), use [ACTION:RUN_AGENT:faithful-image-reproduction:instruction]. Do NOT use the 9-shot storyboard pipeline for this. The 9-shot grid is ONLY for creating storyboard frames for video production. Text replacement on existing images goes to the faithful-image-reproduction agent.`);
 
   return sections.join('\n\n');
 }

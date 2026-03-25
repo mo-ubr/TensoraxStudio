@@ -60,6 +60,9 @@ export { musicAgentPrompt } from './editing/musicAgent';
 export { soundSyncAgentPrompt } from './editing/soundSyncAgent';
 export { onScreenTextAgentPrompt } from './editing/onScreenTextAgent';
 
+// Production — Faithful reproduction
+export { faithfulImageReproductionAgentPrompt } from './production/faithfulImageReproductionAgent';
+
 // Distribution agents
 export { postingAgentPrompt } from './distribution/postingAgent';
 export { schedulingAgentPrompt } from './distribution/schedulingAgent';

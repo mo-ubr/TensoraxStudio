@@ -50,6 +50,7 @@ export type AgentId =
   | 'music-generation'
   // Production Team — Utility
   | 'faithful-formatter'
+  | 'faithful-image-reproduction'
   // Production Team — QA
   | 'qa-consistency'
   // Video Assembly Team

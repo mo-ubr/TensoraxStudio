@@ -435,6 +435,37 @@ app.post("/api/flux-kontext/generate", async (req, res) => {
   }
 });
 
+// ─── Image Edit (alias for faithful reproduction via fal.ai) ────────────────
+
+app.post("/api/image-edit", async (req, res) => {
+  try {
+    const { apiKey, imageUrl, prompt, modelId } = req.body;
+    const resolvedApiKey = (apiKey || "").trim() || process.env.FAL_API_KEY || "";
+
+    if (!resolvedApiKey) {
+      return res.status(400).json({ error: "No fal.ai API key provided. Set it in Settings or as FAL_API_KEY env var." });
+    }
+    if (!imageUrl) {
+      return res.status(400).json({ error: "No source image provided for editing." });
+    }
+    if (!prompt?.trim()) {
+      return res.status(400).json({ error: "No edit instruction provided." });
+    }
+
+    const result = await generateFluxKontextImage({
+      apiKey: resolvedApiKey,
+      imageUrl,
+      prompt: prompt.trim(),
+      modelId: modelId || "nano-banana",
+      onProgress: (msg) => { console.log("[ImageEdit]", msg); },
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("[ImageEdit API]", err);
+    res.status(500).json({ error: err.message || "Image editing failed." });
+  }
+});
+
 // ─── Google Drive (zLibraries) ───────────────────────────────────────────────
 
 app.get("/api/drive/files", async (req, res) => {
