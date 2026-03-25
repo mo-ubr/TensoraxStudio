@@ -1,0 +1,318 @@
+/**
+ * OrchestratorService — Brain of the Master Orchestrator
+ *
+ * Builds the system prompt with agent catalogue and template awareness,
+ * parses the extended ACTION protocol, and converts pipeline plans
+ * into executable TemplateConfig objects.
+ */
+
+import type { TemplateConfig, TemplateStep, TeamActivation, TeamId, AgentId } from '../templates/templateConfig';
+import { TEAM_CATALOGUE, getAllTemplates, type TeamMeta } from './templateService';
+import type { BrandProfile } from '../types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export type MasterActionType =
+  | 'run_template'
+  | 'run_single_agent'
+  | 'show_pipeline'
+  | 'set_field'
+  | 'navigate'
+  | 'upload_request'
+  | 'cancel_pipeline';
+
+export interface MasterAction {
+  type: MasterActionType;
+  templateId?: string;
+  agentId?: string;
+  agentInput?: string;
+  pipelinePlan?: PipelinePlan;
+  field?: string;
+  value?: string;
+  screen?: string;
+  description?: string;
+}
+
+export interface PipelinePlanStep {
+  order: number;
+  name: string;
+  agentId: AgentId;
+  teamId: TeamId;
+  description: string;
+  requiresReview: boolean;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  output?: unknown;
+}
+
+export interface PipelinePlan {
+  id: string;
+  name: string;
+  steps: PipelinePlanStep[];
+  estimatedDuration?: string;
+  source: 'template' | 'modified_template' | 'freeform';
+  sourceTemplateId?: string;
+}
+
+export interface FileAttachment {
+  name: string;
+  type: string;
+  dataUri: string;
+  thumbnailUri?: string;
+}
+
+export interface MasterChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: number;
+  inlinePlan?: PipelinePlan;
+  attachments?: FileAttachment[];
+}
+
+// ─── Agent Catalogue Summary (for system prompt) ────────────────────────────
+
+function buildAgentCatalogueSummary(): string {
+  return TEAM_CATALOGUE.map((team: TeamMeta) => {
+    const agentLines = team.agents
+      .map(a => `  [${a.id}] ${a.name} — ${a.description}`)
+      .join('\n');
+    return `${team.name.toUpperCase()} (${team.agents.length} agents):\n${agentLines}`;
+  }).join('\n\n');
+}
+
+// ─── Template Catalogue Summary (for system prompt) ─────────────────────────
+
+function buildTemplateCatalogueSummary(): string {
+  const templates = getAllTemplates();
+  return templates.map(t => {
+    const teamCount = t.teams.length;
+    const agentCount = t.teams.reduce((sum, team) => sum + team.agents.length, 0);
+    return `  [${t.id}] "${t.name}" — ${t.description.slice(0, 100)}... (${t.steps.length} steps, ${teamCount} teams, ${agentCount} agents, output: ${t.outputs.primary})`;
+  }).join('\n');
+}
+
+// ─── System Prompt Builder ──────────────────────────────────────────────────
+
+export function buildMasterSystemPrompt(
+  projectContext?: Record<string, unknown> | null,
+  brand?: BrandProfile | null,
+): string {
+  const sections: string[] = [];
+
+  // Role
+  sections.push(`═══ ROLE ═══
+You are the Master Orchestrator for TensorAx Studio — a creative production platform that generates branded video campaigns using AI agents.
+
+You are the command centre. You don't just answer questions — you plan and execute production pipelines by routing work to specialised AI agents.
+
+Keep responses SHORT: 2-3 sentences + action tags. Be decisive, not conversational.`);
+
+  // Capabilities
+  sections.push(`═══ CAPABILITIES ═══
+1. TEMPLATE DISPATCH — Launch a pre-built template by name ("Run the What If template")
+2. TEMPLATE MODIFICATION — Modify a template before running ("Run Staff Training but skip localisation")
+3. FREEFORM COMPOSITION — Build a custom pipeline from the agent catalogue ("Take photos, write copy, schedule posts")
+4. SINGLE AGENT CALLS — Route a task to one agent ("Rewrite this copy to be more playful")`);
+
+  // Agent Catalogue
+  sections.push(`═══ AGENT CATALOGUE (${TEAM_CATALOGUE.reduce((s, t) => s + t.agents.length, 0)} agents across ${TEAM_CATALOGUE.length} teams) ═══
+
+${buildAgentCatalogueSummary()}`);
+
+  // Template Catalogue
+  sections.push(`═══ AVAILABLE TEMPLATES ═══
+${buildTemplateCatalogueSummary()}`);
+
+  // Project Context
+  if (projectContext) {
+    const ctx = projectContext;
+    sections.push(`═══ CURRENT PROJECT ═══
+Project: ${ctx.projectName || 'None'}
+Research: ${ctx.research ? 'Completed' : 'Not started'}
+Concepts: ${ctx.concept ? 'Generated' : 'Not started'}
+Characters: ${ctx.characters ? 'Designed' : 'Not started'}
+Video: ${ctx.video ? 'Generated' : 'Not started'}
+Editing: ${ctx.editing ? 'In progress' : 'Not started'}
+Distribution: ${ctx.distribution ? 'Scheduled' : 'Not started'}`);
+  } else {
+    sections.push(`═══ CURRENT PROJECT ═══
+No active project. User may start a new pipeline or select a template.`);
+  }
+
+  // Brand
+  if (brand) {
+    sections.push(`═══ ACTIVE BRAND ═══
+Name: ${brand.name}
+${brand.description ? `Description: ${brand.description}` : ''}`);
+  }
+
+  // ACTION Protocol
+  sections.push(`═══ ACTION PROTOCOL ═══
+Embed these tags in your responses. They are parsed and executed automatically — the user sees only your text, not the tags.
+
+[ACTION:RUN_TEMPLATE:templateId]
+  Launch a built-in or custom template. Example: [ACTION:RUN_TEMPLATE:what-if-transformation]
+
+[ACTION:RUN_AGENT:agentId:input text here]
+  Run a single agent with the given input. Example: [ACTION:RUN_AGENT:copywriter:Rewrite this headline to be more energetic: "New Collection Available"]
+
+[ACTION:SHOW_PIPELINE:{"name":"Pipeline Name","steps":[{"order":1,"name":"Step Name","agentId":"agent-id","teamId":"team-id","description":"What this step does","requiresReview":true}]}]
+  Propose a custom pipeline for user review. The user will see an interactive step list and can approve, modify, or cancel.
+
+[ACTION:NAVIGATE:screenName]
+  Navigate to a screen. Valid: landing, concept, images, video, templates, settings, template-library
+
+[ACTION:UPLOAD_REQUEST:description of files needed]
+  Ask the user to upload specific files. Example: [ACTION:UPLOAD_REQUEST:Upload 3-5 product photos for the campaign]
+
+[ACTION:SET_FIELD:fieldName:value]
+  Set a project field. Valid fields: aim, cta, targetAudience, videoType, format, duration, tone`);
+
+  // Behavioural Rules
+  sections.push(`═══ RULES ═══
+1. Keep responses SHORT — 2-3 sentences + action tags. No essays.
+2. When a user describes a workflow, ALWAYS propose a pipeline plan first (SHOW_PIPELINE). Never execute without showing the plan.
+3. If the request matches a built-in template, suggest it with RUN_TEMPLATE.
+4. If it's close but needs changes, describe what you'd modify and propose a SHOW_PIPELINE with the adjusted steps.
+5. For simple single-agent tasks, use RUN_AGENT directly — no pipeline overhead.
+6. When the user drops files, acknowledge them and suggest what to do with them.
+7. If unsure, ask a clarifying question — don't guess.
+8. After a successful custom pipeline, offer to save it as a reusable template.`);
+
+  return sections.join('\n\n');
+}
+
+// ─── Action Parser ──────────────────────────────────────────────────────────
+
+const ACTION_REGEX = /\[ACTION:([A-Z_]+)(?::([^\]]*))?\]/g;
+
+export function parseMasterActions(text: string): { cleanText: string; actions: MasterAction[] } {
+  const actions: MasterAction[] = [];
+  let match: RegExpExecArray | null;
+
+  // Reset regex
+  ACTION_REGEX.lastIndex = 0;
+
+  while ((match = ACTION_REGEX.exec(text)) !== null) {
+    const [, type, payload] = match;
+
+    switch (type) {
+      case 'RUN_TEMPLATE': {
+        actions.push({ type: 'run_template', templateId: payload?.trim() });
+        break;
+      }
+      case 'RUN_AGENT': {
+        const colonIdx = payload?.indexOf(':') ?? -1;
+        if (colonIdx > 0) {
+          actions.push({
+            type: 'run_single_agent',
+            agentId: payload!.slice(0, colonIdx).trim(),
+            agentInput: payload!.slice(colonIdx + 1).trim(),
+          });
+        }
+        break;
+      }
+      case 'SHOW_PIPELINE': {
+        try {
+          const plan = JSON.parse(payload || '{}') as Partial<PipelinePlan>;
+          actions.push({
+            type: 'show_pipeline',
+            pipelinePlan: {
+              id: `plan-${Date.now()}`,
+              name: plan.name || 'Custom Pipeline',
+              steps: (plan.steps || []).map((s, i) => ({
+                order: s.order ?? i + 1,
+                name: s.name || `Step ${i + 1}`,
+                agentId: s.agentId || 'general-analysis' as AgentId,
+                teamId: s.teamId || 'research' as TeamId,
+                description: s.description || '',
+                requiresReview: s.requiresReview ?? true,
+                status: 'pending' as const,
+              })),
+              source: 'freeform',
+              ...plan,
+            },
+          });
+        } catch {
+          // Malformed JSON — skip
+          console.warn('[OrchestratorService] Failed to parse SHOW_PIPELINE JSON:', payload);
+        }
+        break;
+      }
+      case 'SET_FIELD': {
+        const parts = payload?.split(':') ?? [];
+        if (parts.length >= 2) {
+          actions.push({ type: 'set_field', field: parts[0].trim(), value: parts.slice(1).join(':').trim() });
+        }
+        break;
+      }
+      case 'NAVIGATE': {
+        actions.push({ type: 'navigate', screen: payload?.trim() });
+        break;
+      }
+      case 'UPLOAD_REQUEST': {
+        actions.push({ type: 'upload_request', description: payload?.trim() });
+        break;
+      }
+      case 'CANCEL_PIPELINE': {
+        actions.push({ type: 'cancel_pipeline' });
+        break;
+      }
+    }
+  }
+
+  // Strip action tags from display text
+  const cleanText = text.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim();
+
+  return { cleanText, actions };
+}
+
+// ─── Pipeline Plan → TemplateConfig ─────────────────────────────────────────
+
+export function composeTemplateFromPlan(plan: PipelinePlan): TemplateConfig {
+  // Group steps by team
+  const teamMap = new Map<TeamId, AgentId[]>();
+  for (const step of plan.steps) {
+    const existing = teamMap.get(step.teamId) || [];
+    if (!existing.includes(step.agentId)) existing.push(step.agentId);
+    teamMap.set(step.teamId, existing);
+  }
+
+  const teams: TeamActivation[] = Array.from(teamMap.entries()).map(([teamId, agents]) => ({
+    teamId,
+    agents,
+    notes: `Auto-composed from pipeline plan "${plan.name}"`,
+  }));
+
+  const steps: TemplateStep[] = plan.steps.map(s => ({
+    order: s.order,
+    name: s.name,
+    teamId: s.teamId,
+    agents: [s.agentId],
+    requiresReview: s.requiresReview,
+    description: s.description,
+  }));
+
+  return {
+    id: `custom-${plan.id}`,
+    name: plan.name,
+    description: `Custom pipeline composed by the Master Orchestrator`,
+    icon: 'fa-robot',
+    category: 'custom',
+    version: '1.0.0',
+    builtIn: false,
+    lastModified: new Date().toISOString(),
+    author: 'Master Orchestrator',
+    teams,
+    steps,
+    defaults: {
+      provider: 'gemini',
+      aspectRatio: '16:9',
+    },
+    inputs: {},
+    outputs: {
+      primary: 'mixed',
+      usesShotstack: plan.steps.some(s => s.agentId === 'composition' || s.agentId === 'shotstack-render'),
+    },
+    tags: ['auto-composed'],
+  };
+}

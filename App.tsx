@@ -21,6 +21,7 @@ import { GlobalSettings } from './components/GlobalSettings';
 import { TemplateConfigFacility } from './components/TemplateConfigFacility';
 import { TemplateLibrary } from './components/TemplateLibrary';
 import { TemplateRunner } from './components/TemplateRunner';
+import { StudioLayout } from './components/StudioLayout';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -559,7 +560,7 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
   const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
@@ -567,7 +568,9 @@ const App: React.FC = () => {
 
   /** Sidebar navigation handler */
   const handleSidebarNav = (screen: string) => {
-    if (screen === 'templates') {
+    if (screen === 'studio') {
+      setCurrentScreen('studio');
+    } else if (screen === 'templates') {
       setCurrentScreen('template-library');
     } else if (screen === 'assets') {
       // Placeholder — future asset library screen
@@ -585,6 +588,7 @@ const App: React.FC = () => {
   /** Get the sidebar's active screen based on current state */
   const sidebarActiveScreen = currentScreen === 'settings' ? 'settings'
     : currentScreen === 'project-settings' ? 'settings'
+    : currentScreen === 'studio' ? 'studio'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
     : currentScreen;
@@ -1320,6 +1324,28 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'studio') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <StudioLayout
+            projectContext={null}
+            brand={null}
+            activeProject={activeProject}
+            onAction={() => {}}
+            onStartTemplate={(templateId) => {
+              setSelectedRunnerTemplateId(templateId);
+              setCurrentScreen('template-runner');
+            }}
+            onNavigate={(screen) => setCurrentScreen(screen as any)}
+          />
         </div>
       </div>
     );
