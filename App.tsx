@@ -570,6 +570,9 @@ const App: React.FC = () => {
   const handleSidebarNav = (screen: string) => {
     if (screen === 'studio') {
       setCurrentScreen('studio');
+    } else if (screen === 'projects') {
+      setLandingInitialView('projects');
+      setCurrentScreen('landing');
     } else if (screen === 'templates') {
       setCurrentScreen('template-library');
     } else if (screen === 'assets') {
@@ -590,7 +593,7 @@ const App: React.FC = () => {
     : currentScreen === 'project-settings' ? 'settings'
     : currentScreen === 'studio' ? 'studio'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
-    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : 'landing')
+    : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
     : currentScreen;
   const [conceptIntent, setConceptIntent] = useState<'screenplay' | null>(null);
   const [assistantContext, setAssistantContext] = useState('');

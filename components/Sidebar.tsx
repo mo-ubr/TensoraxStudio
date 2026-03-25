@@ -51,6 +51,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'studio',    label: 'Studio',    icon: 'fa-terminal', screen: 'studio' },
+  { id: 'projects',  label: 'Projects',  icon: 'fa-folder-open', screen: 'projects' },
   { id: 'templates', label: 'Templates', icon: 'fa-shapes',   screen: 'templates' },
   { id: 'assets',    label: 'Assets',    icon: 'fa-images',   screen: 'assets' },
   { id: 'settings',  label: 'Settings',  icon: 'fa-gear',     screen: 'settings' },
