@@ -22,6 +22,7 @@ import { TemplateConfigFacility } from './components/TemplateConfigFacility';
 import { TemplateLibrary } from './components/TemplateLibrary';
 import { TemplateRunner } from './components/TemplateRunner';
 import { StudioLayout } from './components/StudioLayout';
+import { AgentCataloguePanel } from './components/AgentCataloguePanel';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -560,10 +561,11 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('studio');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
   const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
+  const [runnerInitialContext, setRunnerInitialContext] = useState<string | undefined>(undefined);
   const [showTemplateConfig, setShowTemplateConfig] = useState(false);
 
   /** Sidebar navigation handler */
@@ -575,6 +577,8 @@ const App: React.FC = () => {
       setCurrentScreen('landing');
     } else if (screen === 'templates') {
       setCurrentScreen('template-library');
+    } else if (screen === 'agents') {
+      setCurrentScreen('agents' as any);
     } else if (screen === 'assets') {
       // Placeholder — future asset library screen
       setCurrentScreen('landing');
@@ -592,6 +596,7 @@ const App: React.FC = () => {
   const sidebarActiveScreen = currentScreen === 'settings' ? 'settings'
     : currentScreen === 'project-settings' ? 'settings'
     : currentScreen === 'studio' ? 'studio'
+    : (currentScreen as string) === 'agents' ? 'agents'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
     : currentScreen;
@@ -1343,8 +1348,9 @@ const App: React.FC = () => {
             brand={null}
             activeProject={activeProject}
             onAction={() => {}}
-            onStartTemplate={(templateId) => {
+            onStartTemplate={(templateId, initialContext) => {
               setSelectedRunnerTemplateId(templateId);
+              setRunnerInitialContext(initialContext);
               setCurrentScreen('template-runner');
             }}
             onNavigate={(screen) => setCurrentScreen(screen as any)}
@@ -1388,6 +1394,7 @@ const App: React.FC = () => {
           <TemplateRunner
             templateId={selectedRunnerTemplateId}
             projectId={activeProject?.id}
+            initialContext={runnerInitialContext}
             onComplete={(results) => {
               console.log('[TemplateRunner] Pipeline completed:', results);
               setSelectedRunnerTemplateId(null);
@@ -1487,6 +1494,26 @@ const App: React.FC = () => {
             </div>
           )}
       </div></div></div>
+    );
+  }
+
+  if ((currentScreen as string) === 'agents') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <div className="flex-1 min-w-0 overflow-y-auto">
+            <AgentCataloguePanel
+              inline
+              onClose={() => handleSidebarNav('studio')}
+              onSelectAgent={(agentId) => {
+                handleSidebarNav('studio');
+              }}
+            />
+          </div>
+        </div>
+      </div>
     );
   }
 

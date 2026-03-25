@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TensorAxIcon } from './TensorAxIcon';
 
 export type SidebarScreen = 'landing' | 'templates' | 'assets' | 'project-settings' | string;
 
@@ -42,19 +43,6 @@ const SidebarLogo: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   );
 };
 
-/** Studio icon — geometric hexagonal arrow matching the TensorAx brand mark */
-const StudioIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 390 440" fill="currentColor" className={className}>
-    {/* Top chevron */}
-    <polygon points="195,0 390,110 330,110 195,35 60,110 0,110" />
-    {/* Left pillar */}
-    <polygon points="60,140 140,140 140,380 105,400 60,380" />
-    {/* Center pillar */}
-    <polygon points="165,170 225,170 225,420 195,440 165,420" />
-    {/* Right pillar */}
-    <polygon points="250,140 330,140 330,380 285,400 250,380" />
-  </svg>
-);
 
 interface NavItem {
   id: string;
@@ -64,11 +52,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'studio',    label: 'Studio',    icon: 'fa-terminal', screen: 'studio' },
+  { id: 'studio',    label: 'Studio',    icon: '',               screen: 'studio' },
+  { id: 'templates', label: 'Templates', icon: 'fa-shapes',      screen: 'templates' },
+  { id: 'agents',    label: 'Agents',    icon: 'fa-users-gear',  screen: 'agents' },
   { id: 'projects',  label: 'Projects',  icon: 'fa-folder-open', screen: 'projects' },
-  { id: 'templates', label: 'Templates', icon: 'fa-shapes',   screen: 'templates' },
-  { id: 'assets',    label: 'Assets',    icon: 'fa-images',   screen: 'assets' },
-  { id: 'settings',  label: 'Settings',  icon: 'fa-gear',     screen: 'settings' },
+  { id: 'assets',    label: 'Assets',    icon: 'fa-images',      screen: 'assets' },
+  { id: 'settings',  label: 'Settings',  icon: 'fa-gear',        screen: 'settings' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onTemplates }) => {
@@ -99,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, onT
               title={item.label}
             >
               {item.id === 'studio' ? (
-                <StudioIcon className="w-4 h-4" />
+                <TensorAxIcon className="w-5 h-5" />
               ) : (
                 <i className={`fa-solid ${item.icon} text-base`} />
               )}

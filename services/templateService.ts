@@ -70,6 +70,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
       { id: 'video-from-motion-reference', name: 'Video from Motion Reference', team: 'production', description: 'Generate video using a motion reference', icon: 'fa-person-running' },
       { id: 'video-stitching', name: 'Video Stitching', team: 'production', description: 'Concatenate multiple video segments into one', icon: 'fa-link' },
       { id: 'music-generation', name: 'Music Generation', team: 'production', description: 'Background music, jingles, sound effects', icon: 'fa-music' },
+      { id: 'faithful-formatter', name: 'Faithful Formatter', team: 'production', description: 'Exact copy-paste and layout agent. Takes provided text and a reference format, reproduces it faithfully without creative interpretation. For bills, receipts, forms, certificates, badges, labels.', icon: 'fa-copy' },
       { id: 'qa-consistency', name: 'QA / Consistency', team: 'production', description: 'Reviews all assets against brand guidelines and creative brief', icon: 'fa-clipboard-check' },
     ],
   },

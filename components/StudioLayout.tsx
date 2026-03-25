@@ -18,7 +18,7 @@ interface StudioLayoutProps {
   brand?: BrandProfile | null;
   activeProject?: Project | null;
   onAction: (action: MasterAction) => void;
-  onStartTemplate: (templateId: string) => void;
+  onStartTemplate: (templateId: string, initialContext?: string) => void;
   onNavigate: (screen: string) => void;
 }
 
@@ -53,8 +53,8 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
     } catch {
       // Template with this ID may already exist — that's OK for execution
     }
-    // Launch the template runner with the custom template
-    onStartTemplate(templateConfig.id);
+    // Launch the template runner with the custom template + MO chat context
+    onStartTemplate(templateConfig.id, chatHistoryRef.current);
   };
 
   return (

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<title>СМЕТКА — Roll-Up Banner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e8e4df;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    font-family: 'Source Code Pro', 'Courier New', monospace;
+  }
+
+  /* Roll-up banner frame 85×200cm — scaled to screen */
+  .banner-frame {
+    width: 420px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 2%, #2a2a2a 98%, #1a1a1a 100%);
+    border-radius: 8px;
+    padding: 12px 12px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  /* The "receipt paper" */
+  .receipt {
+    background: #faf8f5;
+    width: 100%;
+    padding: 32px 24px 40px;
+    position: relative;
+    /* Torn edge effect at bottom */
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% calc(100% - 8px),
+      98% 100%, 96% calc(100% - 4px), 94% 100%, 92% calc(100% - 6px),
+      90% 100%, 88% calc(100% - 3px), 86% 100%, 84% calc(100% - 5px),
+      82% 100%, 80% calc(100% - 4px), 78% 100%, 76% calc(100% - 6px),
+      74% 100%, 72% calc(100% - 3px), 70% 100%, 68% calc(100% - 5px),
+      66% 100%, 64% calc(100% - 4px), 62% 100%, 60% calc(100% - 6px),
+      58% 100%, 56% calc(100% - 3px), 54% 100%, 52% calc(100% - 5px),
+      50% 100%, 48% calc(100% - 4px), 46% 100%, 44% calc(100% - 6px),
+      42% 100%, 40% calc(100% - 3px), 38% 100%, 36% calc(100% - 5px),
+      34% 100%, 32% calc(100% - 4px), 30% 100%, 28% calc(100% - 6px),
+      26% 100%, 24% calc(100% - 3px), 22% 100%, 20% calc(100% - 5px),
+      18% 100%, 16% calc(100% - 4px), 14% 100%, 12% calc(100% - 6px),
+      10% 100%, 8% calc(100% - 3px), 6% 100%, 4% calc(100% - 5px),
+      2% 100%, 0% calc(100% - 8px)
+    );
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #999;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+  }
+
+  .header .company {
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+  }
+
+  .header .dept {
+    font-size: 10px;
+    color: #666;
+    font-style: italic;
+  }
+
+  .header .address, .header .mol {
+    font-size: 9px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .header .mol {
+    font-weight: 700;
+    color: #555;
+    margin-top: 4px;
+  }
+
+  .operator-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: #999;
+    padding: 6px 0;
+    border-bottom: 1px dashed #ccc;
+    margin-bottom: 10px;
+  }
+
+  .line-item {
+    padding: 6px 0;
+    border-bottom: 1px dotted #ddd;
+  }
+
+  .line-item:last-child {
+    border-bottom: none;
+  }
+
+  .line-qty {
+    font-size: 9px;
+    color: #999;
+    margin-bottom: 1px;
+  }
+
+  .line-desc {
+    font-size: 10px;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 2px;
+  }
+
+  .line-desc strong {
+    color: #1a1a1a;
+  }
+
+  .line-dots {
+    font-size: 9px;
+    color: #ccc;
+    letter-spacing: 1px;
+  }
+
+  .line-amount {
+    font-size: 12px;
+    font-weight: 900;
+    color: #c00;
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  .totals {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 2px solid #1a1a1a;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+  }
+
+  .total-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .total-amount {
+    font-size: 16px;
+    font-weight: 900;
+    color: #c00;
+  }
+
+  .per-capita .total-label {
+    font-size: 9px;
+    color: #555;
+  }
+
+  .per-capita .total-amount {
+    font-size: 13px;
+    color: #900;
+  }
+
+  .footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed #999;
+    text-align: center;
+  }
+
+  .service-fee {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .hashtag {
+    font-size: 9px;
+    font-weight: 700;
+    color: #c00;
+    margin-bottom: 3px;
+    word-break: break-all;
+  }
+
+  .qr-placeholder {
+    width: 80px;
+    height: 80px;
+    background: #eee;
+    border: 1px solid #ddd;
+    margin: 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    color: #bbb;
+  }
+
+  .fiscal {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #333;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .fiscal-code {
+    font-size: 7px;
+    color: #aaa;
+    letter-spacing: 1px;
+    word-break: break-all;
+  }
+
+  .pin-emoji {
+    font-style: normal;
+  }
+
+  /* Print hint */
+  .print-note {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 10px;
+    color: #999;
+    font-family: sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div class="banner-frame">
+  <div class="receipt">
+
+    <!-- HEADER -->
+    <div class="header">
+      <h1>СМЕТКА</h1>
+      <div class="company">"За Хората" ООД</div>
+      <div class="dept">Департамент за празни обещания</div>
+      <div class="address">Адрес: София, Народно събрание, кабинет 222а</div>
+      <div class="mol">МОЛ: Делян Пеевски и Бойко Борисов</div>
+    </div>
+
+    <div class="operator-line">
+      <span>01</span>
+      <span>Оператор</span>
+      <span>#01</span>
+    </div>
+
+    <!-- LINE ITEMS -->
+    <div class="line-item">
+      <div class="line-qty">1 х</div>
+      <div class="line-desc">Най-голямата загуба и най-скъпият „корупционен случай" — <strong>Фалитът на „Корпоративна Търговска Банка"</strong> ня#КОЙ открадна</div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 5 милиарда €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">12 х</div>
+      <div class="line-desc">Невзети и загубени европейски средства по <strong>„Плана за възстановяване и устойчивост"</strong></div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 2 милиарда €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">1 х</div>
+      <div class="line-desc">Щети по газохранилището <strong>„Чирен"</strong></div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 90 милиона €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">12 х</div>
+      <div class="line-desc">Контрабанда и щети за републиканския бюджет на <strong>„Капитан Андреево"</strong></div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 50 милиона € годишно</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">1 х</div>
+      <div class="line-desc">Финансово-непрозрачна корупционна схема <strong>„Лафка"</strong></div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 250 милиона €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">1 х</div>
+      <div class="line-desc">Съмнителна приватизация и фалит на <strong>„Булгартабак"</strong></div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 400 милиона €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">12 х</div>
+      <div class="line-desc">Газопроводът <strong>„Турски поток (Балкански поток)"</strong>: Финансови щети от ниски приходи, неизползван капацитет, пропуснати транзитни ползи</div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 800 милиона €</div>
+    </div>
+
+    <div class="line-item">
+      <div class="line-qty">1 х</div>
+      <div class="line-desc">Изчезнаха милиони в чували, а магистрала няма. <strong>„Хемус"</strong>. Плащаме ние, крадат те.</div>
+      <div class="line-dots">................................................</div>
+      <div class="line-amount">- 30,6 милиона €</div>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="totals">
+      <div class="total-row">
+        <span class="total-label"><span class="pin-emoji">📌</span> ОБЩА СУМА НА откраднати / загубени / невзети средства:</span>
+        <span class="total-amount">≈ 8,62 млрд €</span>
+      </div>
+      <div class="total-row per-capita">
+        <span class="total-label"><span class="pin-emoji">📌</span> На глава от населението:</span>
+        <span class="total-amount">1 326 €</span>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="service-fee">SERVICE FEE</div>
+      <div class="hashtag">#КолкоНиСтруваВсичкоТова?</div>
+      <div class="hashtag">#СметкатаЯПлащамеВсичкиНие</div>
+
+      <div class="qr-placeholder">QR CODE</div>
+
+      <div class="fiscal">ФИСКАЛЕН БОН</div>
+      <div class="fiscal-code">0000000000000000000 0000000000000000 000000000000</div>
+    </div>
+
+  </div>
+</div>
+
+<p class="print-note">Roll-Up Banner — 85 × 200 cm | Demo: "За Хората" Civic Campaign</p>
+
+</body>
+</html>

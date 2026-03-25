@@ -189,14 +189,98 @@ Embed these tags in your responses. They are parsed and executed automatically �
 
 const ACTION_REGEX = /\[ACTION:([A-Z_]+)(?::([^\]]*))?\]/g;
 
+/** Extract JSON from text using bracket-depth counting (handles nested {} and []) */
+function extractJsonFromIndex(text: string, startIdx: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = startIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\' && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') depth++;
+    if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0) return text.slice(startIdx, i + 1);
+    }
+  }
+  return null;
+}
+
+function buildPipelineAction(plan: Partial<PipelinePlan>): MasterAction {
+  return {
+    type: 'show_pipeline',
+    pipelinePlan: {
+      id: `plan-${Date.now()}`,
+      name: plan.name || 'Custom Pipeline',
+      steps: (plan.steps || []).map((s: any, i: number) => ({
+        order: s.order ?? i + 1,
+        name: s.name || `Step ${i + 1}`,
+        agentId: s.agentId || 'general-analysis' as AgentId,
+        teamId: s.teamId || 'research' as TeamId,
+        description: s.description || '',
+        requiresReview: s.requiresReview ?? true,
+        status: 'pending' as const,
+      })),
+      source: 'freeform',
+      ...plan,
+    },
+  };
+}
+
 export function parseMasterActions(text: string): { cleanText: string; actions: MasterAction[] } {
   const actions: MasterAction[] = [];
   let match: RegExpExecArray | null;
+  let cleanedText = text;
 
-  // Reset regex
+  // 1. Extract SHOW_PIPELINE actions using bracket-depth JSON extraction
+  const pipelineTag = '[ACTION:SHOW_PIPELINE:';
+  let searchStart = 0;
+  while (true) {
+    const tagIdx = cleanedText.indexOf(pipelineTag, searchStart);
+    if (tagIdx === -1) break;
+    const jsonStart = tagIdx + pipelineTag.length;
+    const jsonStr = extractJsonFromIndex(cleanedText, jsonStart);
+    if (jsonStr) {
+      try {
+        const plan = JSON.parse(jsonStr) as Partial<PipelinePlan>;
+        actions.push(buildPipelineAction(plan));
+        // Find the closing ] of the action tag
+        const afterJson = jsonStart + jsonStr.length;
+        const closingBracket = cleanedText.indexOf(']', afterJson);
+        const endIdx = closingBracket !== -1 ? closingBracket + 1 : afterJson;
+        cleanedText = cleanedText.slice(0, tagIdx) + cleanedText.slice(endIdx);
+        searchStart = tagIdx; // re-scan from same position
+      } catch {
+        console.warn('[OrchestratorService] Failed to parse SHOW_PIPELINE JSON');
+        searchStart = jsonStart;
+      }
+    } else {
+      searchStart = jsonStart;
+    }
+  }
+
+  // 2. Also try ```json fenced blocks
+  const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
+  jsonBlockRegex.lastIndex = 0;
+  while ((match = jsonBlockRegex.exec(cleanedText)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed.name && parsed.steps) {
+        actions.push(buildPipelineAction(parsed));
+        cleanedText = cleanedText.replace(match[0], '');
+      }
+    } catch {
+      // Not a pipeline — ignore
+    }
+  }
+
+  // 3. Parse remaining simple actions
   ACTION_REGEX.lastIndex = 0;
 
-  while ((match = ACTION_REGEX.exec(text)) !== null) {
+  while ((match = ACTION_REGEX.exec(cleanedText)) !== null) {
     const [, type, payload] = match;
 
     switch (type) {
@@ -216,30 +300,7 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
         break;
       }
       case 'SHOW_PIPELINE': {
-        try {
-          const plan = JSON.parse(payload || '{}') as Partial<PipelinePlan>;
-          actions.push({
-            type: 'show_pipeline',
-            pipelinePlan: {
-              id: `plan-${Date.now()}`,
-              name: plan.name || 'Custom Pipeline',
-              steps: (plan.steps || []).map((s, i) => ({
-                order: s.order ?? i + 1,
-                name: s.name || `Step ${i + 1}`,
-                agentId: s.agentId || 'general-analysis' as AgentId,
-                teamId: s.teamId || 'research' as TeamId,
-                description: s.description || '',
-                requiresReview: s.requiresReview ?? true,
-                status: 'pending' as const,
-              })),
-              source: 'freeform',
-              ...plan,
-            },
-          });
-        } catch {
-          // Malformed JSON — skip
-          console.warn('[OrchestratorService] Failed to parse SHOW_PIPELINE JSON:', payload);
-        }
+        // Already handled by bracket-depth extractor above — skip
         break;
       }
       case 'BUILD_TEMPLATE': {
@@ -268,8 +329,8 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
     }
   }
 
-  // Strip action tags from display text
-  const cleanText = text.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim();
+  // Strip remaining action tags from display text
+  const cleanText = cleanedText.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim();
 
   return { cleanText, actions };
 }

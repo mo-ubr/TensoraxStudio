@@ -5,12 +5,16 @@ import {
   getTeamMeta,
   getAgentMeta,
 } from '../services/templateService';
+import { GeminiService, hasStoredKeyForType } from '../services/geminiService';
+import { TensorAxIcon } from './TensorAxIcon';
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
 interface TemplateRunnerProps {
   templateId: string;
   projectId?: string;
+  /** Initial context from the MO conversation — file contents, user instructions, etc. */
+  initialContext?: string;
   onComplete: (results: Record<string, unknown>) => void;
   onCancel: () => void;
 }
@@ -22,6 +26,8 @@ type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | '
 interface StepState {
   status: StepStatus;
   output: Record<string, unknown> | null;
+  /** Readable text output from the agent */
+  outputText: string | null;
   startedAt: number | null;
   completedAt: number | null;
 }
@@ -135,28 +141,35 @@ const AgentChip: React.FC<{ agentId: string }> = ({ agentId }) => {
 
 // ─── Output Display ─────────────────────────────────────────────────────────
 
-const OutputDisplay: React.FC<{ output: Record<string, unknown> }> = ({ output }) => {
-  const [expanded, setExpanded] = useState(false);
+const OutputDisplay: React.FC<{ output: Record<string, unknown>; outputText?: string | null }> = ({ output, outputText }) => {
+  const [showRaw, setShowRaw] = useState(false);
+  const displayText = outputText || (output as any)?.text || '';
 
   return (
     <div className="rounded-xl border border-[#e0d6e3] bg-white overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#f9f7fa] transition-colors"
-      >
+      <div className="px-5 py-3 border-b border-[#f0eff0] flex items-center justify-between">
         <span className="text-[10px] font-black uppercase tracking-wider text-[#5c3a62] flex items-center gap-2">
-          <i className="fa-solid fa-code text-[#91569c] text-[9px]" />
+          <i className="fa-solid fa-file-lines text-[#91569c] text-[9px]" />
           Step Output
         </span>
-        <i className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-[9px] text-[#ccc]`} />
-      </button>
-      {expanded && (
-        <div className="px-4 pb-4">
-          <pre className="bg-[#f8f6f9] rounded-lg p-3 text-[10px] text-[#5c3a62] overflow-x-auto font-mono leading-relaxed max-h-[300px] overflow-y-auto">
+        <button
+          onClick={() => setShowRaw(!showRaw)}
+          className="text-[8px] font-bold uppercase tracking-wider text-[#bbb] hover:text-[#91569c] transition-colors"
+        >
+          {showRaw ? 'Formatted' : 'Raw JSON'}
+        </button>
+      </div>
+      <div className="px-5 py-4 max-h-[400px] overflow-y-auto">
+        {showRaw ? (
+          <pre className="bg-[#f8f6f9] rounded-lg p-3 text-[10px] text-[#5c3a62] overflow-x-auto font-mono leading-relaxed">
             {JSON.stringify(output, null, 2)}
           </pre>
-        </div>
-      )}
+        ) : (
+          <div className="text-[12px] text-[#333] leading-relaxed whitespace-pre-wrap">
+            {displayText || 'No output available.'}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -166,6 +179,7 @@ const OutputDisplay: React.FC<{ output: Record<string, unknown> }> = ({ output }
 export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
   templateId,
   projectId,
+  initialContext,
   onComplete,
   onCancel,
 }) => {
@@ -176,6 +190,7 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
     (template?.steps || []).map(() => ({
       status: 'pending' as StepStatus,
       output: null,
+      outputText: null,
       startedAt: null,
       completedAt: null,
     }))
@@ -193,38 +208,99 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
   const completedCount = stepStates.filter(s => s.status === 'completed').length;
   const totalSteps = template?.steps.length || 0;
 
-  // ── Run step (simulated) ──
+  // ── Build context from prior steps ──
 
-  const handleRunStep = useCallback(() => {
+  const buildPriorContext = useCallback(() => {
+    const prior: string[] = [];
+    (template?.steps || []).forEach((step, i) => {
+      const st = stepStates[i];
+      if (st.status === 'completed' && st.outputText) {
+        prior.push(`--- Step ${i + 1}: ${step.name} ---\n${st.outputText}`);
+      }
+    });
+    return prior.length > 0 ? '\n\nPrior step results:\n' + prior.join('\n\n') : '';
+  }, [template, stepStates]);
+
+  // ── Run step (real Gemini call) ──
+
+  const handleRunStep = useCallback(async () => {
     if (!currentStep) return;
+
+    // Check API key
+    if (!hasStoredKeyForType('analysis')) {
+      updateStepState(activeStepIndex, {
+        status: 'failed',
+        outputText: 'No Gemini API key found. Please set one in Settings.',
+        completedAt: Date.now(),
+      });
+      return;
+    }
 
     updateStepState(activeStepIndex, { status: 'running', startedAt: Date.now() });
 
-    // Simulate 2-second agent execution
-    setTimeout(() => {
-      const mockOutput = generateMockOutput(currentStep);
+    try {
+      // Build agent prompt with context
+      const agentMetas = currentStep.agents.map(id => getAgentMeta(id as any)).filter(Boolean);
+      const agentNames = agentMetas.map(a => a!.name).join(', ');
+      const agentDescs = agentMetas.map(a => `${a!.name}: ${a!.description}`).join('\n');
+      const priorContext = buildPriorContext();
+
+      const initialCtx = initialContext || '';
+
+      const prompt = `═══ ORIGINAL USER BRIEF ═══
+${initialCtx || '(No brief provided)'}
+═══ END BRIEF ═══
+
+You are executing step ${currentStep.order} of ${totalSteps} in the "${template?.name || 'Pipeline'}" pipeline.
+
+CRITICAL: Follow the user's original brief above exactly. Do NOT invent extra steps, camera angles, storyboard frames, or production techniques that the user did not ask for. Stick precisely to what was requested.
+
+CURRENT STEP: ${currentStep.name}
+Description: ${currentStep.description}
+Active agents: ${agentNames}
+${priorContext ? `\n${priorContext}` : ''}
+
+Execute ONLY this step. Deliver the specific output described above, using the user's content and instructions from the brief. Be thorough but stay on-brief.`;
+
+      const chat = GeminiService.createChat('gemini-2.5-flash');
+      const responsePromise = chat.sendMessage({ message: prompt });
+      const response = await Promise.race([
+        responsePromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Step timed out after 60 seconds')), 60000)
+        ),
+      ]);
+
+      const outputText = (response as any)?.text || 'Step completed but no output was returned.';
 
       if (currentStep.requiresReview) {
         updateStepState(activeStepIndex, {
           status: 'review',
-          output: mockOutput,
+          output: { text: outputText, agents: currentStep.agents, timestamp: new Date().toISOString() },
+          outputText,
           completedAt: Date.now(),
         });
       } else {
         updateStepState(activeStepIndex, {
           status: 'completed',
-          output: mockOutput,
+          output: { text: outputText, agents: currentStep.agents, timestamp: new Date().toISOString() },
+          outputText,
           completedAt: Date.now(),
         });
-        // Auto-advance to next step if no review needed
         if (activeStepIndex < totalSteps - 1) {
           setActiveStepIndex(activeStepIndex + 1);
         } else {
           setPipelineComplete(true);
         }
       }
-    }, 2000);
-  }, [currentStep, activeStepIndex, totalSteps, updateStepState]);
+    } catch (err: any) {
+      updateStepState(activeStepIndex, {
+        status: 'failed',
+        outputText: `Error: ${err?.message || 'Failed to execute step'}`,
+        completedAt: Date.now(),
+      });
+    }
+  }, [currentStep, activeStepIndex, totalSteps, updateStepState, buildPriorContext, template]);
 
   // ── Review actions ──
 
@@ -438,11 +514,11 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
                 </div>
               )}
 
-              {/* Running animation */}
+              {/* Running animation with spinning TensorAx icon */}
               {currentState.status === 'running' && (
                 <div className="flex flex-col items-center justify-center py-12 rounded-xl bg-white border border-[#e0d6e3]">
-                  <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] flex items-center justify-center mb-4 animate-pulse">
-                    <i className="fa-solid fa-robot text-2xl text-[#91569c]" />
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f6f0f8] to-[#eadcef] flex items-center justify-center mb-4">
+                    <TensorAxIcon className="w-8 h-8 text-[#91569c]" spinning />
                   </div>
                   <span className="text-sm font-black text-[#5c3a62] uppercase tracking-wide">
                     Agents working...
@@ -450,17 +526,39 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
                   <p className="text-[10px] text-[#999] mt-2">
                     {currentStep.agents.length} agent{currentStep.agents.length !== 1 ? 's' : ''} processing this step
                   </p>
-                  <div className="mt-4 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  {/* Progress dots */}
+                  <div className="mt-4 flex items-center gap-1.5">
+                    {[0, 1, 2, 3, 4, 5].map(i => (
+                      <div
+                        key={i}
+                        className="h-1.5 rounded-full bg-[#91569c] animate-pulse"
+                        style={{ width: `${12 + i * 3}px`, animationDelay: `${i * 200}ms` }}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* Output display (when completed or in review) */}
-              {currentState.output && (currentState.status === 'completed' || currentState.status === 'review') && (
-                <OutputDisplay output={currentState.output} />
+              {(currentState.outputText || currentState.output) && (currentState.status === 'completed' || currentState.status === 'review') && (
+                <OutputDisplay output={currentState.output || {}} outputText={currentState.outputText} />
+              )}
+
+              {/* Failed step — show error */}
+              {currentState.status === 'failed' && currentState.outputText && (
+                <div className="rounded-xl bg-red-50 border border-red-200 p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fa-solid fa-circle-xmark text-red-500" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-700">Step Failed</span>
+                  </div>
+                  <p className="text-[11px] text-red-800">{currentState.outputText}</p>
+                  <button
+                    onClick={handleReject}
+                    className="mt-3 px-4 py-2 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wider transition-all"
+                  >
+                    <i className="fa-solid fa-rotate-left mr-1.5 text-[9px]" />Retry Step
+                  </button>
+                </div>
               )}
 
               {/* Review actions */}

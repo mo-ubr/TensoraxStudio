@@ -18,6 +18,7 @@ import {
 } from '../services/orchestratorService';
 import { PipelineComposer } from './PipelineComposer';
 import { AgentCataloguePanel } from './AgentCataloguePanel';
+import { TensorAxIcon } from './TensorAxIcon';
 import type { BrandProfile } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -34,6 +35,17 @@ const MODELS = [
   { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+];
+
+const ACTIVITY_PHRASES = [
+  { icon: 'fa-brain', text: 'Analysing request...' },
+  { icon: 'fa-route', text: 'Routing to agents...' },
+  { icon: 'fa-pen-fancy', text: 'Consulting Copy Director...' },
+  { icon: 'fa-palette', text: 'Checking Brand Analyst...' },
+  { icon: 'fa-film', text: 'Preparing visual pipeline...' },
+  { icon: 'fa-wand-magic-sparkles', text: 'Composing response...' },
+  { icon: 'fa-check-double', text: 'Running QA checks...' },
+  { icon: 'fa-layer-group', text: 'Assembling output...' },
 ];
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -55,9 +67,20 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
   const [pendingFiles, setPendingFiles] = useState<FileAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [activityIdx, setActivityIdx] = useState(0);
+
   const chatRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Cycle through activity phrases while loading
+  useEffect(() => {
+    if (!loading) { setActivityIdx(0); return; }
+    const interval = setInterval(() => {
+      setActivityIdx(prev => (prev + 1) % ACTIVITY_PHRASES.length);
+    }, 2400);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -73,16 +96,24 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
     }
   }, [messages, chatHistoryRef]);
 
-  // Greeting on first load
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{
-        role: 'assistant',
-        text: "Welcome to the Studio. I'm your Master Orchestrator — I can launch templates, compose custom pipelines, or route tasks to any of our 43 specialised agents.\n\nWhat would you like to create?",
-        timestamp: Date.now(),
-      }]);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Time-based greeting
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const QUICK_ACTIONS = [
+    { icon: 'fa-pen-fancy',           label: 'Copy',          prompt: 'Help me write copy for a campaign' },
+    { icon: 'fa-image',               label: 'Image',         prompt: 'Generate images for a creative brief' },
+    { icon: 'fa-film',                label: 'Video',         prompt: 'Create a video concept and storyboard' },
+    { icon: 'fa-presentation-screen', label: 'Presentation',  prompt: 'Build a presentation deck' },
+    { icon: 'fa-graduation-cap',      label: 'Tutorial',      prompt: 'Create a training tutorial video' },
+    { icon: 'fa-magnifying-glass',    label: 'Research',      prompt: 'Research trends and competitors for a campaign' },
+    { icon: 'fa-chart-mixed',         label: 'Analyse',       prompt: 'Analyse performance of existing content' },
+    { icon: 'fa-calendar',            label: 'Schedule',      prompt: 'Plan a content schedule for the week' },
+  ];
 
   // ─── Send Message ──────────────────────────────────────────────────────────
 
@@ -143,9 +174,12 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
         timeoutPromise,
       ]);
       const rawText = response?.text || 'No response received.';
+      console.log('[MO] Raw Gemini response:', rawText);
 
       // Parse actions
       const { cleanText, actions } = parseMasterActions(rawText);
+      console.log('[MO] Parsed actions:', actions.length, actions.map(a => a.type));
+      console.log('[MO] Clean text:', cleanText);
 
       // Check for inline pipeline plan
       const pipelineAction = actions.find(a => a.type === 'show_pipeline');
@@ -196,6 +230,21 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
     setIsDragging(false);
   }, []);
 
+  const ACCEPTED_TYPES = [
+    'image/', 'video/',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+    'application/msword',           // .doc
+    'application/pdf',
+    'text/plain', 'text/markdown',  // .txt, .md
+    'text/csv',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',      // .xlsx
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+  ];
+
+  const isAcceptedFile = (file: File) =>
+    ACCEPTED_TYPES.some(t => t.endsWith('/') ? file.type.startsWith(t) : file.type === t)
+    || /\.(docx?|pdf|txt|md|csv|xlsx?|pptx?)$/i.test(file.name);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -203,12 +252,12 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
 
     const files = Array.from(e.dataTransfer.files);
     for (const file of files) {
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      if (isAcceptedFile(file)) {
         const reader = new FileReader();
         reader.onload = () => {
           setPendingFiles(prev => [...prev, {
             name: file.name,
-            type: file.type,
+            type: file.type || 'application/octet-stream',
             dataUri: reader.result as string,
           }]);
         };
@@ -265,38 +314,49 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Command Bar */}
-      <div className="flex-shrink-0 px-6 py-3 bg-white border-b border-[#e0d6e3] flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <i className="fa-solid fa-robot text-[#91569c]" />
-          <span className="text-xs font-black uppercase tracking-wider text-[#5c3a62]">Master Orchestrator</span>
+      {/* Status strip — visible when MO is working */}
+      {loading && (
+        <div className="flex-shrink-0 bg-white border-b border-[#e0d6e3] relative overflow-hidden">
+          {/* Animated gradient bar at top */}
+          <div className="h-[3px] bg-[#f6f0f8]">
+            <div className="h-full bg-gradient-to-r from-[#91569c] via-[#c084fc] to-[#91569c]"
+              style={{ width: '40%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+          </div>
+
+          <div className="flex items-center gap-3 px-5 py-2.5">
+            {/* Spinning TensorAx icon */}
+            <TensorAxIcon className="w-6 h-6 text-[#91569c]" spinning />
+
+            {/* Current activity + step dots */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <i className={`fa-solid ${ACTIVITY_PHRASES[activityIdx].icon} text-[10px] text-[#91569c]`} />
+                <span className="text-[11px] font-bold text-[#5c3a62] truncate">
+                  {ACTIVITY_PHRASES[activityIdx].text}
+                </span>
+              </div>
+              {/* Step progress dots */}
+              <div className="flex items-center gap-1 mt-1.5">
+                {ACTIVITY_PHRASES.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 rounded-full transition-all duration-500 ${
+                      i < activityIdx
+                        ? 'bg-[#91569c] w-5'
+                        : i === activityIdx
+                          ? 'bg-[#c084fc] w-5 animate-pulse'
+                          : 'bg-[#e8dced] w-3'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Elapsed timer */}
+            <span className="text-[10px] font-mono text-[#ceadd4] flex-shrink-0">{loadingElapsed}s</span>
+          </div>
         </div>
-
-        <div className="flex-1" />
-
-        {/* Quick Actions */}
-        <button
-          onClick={() => onAction({ type: 'navigate', screen: 'template-library' })}
-          className="px-3 py-1.5 rounded-lg border border-[#e0d6e3] text-[9px] font-bold uppercase tracking-wider text-[#888] hover:border-[#91569c] hover:text-[#91569c] transition-colors"
-        >
-          <i className="fa-solid fa-shapes mr-1.5" />Templates
-        </button>
-        <button
-          onClick={() => setShowCatalogue(true)}
-          className="px-3 py-1.5 rounded-lg border border-[#e0d6e3] text-[9px] font-bold uppercase tracking-wider text-[#888] hover:border-[#91569c] hover:text-[#91569c] transition-colors"
-        >
-          <i className="fa-solid fa-users mr-1.5" />Agent Catalogue
-        </button>
-
-        {/* Model Selector */}
-        <select
-          value={model}
-          onChange={e => handleModelChange(e.target.value)}
-          className="text-[9px] px-2 py-1.5 rounded-lg border border-[#e0d6e3] text-[#888] bg-white focus:outline-none focus:border-[#91569c]"
-        >
-          {MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-        </select>
-      </div>
+      )}
 
       {/* Messages Area */}
       <div
@@ -308,7 +368,35 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
             <div className="text-center">
               <i className="fa-solid fa-cloud-arrow-up text-4xl text-[#91569c] mb-2" />
               <p className="text-xs font-bold text-[#91569c] uppercase tracking-wider">Drop files here</p>
-              <p className="text-[9px] text-[#aaa]">Images and videos supported</p>
+              <p className="text-[9px] text-[#aaa]">Images, videos, documents (.docx, .pdf, .xlsx, .pptx)</p>
+            </div>
+          </div>
+        )}
+
+        {/* Hero greeting — shown when no conversation yet */}
+        {!isDragging && messages.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-full -mt-4">
+            <TensorAxIcon className="w-12 h-12 text-[#91569c]/30 mb-5" spinning={loading} />
+            <h1 className="text-3xl font-heading font-light text-[#5c3a62] mb-2">
+              Hi, Mariella
+            </h1>
+            <p className="text-sm text-[#888] mb-1">I am <strong className="text-[#5c3a62]">MO</strong>, Tensorax' Master Orchestrator.</p>
+            <p className="text-sm text-[#888] mb-8">What can I do for you today?</p>
+
+            <div className="flex flex-wrap justify-center gap-2 max-w-[640px]">
+              {QUICK_ACTIONS.map(qa => (
+                <button
+                  key={qa.label}
+                  onClick={() => {
+                    setInput(qa.prompt);
+                    inputRef.current?.focus();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-[#e0d6e3] bg-white text-[11px] font-bold text-[#5c3a62] hover:border-[#91569c] hover:text-[#91569c] hover:shadow-sm transition-all"
+                >
+                  <i className={`fa-solid ${qa.icon} text-[#91569c]/60`} />
+                  {qa.label}
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -320,7 +408,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
               <div className={`flex items-center gap-2 mb-1 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                 {msg.role === 'assistant' && (
                   <div className="w-5 h-5 rounded-full bg-[#91569c] flex items-center justify-center flex-shrink-0">
-                    <i className="fa-solid fa-robot text-[8px] text-white" />
+                    <TensorAxIcon className="w-3 h-3 text-white" />
                   </div>
                 )}
                 <span className="text-[8px] font-bold uppercase tracking-wider text-[#aaa]">
@@ -368,30 +456,60 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
           </div>
         ))}
 
-        {/* Loading indicator with elapsed time */}
+        {/* Rich loading indicator with agent activity */}
         {loading && (
           <div className="flex justify-start">
-            <div className="flex items-start gap-2">
-              <div className="w-5 h-5 rounded-full bg-[#91569c] flex items-center justify-center flex-shrink-0 mt-1">
-                <i className="fa-solid fa-robot text-[8px] text-white animate-pulse" />
+            <div className="flex items-start gap-2 w-full max-w-[85%]">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c084fc] to-[#91569c] flex items-center justify-center flex-shrink-0 mt-1 shadow-md">
+                <TensorAxIcon className="w-4 h-4 text-white" spinning />
               </div>
-              <div>
-                <div className="bg-white border border-[#e0d6e3] rounded-xl px-4 py-3 rounded-tl-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex-1">
+                <div className="bg-white border border-[#e0d6e3] rounded-xl rounded-tl-sm overflow-hidden shadow-sm">
+                  {/* Progress bar */}
+                  <div className="h-1 bg-[#f6f0f8]">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#91569c] to-[#c084fc] transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min(95, loadingElapsed * 1.6)}%` }}
+                    />
+                  </div>
+
+                  <div className="px-4 py-3">
+                    {/* Current activity */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <i className={`fa-solid ${ACTIVITY_PHRASES[activityIdx].icon} text-[#91569c] text-xs`} />
+                      <span className="text-[11px] font-bold text-[#5c3a62]">
+                        {ACTIVITY_PHRASES[activityIdx].text}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-[#aaa] font-bold uppercase tracking-wider">
-                      {loadingElapsed < 5 ? 'Thinking...' :
-                       loadingElapsed < 15 ? 'Processing your request...' :
-                       loadingElapsed < 30 ? 'Still working — complex requests take longer...' :
-                       'Almost there — hang tight...'}
-                    </span>
+
+                    {/* Agent activity visualization */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      {ACTIVITY_PHRASES.slice(0, 6).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-1.5 rounded-full transition-all duration-500 ${
+                            i <= activityIdx
+                              ? 'bg-[#91569c] w-6'
+                              : i === activityIdx + 1
+                                ? 'bg-[#ceadd4] w-4 animate-pulse'
+                                : 'bg-[#e8dced] w-3'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Status line */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] text-[#aaa] font-bold uppercase tracking-wider">
+                        {loadingElapsed < 5 ? 'Initialising...' :
+                         loadingElapsed < 15 ? 'Agents processing...' :
+                         loadingElapsed < 30 ? 'Complex request — still working...' :
+                         'Almost there — finalising...'}
+                      </span>
+                      <span className="text-[9px] text-[#ceadd4] font-mono">{loadingElapsed}s</span>
+                    </div>
                   </div>
                 </div>
-                <span className="text-[8px] text-[#ccc] mt-1 block pl-1">{loadingElapsed}s elapsed</span>
               </div>
             </div>
           </div>
@@ -405,8 +523,16 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
             <div key={i} className="flex items-center gap-1.5 bg-white rounded-lg px-2 py-1 border border-[#e0d6e3]">
               {f.type.startsWith('image/') ? (
                 <img src={f.dataUri} alt={f.name} className="w-6 h-6 rounded object-cover" />
-              ) : (
+              ) : f.type.startsWith('video/') ? (
                 <i className="fa-solid fa-video text-[#91569c] text-[10px]" />
+              ) : (
+                <i className={`fa-solid ${
+                  /\.docx?$/i.test(f.name) ? 'fa-file-word text-blue-500' :
+                  /\.pdf$/i.test(f.name) ? 'fa-file-pdf text-red-500' :
+                  /\.xlsx?$/i.test(f.name) ? 'fa-file-excel text-green-600' :
+                  /\.pptx?$/i.test(f.name) ? 'fa-file-powerpoint text-orange-500' :
+                  'fa-file-lines text-[#91569c]'
+                } text-[10px]`} />
               )}
               <span className="text-[9px] text-[#5c3a62] font-bold truncate max-w-[100px]">{f.name}</span>
               <button onClick={() => removePendingFile(i)} className="text-[#aaa] hover:text-red-500 text-[9px]">
@@ -426,7 +552,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
             <input
               type="file"
               multiple
-              accept="image/*,video/*"
+              accept="image/*,video/*,.docx,.doc,.pdf,.txt,.md,.csv,.xlsx,.xls,.pptx,.ppt"
               className="hidden"
               onChange={e => {
                 const files = Array.from(e.target.files || []);
@@ -473,7 +599,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
           </button>
         </div>
         <p className="text-[8px] text-[#bbb] mt-1.5 px-12">
-          Enter to send, Shift+Enter for newline. Drag & drop images/videos into the chat.
+          Enter to send, Shift+Enter for newline. Drag & drop files into the chat.
         </p>
       </div>
 

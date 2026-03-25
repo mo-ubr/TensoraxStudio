@@ -48,6 +48,8 @@ export type AgentId =
   | 'video-from-motion-reference'
   | 'video-stitching'
   | 'music-generation'
+  // Production Team — Utility
+  | 'faithful-formatter'
   // Production Team — QA
   | 'qa-consistency'
   // Video Assembly Team
