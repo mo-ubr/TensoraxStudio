@@ -1,6 +1,6 @@
 # Agent Teams — Master Reference Guide
 
-> **Last updated:** 2026-03-25
+> **Last updated:** 2026-03-25 (v2 — added REST API, Template Library UI, Pipeline Runner, test suite)
 > **Maintainer:** Update this file every time the agent/team architecture changes.
 
 ---
