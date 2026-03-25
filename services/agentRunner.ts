@@ -12,6 +12,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
+import { type CreativityLevels, buildCreativityPreamble } from './creativityControl';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ export interface AgentRunOptions {
   temperature?: number;
   /** Max output tokens. Default: 8192 */
   maxTokens?: number;
+  /** Creativity control levels. When set, a binding preamble is injected before the agent prompt. */
+  creativityLevels?: CreativityLevels;
 }
 
 export interface AgentRunResult<T = unknown> {
@@ -271,7 +274,14 @@ export async function runAgent<T = unknown>(opts: AgentRunOptions): Promise<Agen
   const resolvedModel = resolveModel(provider, opts.model);
   const resolvedKey = resolveApiKey(provider, opts.apiKey);
 
-  const fullOpts = { ...opts, resolvedKey, resolvedModel };
+  // Inject creativity control preamble before the agent prompt when levels are set
+  let agentPrompt = opts.agentPrompt;
+  if (opts.creativityLevels) {
+    const preamble = buildCreativityPreamble(opts.creativityLevels);
+    agentPrompt = `${preamble}\n\n${agentPrompt}`;
+  }
+
+  const fullOpts = { ...opts, agentPrompt, resolvedKey, resolvedModel };
 
   const result = provider === 'gemini'
     ? await runGemini(fullOpts)

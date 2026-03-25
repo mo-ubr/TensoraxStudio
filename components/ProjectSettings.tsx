@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { DB, type Project } from '../services/projectDB';
 import { BrandProfile, PROJECT_TEMPLATES, type TemplateId } from '../types';
+import {
+  type FreedomLevel,
+  type CreativityLevels,
+  TEXT_FREEDOM_LEVELS,
+  VISUAL_FREEDOM_LEVELS,
+  getStoredCreativityLevels,
+  setStoredCreativityLevels,
+  clearStoredCreativityLevels,
+} from '../services/creativityControl';
 
 interface ApiSlot {
   id: string;
@@ -296,6 +305,39 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   const [wifHasFinalVideo, setWifHasFinalVideo] = useState(false);
   const [wifHasAnalysis, setWifHasAnalysis] = useState(false);
   const [wifWizardStep, setWifWizardStep] = useState(0);
+
+  // Creativity Control state
+  const [creativityMode, setCreativityMode] = useState<'auto' | 'manual'>('auto');
+  const [textFreedom, setTextFreedom] = useState<FreedomLevel>(0);
+  const [visualFreedom, setVisualFreedom] = useState<FreedomLevel>(3);
+
+  useEffect(() => {
+    const stored = getStoredCreativityLevels();
+    if (stored) {
+      setCreativityMode('manual');
+      setTextFreedom(stored.text);
+      setVisualFreedom(stored.visual);
+    }
+  }, []);
+
+  const handleCreativityModeChange = (mode: 'auto' | 'manual') => {
+    setCreativityMode(mode);
+    if (mode === 'auto') {
+      clearStoredCreativityLevels();
+    } else {
+      setStoredCreativityLevels({ text: textFreedom, visual: visualFreedom });
+    }
+  };
+
+  const handleTextFreedomChange = (level: FreedomLevel) => {
+    setTextFreedom(level);
+    if (creativityMode === 'manual') setStoredCreativityLevels({ text: level, visual: visualFreedom });
+  };
+
+  const handleVisualFreedomChange = (level: FreedomLevel) => {
+    setVisualFreedom(level);
+    if (creativityMode === 'manual') setStoredCreativityLevels({ text: textFreedom, visual: level });
+  };
 
   const activeBrand = brands.find(b => b.id === activeBrandId);
   const scope = project.notes?.replace('Scope: ', '') || 'full';
@@ -607,6 +649,120 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
         {/* Project Directory */}
         <ProjectDirectory project={project} onUpdateProject={onUpdateProject} />
+
+        {/* Creativity Control */}
+        <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm">
+          <h3 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2 mb-1">
+            <i className="fa-solid fa-sliders text-[#91569c]"></i>
+            Creativity Control
+          </h3>
+          <p className="text-[10px] text-[#888] mb-4 leading-relaxed">
+            Controls how much creative freedom agents have over your text and visuals.
+          </p>
+
+          {/* Mode toggle */}
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={() => handleCreativityModeChange('auto')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                creativityMode === 'auto'
+                  ? 'bg-[#91569c] text-white'
+                  : 'bg-[#f6f0f8] text-[#91569c] hover:bg-[#eadcef]'
+              }`}
+            >
+              Auto-detect
+            </button>
+            <button
+              onClick={() => handleCreativityModeChange('manual')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                creativityMode === 'manual'
+                  ? 'bg-[#91569c] text-white'
+                  : 'bg-[#f6f0f8] text-[#91569c] hover:bg-[#eadcef]'
+              }`}
+            >
+              Manual
+            </button>
+            {creativityMode === 'auto' && (
+              <span className="text-[9px] text-[#888] italic ml-2">Levels set automatically from your instructions</span>
+            )}
+          </div>
+
+          {/* Text Freedom */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-[#5c3a62] uppercase tracking-wider">
+                <i className="fa-solid fa-font mr-1.5 text-[#91569c]"></i>
+                Text Freedom
+              </span>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                textFreedom === 0 ? 'bg-red-100 text-red-700' :
+                textFreedom === 1 ? 'bg-orange-100 text-orange-700' :
+                textFreedom === 2 ? 'bg-yellow-100 text-yellow-700' :
+                'bg-green-100 text-green-700'
+              }`}>
+                {TEXT_FREEDOM_LEVELS[textFreedom].name}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {TEXT_FREEDOM_LEVELS.map(level => (
+                <button
+                  key={level.level}
+                  onClick={() => handleTextFreedomChange(level.level as FreedomLevel)}
+                  disabled={creativityMode === 'auto'}
+                  className={`flex-1 py-2 px-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                    textFreedom === level.level
+                      ? 'bg-[#91569c] text-white border-[#91569c] shadow-sm'
+                      : creativityMode === 'auto'
+                        ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                        : 'bg-[#f6f0f8] text-[#91569c] border-[#e0d6e3] hover:border-[#91569c]/50'
+                  }`}
+                  title={level.shortDescription}
+                >
+                  {level.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-[#888] mt-1.5 leading-relaxed">{TEXT_FREEDOM_LEVELS[textFreedom].shortDescription}</p>
+          </div>
+
+          {/* Visual Freedom */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-[#5c3a62] uppercase tracking-wider">
+                <i className="fa-solid fa-palette mr-1.5 text-[#91569c]"></i>
+                Visual Freedom
+              </span>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                visualFreedom === 0 ? 'bg-red-100 text-red-700' :
+                visualFreedom === 1 ? 'bg-orange-100 text-orange-700' :
+                visualFreedom === 2 ? 'bg-yellow-100 text-yellow-700' :
+                'bg-green-100 text-green-700'
+              }`}>
+                {VISUAL_FREEDOM_LEVELS[visualFreedom].name}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {VISUAL_FREEDOM_LEVELS.map(level => (
+                <button
+                  key={level.level}
+                  onClick={() => handleVisualFreedomChange(level.level as FreedomLevel)}
+                  disabled={creativityMode === 'auto'}
+                  className={`flex-1 py-2 px-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                    visualFreedom === level.level
+                      ? 'bg-[#91569c] text-white border-[#91569c] shadow-sm'
+                      : creativityMode === 'auto'
+                        ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                        : 'bg-[#f6f0f8] text-[#91569c] border-[#e0d6e3] hover:border-[#91569c]/50'
+                  }`}
+                  title={level.shortDescription}
+                >
+                  {level.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-[#888] mt-1.5 leading-relaxed">{VISUAL_FREEDOM_LEVELS[visualFreedom].shortDescription}</p>
+          </div>
+        </div>
 
         {/* API Configuration */}
         <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm">

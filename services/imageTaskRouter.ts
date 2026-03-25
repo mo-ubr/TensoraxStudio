@@ -19,6 +19,8 @@ export type ImageTaskRoute =
   | 'storyboard-9shot'     // Standard 9-shot contact sheet pipeline
   | 'standard-generate';   // Single new image from prompt (no reference)
 
+import { type CreativityLevels, detectCreativityLevels } from './creativityControl';
+
 export interface ImageTaskRoutingResult {
   route: ImageTaskRoute;
   confidence: number;          // 0–1, how sure we are about the route
@@ -26,6 +28,7 @@ export interface ImageTaskRoutingResult {
   editInstruction?: string;    // Pre-built edit instruction for faithful-edit route
   referenceImageUri?: string;  // The reference image to reproduce
   newText?: string;            // Replacement text extracted from the request
+  creativityLevels: CreativityLevels; // Auto-detected creativity levels for this request
 }
 
 // ─── Detection keywords ─────────────────────────────────────────────────────
@@ -71,8 +74,12 @@ export function routeImageTask(
   userText: string,
   hasReferenceImage: boolean,
   hasFluxKontextKey: boolean = false,
+  hasProvidedCopy: boolean = false,
 ): ImageTaskRoutingResult {
   const lower = userText.toLowerCase();
+
+  // Auto-detect creativity levels from user language
+  const creativityLevels = detectCreativityLevels(userText, hasProvidedCopy, hasReferenceImage);
 
   // Count signal matches
   const faithfulHits = FAITHFUL_SIGNALS.filter(s => lower.includes(s)).length;
@@ -86,12 +93,14 @@ export function routeImageTask(
         confidence: Math.min(0.95, 0.6 + faithfulHits * 0.1),
         reason: `Detected ${faithfulHits} reproduction/text-replacement signals with a reference image. Using image edit model for precise text replacement.`,
         referenceImageUri: undefined, // caller fills this in
+        creativityLevels,
       };
     }
     return {
       route: 'faithful-generate',
       confidence: Math.min(0.9, 0.5 + faithfulHits * 0.1),
       reason: `Detected ${faithfulHits} reproduction signals with reference image. No edit model API key available — falling back to faithful generation prompt.`,
+      creativityLevels,
     };
   }
 
@@ -102,12 +111,14 @@ export function routeImageTask(
         route: 'faithful-edit',
         confidence: 0.7,
         reason: `Detected reproduction intent with reference image. Using image edit model.`,
+        creativityLevels,
       };
     }
     return {
       route: 'faithful-generate',
       confidence: 0.65,
       reason: `Detected reproduction intent with reference image. Using faithful generation prompt.`,
+      creativityLevels,
     };
   }
 
@@ -117,6 +128,7 @@ export function routeImageTask(
       route: 'storyboard-9shot',
       confidence: Math.min(0.95, 0.6 + storyboardHits * 0.15),
       reason: `Detected ${storyboardHits} storyboard/cinematography signals. Using 9-shot pipeline.`,
+      creativityLevels,
     };
   }
 
@@ -128,6 +140,7 @@ export function routeImageTask(
       route: 'standard-generate',
       confidence: 0.5,
       reason: `Reference image provided but no clear reproduction or storyboard intent detected. Using standard image generation.`,
+      creativityLevels,
     };
   }
 
@@ -136,6 +149,7 @@ export function routeImageTask(
     route: 'standard-generate',
     confidence: 0.6,
     reason: `No storyboard or reproduction signals detected. Using standard image generation.`,
+    creativityLevels,
   };
 }
 

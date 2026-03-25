@@ -181,7 +181,9 @@ Embed these tags in your responses. They are parsed and executed automatically �
 6. When the user drops files, acknowledge them and suggest what to do with them.
 7. If unsure, ask a clarifying question — don't guess.
 8. After a successful custom pipeline, offer to save it as a reusable template.
-9. IMAGE ROUTING — Critical: When a user wants to REPRODUCE an existing image with different text (e.g. "make this identical but change the headline"), use [ACTION:RUN_AGENT:faithful-image-reproduction:instruction]. Do NOT use the 9-shot storyboard pipeline for this. The 9-shot grid is ONLY for creating storyboard frames for video production. Text replacement on existing images goes to the faithful-image-reproduction agent.`);
+9. IMAGE ROUTING — Critical: When a user wants to REPRODUCE an existing image with different text (e.g. "make this identical but change the headline"), use [ACTION:RUN_AGENT:faithful-image-reproduction:instruction]. Do NOT use the 9-shot storyboard pipeline for this. The 9-shot grid is ONLY for creating storyboard frames for video production. Text replacement on existing images goes to the faithful-image-reproduction agent.
+10. CREATIVITY CONTROL — Every request has two freedom axes: TEXT (0=Verbatim, 1=Minor edits, 2=Adapt, 3=Rewrite) and VISUAL (0=Clone, 1=Match, 2=Inspired, 3=Freeform). DEFAULT RULE: When the user provides text/copy, TEXT FREEDOM IS ALWAYS 0 (VERBATIM) unless they explicitly ask you to rewrite it. This means you pass their text through character-for-character — no paraphrasing, no "improvements", no rewording. When you detect text was provided, mention it in your response: "I'll use your text exactly as provided." Watch for signals: "use this text", "replace with", "here is the text" all mean VERBATIM.`);
+
 
   return sections.join('\n\n');
 }
