@@ -22,9 +22,14 @@ export const whatIfTransformation: TemplateConfig = {
 
   teams: [
     {
+      teamId: 'research',
+      agents: ['general-analysis'],
+      notes: 'General analysis agent used to extract transformation stages from reference video',
+    },
+    {
       teamId: 'production',
       agents: ['image-producer', 'video-producer', 'video-from-keyframes', 'video-stitching'],
-      notes: 'No research or creative director needed — user provides the creative direction via reference video',
+      notes: 'No creative director needed — user provides the creative direction via reference video',
     },
     {
       teamId: 'video-assembly',
@@ -45,7 +50,7 @@ export const whatIfTransformation: TemplateConfig = {
     {
       order: 2,
       name: 'Analyse',
-      teamId: 'production',
+      teamId: 'research',
       agents: ['general-analysis'],
       requiresReview: true,
       description: 'AI analyses the reference video and extracts transformation stages',
@@ -134,17 +139,17 @@ export const videoFromKeyframes: TemplateConfig = {
       order: 2,
       name: 'Generate Videos',
       teamId: 'production',
-      agents: ['video-from-keyframes'],
+      agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
-      description: 'Generate a video segment between each consecutive pair of keyframes',
+      description: 'Generate video segments between keyframes, then stitch into one continuous video',
     },
     {
       order: 3,
-      name: 'Stitch & Compose',
+      name: 'Compose',
       teamId: 'video-assembly',
       agents: ['text-overlay', 'music-direction', 'caption', 'composition', 'shotstack-render'],
       requiresReview: true,
-      description: 'Stitch segments, add overlays/music/captions, render via Shotstack',
+      description: 'Add overlays, music, captions, and render via Shotstack',
     },
   ],
 
@@ -242,9 +247,9 @@ export const staffTrainingVideo: TemplateConfig = {
       order: 5,
       name: 'Assembly & Localise',
       teamId: 'video-assembly',
-      agents: ['voiceover', 'translator', 'subtitles-hooks', 'text-overlay', 'composition', 'shotstack-render'],
+      agents: ['voiceover', 'translator', 'cultural-reviewer', 'subtitles-hooks', 'text-overlay', 'composition', 'shotstack-render'],
       requiresReview: true,
-      description: 'Add voiceover, translate for target markets, add subtitles, compose via Shotstack',
+      description: 'Add voiceover, translate for target markets, cultural review, add subtitles, compose via Shotstack',
     },
     {
       order: 6,
@@ -311,8 +316,10 @@ export const productMarketingCampaign: TemplateConfig = {
   teams: [
     {
       teamId: 'research',
-      agents: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research'],
-      notes: 'Full research intelligence suite',
+      agents: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research', 'deep-research'],
+      parallel: [['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research']],
+      sequence: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research', 'deep-research'],
+      notes: 'Full research intelligence suite. First 4 agents run in parallel, then deep-research synthesises their outputs.',
     },
     {
       teamId: 'production',
@@ -353,9 +360,9 @@ export const productMarketingCampaign: TemplateConfig = {
       order: 1,
       name: 'Research',
       teamId: 'research',
-      agents: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research'],
+      agents: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research', 'deep-research'],
       requiresReview: true,
-      description: 'Full competitive + audience intelligence gathering',
+      description: 'Full competitive + audience intelligence. 4 agents run in parallel, then deep-research synthesises.',
     },
     {
       order: 2,
@@ -489,7 +496,7 @@ export const liveShoppingChannel: TemplateConfig = {
     {
       teamId: 'distribution',
       agents: ['posting', 'scheduling'],
-      notes: 'Platform-specific stream setup',
+      notes: 'Platform-specific stream setup. Aspect ratio adapts to platform (9:16 for TikTok, 16:9 for YouTube/Facebook).',
     },
   ],
 
