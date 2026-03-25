@@ -48,7 +48,9 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
   const [messages, setMessages] = useState<MasterChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingElapsed, setLoadingElapsed] = useState(0);
   const [model, setModel] = useState(MODELS[0].id);
+  const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showCatalogue, setShowCatalogue] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<FileAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -118,6 +120,12 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
     setInput('');
     setPendingFiles([]);
     setLoading(true);
+    setLoadingElapsed(0);
+
+    // Start elapsed timer
+    loadingTimerRef.current = setInterval(() => {
+      setLoadingElapsed(prev => prev + 1);
+    }, 1000);
 
     try {
       // Create or reuse chat session
@@ -126,10 +134,15 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
         chatRef.current = GeminiService.createChat(model, systemPrompt);
       }
 
-      // Send to Gemini
-      const response = await chatRef.current.sendMessage({ message: userText });
-      const rawText = typeof response === 'string' ? response :
-        response?.text ?? response?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      // Send to Gemini with timeout (60s)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out after 60 seconds. The model may be overloaded — try again.')), 60000)
+      );
+      const response = await Promise.race([
+        chatRef.current.sendMessage({ message: userText }),
+        timeoutPromise,
+      ]);
+      const rawText = response?.text || 'No response received.';
 
       // Parse actions
       const { cleanText, actions } = parseMasterActions(rawText);
@@ -140,7 +153,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
       // Add assistant message
       const assistantMsg: MasterChatMessage = {
         role: 'assistant',
-        text: cleanText,
+        text: cleanText || 'The orchestrator processed your request.',
         timestamp: Date.now(),
         inlinePlan: pipelineAction?.pipelinePlan,
       };
@@ -153,13 +166,19 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
         }
       }
     } catch (err: any) {
+      const errMsg = err?.message || 'Failed to get response from Gemini.';
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: `Error: ${err?.message || 'Failed to get response from Gemini. Check your API key and try again.'}`,
+        text: `Error: ${errMsg.length > 200 ? errMsg.slice(0, 197) + '...' : errMsg}`,
         timestamp: Date.now(),
       }]);
     } finally {
       setLoading(false);
+      setLoadingElapsed(0);
+      if (loadingTimerRef.current) {
+        clearInterval(loadingTimerRef.current);
+        loadingTimerRef.current = null;
+      }
     }
   }, [input, pendingFiles, loading, model, projectContext, brand, onAction]);
 
@@ -349,19 +368,30 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
           </div>
         ))}
 
-        {/* Loading indicator */}
+        {/* Loading indicator with elapsed time */}
         {loading && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-[#91569c] flex items-center justify-center">
+            <div className="flex items-start gap-2">
+              <div className="w-5 h-5 rounded-full bg-[#91569c] flex items-center justify-center flex-shrink-0 mt-1">
                 <i className="fa-solid fa-robot text-[8px] text-white animate-pulse" />
               </div>
-              <div className="bg-white border border-[#e0d6e3] rounded-xl px-4 py-3 rounded-tl-sm">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div>
+                <div className="bg-white border border-[#e0d6e3] rounded-xl px-4 py-3 rounded-tl-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-[#91569c] animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-[10px] text-[#aaa] font-bold uppercase tracking-wider">
+                      {loadingElapsed < 5 ? 'Thinking...' :
+                       loadingElapsed < 15 ? 'Processing your request...' :
+                       loadingElapsed < 30 ? 'Still working — complex requests take longer...' :
+                       'Almost there — hang tight...'}
+                    </span>
+                  </div>
                 </div>
+                <span className="text-[8px] text-[#ccc] mt-1 block pl-1">{loadingElapsed}s elapsed</span>
               </div>
             </div>
           </div>
