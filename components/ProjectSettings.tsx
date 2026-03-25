@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { DB, type Project } from '../services/projectDB';
-import { BrandProfile } from '../types';
+import { BrandProfile, PROJECT_TEMPLATES, type TemplateId } from '../types';
 
 interface ApiSlot {
   id: string;
   label: string;
   icon: string;
   description: string;
-  provider: 'google' | 'anthropic' | 'fal';
+  provider: 'google' | 'anthropic' | 'fal' | 'shotstack';
   keyStorageKey: string;
   modelStorageKey: string;
   defaultModel: string;
@@ -87,6 +87,19 @@ const API_SLOTS: ApiSlot[] = [
       { group: 'Kling O3 Omni (fal.ai)', items: ['kling-o3-standard', 'kling-o3-pro'] },
     ],
   },
+  {
+    id: 'video-composition',
+    label: 'Video Composition (Shotstack)',
+    icon: 'fa-wand-magic-sparkles',
+    description: 'Composes final video with text, music, transitions, and branding',
+    provider: 'shotstack',
+    keyStorageKey: 'tensorax_shotstack_key',
+    modelStorageKey: 'tensorax_shotstack_model',
+    defaultModel: 'shotstack-v1',
+    models: [
+      { group: 'Shotstack', items: ['shotstack-v1'] },
+    ],
+  },
 ];
 
 function getStoredKey(storageKey: string): string {
@@ -135,6 +148,7 @@ interface ProjectSettingsProps {
   project: Project;
   brands: BrandProfile[];
   activeBrandId: string;
+  activeTemplateId?: TemplateId | null;
   onBack: () => void;
   onSwitchProject: () => void;
   onUpdateProject: (updated: Project) => void;
@@ -257,7 +271,7 @@ interface CheckItem {
 }
 
 export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
-  project, brands, activeBrandId, onBack, onSwitchProject, onUpdateProject, onNavigate, onBrandChange,
+  project, brands, activeBrandId, activeTemplateId, onBack, onSwitchProject, onUpdateProject, onNavigate, onBrandChange,
 }) => {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(project.name);
@@ -265,6 +279,23 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   const [hasScreenplay, setHasScreenplay] = useState(false);
   const [hasIdeas, setHasIdeas] = useState(false);
   const [metaLoaded, setMetaLoaded] = useState(false);
+
+  // Template-specific pipeline state
+  const [kfFrameCount, setKfFrameCount] = useState(0);
+  const [kfSegmentsDone, setKfSegmentsDone] = useState(0);
+  const [kfSegmentsTotal, setKfSegmentsTotal] = useState(0);
+  const [kfHasFinalVideo, setKfHasFinalVideo] = useState(false);
+  const [kfDuration, setKfDuration] = useState('5');
+  const [kfWizardStep, setKfWizardStep] = useState(0);
+
+  // What-If template state
+  const [wifStagesCount, setWifStagesCount] = useState(0);
+  const [wifKeyframesDone, setWifKeyframesDone] = useState(0);
+  const [wifSegmentsDone, setWifSegmentsDone] = useState(0);
+  const [wifSegmentsTotal, setWifSegmentsTotal] = useState(0);
+  const [wifHasFinalVideo, setWifHasFinalVideo] = useState(false);
+  const [wifHasAnalysis, setWifHasAnalysis] = useState(false);
+  const [wifWizardStep, setWifWizardStep] = useState(0);
 
   const activeBrand = brands.find(b => b.id === activeBrandId);
   const scope = project.notes?.replace('Scope: ', '') || 'full';
@@ -278,6 +309,34 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       setHasScreenplay(!!(meta.screenplay && typeof meta.screenplay === 'string' && (meta.screenplay as string).length > 50));
       const cs = meta.conceptState as any;
       setHasIdeas(!!(cs?.ideas?.length > 0));
+
+      // Load "Video from Key Frames" wizard state
+      if (meta.kfWizardState && typeof meta.kfWizardState === 'object') {
+        const kf = meta.kfWizardState as Record<string, unknown>;
+        const frames = Array.isArray(kf.frames) ? kf.frames : [];
+        const segments = Array.isArray(kf.segments) ? kf.segments : [];
+        setKfFrameCount(frames.length);
+        setKfSegmentsTotal(segments.length);
+        setKfSegmentsDone(segments.filter((s: any) => !!s.videoUrl).length);
+        setKfHasFinalVideo(typeof kf.finalVideoUrl === 'string' && kf.finalVideoUrl.length > 0);
+        if (kf.segmentDuration === '5' || kf.segmentDuration === '10') setKfDuration(kf.segmentDuration as string);
+        setKfWizardStep(typeof kf.step === 'number' ? kf.step : 0);
+      }
+
+      // Load "What If? Transformation" wizard state
+      if (meta.wizardState && typeof meta.wizardState === 'object') {
+        const wif = meta.wizardState as Record<string, unknown>;
+        const stages = Array.isArray(wif.stages) ? wif.stages : [];
+        const segments = Array.isArray(wif.segments) ? wif.segments : [];
+        setWifStagesCount(stages.length);
+        setWifKeyframesDone(stages.filter((s: any) => !!s.imageUrl).length);
+        setWifSegmentsTotal(segments.length);
+        setWifSegmentsDone(segments.filter((s: any) => !!s.videoUrl).length);
+        setWifHasFinalVideo(typeof wif.finalVideoUrl === 'string' && (wif.finalVideoUrl as string).length > 0);
+        setWifHasAnalysis(typeof wif.videoAnalysis === 'string' && (wif.videoAnalysis as string).length > 0);
+        setWifWizardStep(typeof wif.step === 'number' ? wif.step : 0);
+      }
+
       setMetaLoaded(true);
     }).catch(() => setMetaLoaded(true));
   }, [project.id]);
@@ -351,50 +410,124 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   };
 
-  const pipeline: CheckItem[] = [
-    {
-      label: 'General Direction',
-      done: true,
-      detail: 'Project brief and creative direction',
-      action: { label: 'Edit Direction', screen: 'concept' },
-    },
-    {
-      label: 'Style Analysis',
-      done: hasStyleAnalysis,
-      detail: hasStyleAnalysis ? 'Reference video/images analysed' : 'No reference analysed yet — required for best results',
-      action: { label: hasStyleAnalysis ? 'View Analysis' : 'Analyse Reference', screen: 'concept' },
-    },
-    {
-      label: 'Idea Generation',
-      done: hasIdeas,
-      detail: hasIdeas ? 'Concept ideas generated' : 'Generate ideas from brief + style analysis',
-      action: { label: hasIdeas ? 'View Ideas' : 'Generate Ideas', screen: 'concept' },
-    },
-    {
-      label: 'Screenplay',
-      done: hasScreenplay,
-      detail: hasScreenplay ? 'Screenplay created' : 'Accept an idea to create the screenplay',
-      action: { label: hasScreenplay ? 'View Screenplay' : 'Create Screenplay', screen: 'concept' },
-    },
-    {
-      label: 'Characters & Images',
-      done: false,
-      detail: 'Build characters from screenplay, generate images',
-      action: { label: 'Open Characters', screen: 'images' },
-    },
-    {
-      label: 'Frame Composition',
-      done: false,
-      detail: 'Compose 9-frame storyboard shots',
-      action: { label: 'Open Frames', screen: 'scenes' },
-    },
-    {
-      label: 'Video Generation',
-      done: false,
-      detail: 'Generate final video from frames',
-      action: { label: 'Open Video', screen: 'video' },
-    },
-  ];
+  // ── Build pipeline based on active template ──
+  const activeTemplate = activeTemplateId ? PROJECT_TEMPLATES.find(t => t.id === activeTemplateId) : null;
+
+  const pipeline: CheckItem[] = activeTemplateId === 'video-from-keyframes'
+    // ─── Video from Key Frames pipeline (uses videoFromKeyframesAgent + videoStitchingAgent) ───
+    ? [
+        {
+          label: 'Upload Key Frames',
+          done: kfFrameCount >= 2,
+          detail: kfFrameCount >= 2
+            ? `${kfFrameCount} keyframes uploaded and sequenced`
+            : 'Upload at least 2 keyframe images in the desired sequence',
+          action: { label: kfFrameCount >= 2 ? 'Edit Frames' : 'Upload Frames', screen: 'landing' },
+        },
+        {
+          label: 'Generate Video Segments',
+          done: kfSegmentsTotal > 0 && kfSegmentsDone === kfSegmentsTotal,
+          detail: kfSegmentsTotal > 0
+            ? `${kfSegmentsDone}/${kfSegmentsTotal} segments generated — ${kfDuration}s each (videoFromKeyframesAgent)`
+            : `AI generates a ${kfDuration}s video between each consecutive frame pair`,
+          action: { label: kfSegmentsDone > 0 ? 'View Segments' : 'Generate Videos', screen: 'landing' },
+        },
+        {
+          label: 'Stitch Final Video',
+          done: kfHasFinalVideo,
+          detail: kfHasFinalVideo
+            ? 'Final video stitched and ready for download'
+            : 'Concatenate all segments into one video (videoStitchingAgent)',
+          action: { label: kfHasFinalVideo ? 'View Final Video' : 'Stitch Videos', screen: 'landing' },
+        },
+      ]
+    : activeTemplateId === 'what-if-transformation'
+    // ─── What If? Transformation pipeline ───
+    ? [
+        {
+          label: 'Settings & Upload',
+          done: wifHasAnalysis || wifStagesCount > 0,
+          detail: 'Upload source image and reference video, set output format',
+          action: { label: 'Edit Settings', screen: 'landing' },
+        },
+        {
+          label: 'Analyse Reference',
+          done: wifHasAnalysis,
+          detail: wifHasAnalysis
+            ? `Video analysed — ${wifStagesCount} transformation stages extracted`
+            : 'AI analyses the reference video to extract transformation stages',
+          action: { label: wifHasAnalysis ? 'View Analysis' : 'Analyse Video', screen: 'landing' },
+        },
+        {
+          label: 'Generate Keyframe Images',
+          done: wifStagesCount > 0 && wifKeyframesDone === wifStagesCount,
+          detail: wifStagesCount > 0
+            ? `${wifKeyframesDone}/${wifStagesCount} keyframes generated`
+            : 'Generate an edited keyframe image for each stage',
+          action: { label: wifKeyframesDone > 0 ? 'View Keyframes' : 'Generate Images', screen: 'landing' },
+        },
+        {
+          label: 'Generate Video Segments',
+          done: wifSegmentsTotal > 0 && wifSegmentsDone === wifSegmentsTotal,
+          detail: wifSegmentsTotal > 0
+            ? `${wifSegmentsDone}/${wifSegmentsTotal} segments generated`
+            : 'Generate a video segment between each keyframe pair',
+          action: { label: wifSegmentsDone > 0 ? 'View Segments' : 'Generate Videos', screen: 'landing' },
+        },
+        {
+          label: 'Stitch Final Video',
+          done: wifHasFinalVideo,
+          detail: wifHasFinalVideo
+            ? 'Final video stitched and ready for download'
+            : 'Concatenate all segments into one final video',
+          action: { label: wifHasFinalVideo ? 'View Final Video' : 'Stitch Videos', screen: 'landing' },
+        },
+      ]
+    // ─── Default campaign pipeline (no template) ───
+    : [
+        {
+          label: 'General Direction',
+          done: true,
+          detail: 'Project brief and creative direction',
+          action: { label: 'Edit Direction', screen: 'concept' },
+        },
+        {
+          label: 'Style Analysis',
+          done: hasStyleAnalysis,
+          detail: hasStyleAnalysis ? 'Reference video/images analysed' : 'No reference analysed yet — required for best results',
+          action: { label: hasStyleAnalysis ? 'View Analysis' : 'Analyse Reference', screen: 'concept' },
+        },
+        {
+          label: 'Idea Generation',
+          done: hasIdeas,
+          detail: hasIdeas ? 'Concept ideas generated' : 'Generate ideas from brief + style analysis',
+          action: { label: hasIdeas ? 'View Ideas' : 'Generate Ideas', screen: 'concept' },
+        },
+        {
+          label: 'Screenplay',
+          done: hasScreenplay,
+          detail: hasScreenplay ? 'Screenplay created' : 'Accept an idea to create the screenplay',
+          action: { label: hasScreenplay ? 'View Screenplay' : 'Create Screenplay', screen: 'concept' },
+        },
+        {
+          label: 'Characters & Images',
+          done: false,
+          detail: 'Build characters from screenplay, generate images',
+          action: { label: 'Open Characters', screen: 'images' },
+        },
+        {
+          label: 'Frame Composition',
+          done: false,
+          detail: 'Compose 9-frame storyboard shots',
+          action: { label: 'Open Frames', screen: 'scenes' },
+        },
+        {
+          label: 'Video Generation',
+          done: false,
+          detail: 'Generate final video from frames',
+          action: { label: 'Open Video', screen: 'video' },
+        },
+      ];
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#edecec]">
@@ -570,10 +703,23 @@ export const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
         {/* Pipeline Progress */}
         <div className="bg-white border border-[#e0d6e3] rounded-xl p-6 shadow-sm">
-          <h3 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2 mb-4">
-            <i className="fa-solid fa-list-check text-[#91569c]"></i>
-            Production Pipeline
+          <h3 className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide flex items-center gap-2 mb-1">
+            <i className={`fa-solid ${activeTemplate?.icon || 'fa-list-check'} text-[#91569c]`}></i>
+            {activeTemplate ? `${activeTemplate.name} Pipeline` : 'Production Pipeline'}
           </h3>
+          {activeTemplateId === 'video-from-keyframes' && (
+            <p className="text-[9px] text-[#888] mb-4">
+              <i className="fa-solid fa-robot text-[#ceadd4] mr-1"></i>
+              Agents: <span className="font-bold text-[#91569c]">videoFromKeyframesAgent</span> → <span className="font-bold text-[#91569c]">videoStitchingAgent</span>
+            </p>
+          )}
+          {activeTemplateId === 'what-if-transformation' && (
+            <p className="text-[9px] text-[#888] mb-4">
+              <i className="fa-solid fa-robot text-[#ceadd4] mr-1"></i>
+              Agents: analysis → image generation → video generation → <span className="font-bold text-[#91569c]">videoStitchingAgent</span>
+            </p>
+          )}
+          {!activeTemplateId && <div className="mb-3" />}
           {!metaLoaded ? (
             <div className="flex items-center justify-center py-8">
               <i className="fa-solid fa-spinner fa-spin text-[#91569c] text-xl"></i>

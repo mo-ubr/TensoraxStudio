@@ -49,6 +49,8 @@ export { createEditingOrchestrator } from './editingOrchestrator';
 export { createDistributionOrchestrator } from './distributionOrchestrator';
 export { createCampaignOrchestrator } from './campaignOrchestrator';
 export type { CampaignPhase, CampaignConfig } from './campaignOrchestrator';
+export { createCompositionOrchestrator } from './compositionOrchestrator';
+export type { CompositionInputs } from './compositionOrchestrator';
 
 // Agent runner (re-export for convenience)
 export { runAgent, runAgentsParallel, runAgentChain } from '../agentRunner';

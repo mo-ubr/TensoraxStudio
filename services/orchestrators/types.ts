@@ -74,6 +74,8 @@ export interface ProjectContext {
     music?: unknown;
     onScreenText?: unknown;
     finalCut?: unknown;
+    /** Shotstack Edit JSON (from CompositionOrchestrator) */
+    composition?: unknown;
   };
 
   /** Distribution outputs (from DistributionOrchestrator) */

@@ -15,6 +15,7 @@ import { DB, type Project } from './services/projectDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
 import { TemplateWizard } from './components/TemplateWizard';
+import { KeyframesWizard } from './components/KeyframesWizard';
 import { Sidebar } from './components/Sidebar';
 import { GlobalSettings } from './components/GlobalSettings';
 
@@ -559,6 +560,10 @@ const App: React.FC = () => {
     } else if (screen === 'assets') {
       // Placeholder — future asset library screen
       setCurrentScreen('landing');
+    } else if (screen === 'settings') {
+      // Map sidebar "Settings" to project-settings when a project is active
+      setLandingInitialView(undefined);
+      setCurrentScreen(activeProject ? 'project-settings' : 'landing');
     } else {
       setLandingInitialView(undefined);
       setCurrentScreen(screen as any);
@@ -1222,16 +1227,29 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <div className="flex flex-col flex-1 min-w-0">
-        <TemplateWizard
-          templateId={activeTemplateId}
-          projectId={activeProject.id}
-          onComplete={(result) => {
-            console.log('[TemplateWizard] completed:', result.templateId, result.videoUrl ? 'with video' : 'no video');
-            setActiveTemplateId(null);
-            setCurrentScreen('landing');
-          }}
-          onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
-        />
+        {activeTemplateId === 'video-from-keyframes' ? (
+          <KeyframesWizard
+            templateId={activeTemplateId}
+            projectId={activeProject.id}
+            onComplete={(result) => {
+              console.log('[KeyframesWizard] completed:', result.templateId, result.finalVideoUrl ? 'with video' : 'no video');
+              setActiveTemplateId(null);
+              setCurrentScreen('landing');
+            }}
+            onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          />
+        ) : (
+          <TemplateWizard
+            templateId={activeTemplateId}
+            projectId={activeProject.id}
+            onComplete={(result) => {
+              console.log('[TemplateWizard] completed:', result.templateId, result.videoUrl ? 'with video' : 'no video');
+              setActiveTemplateId(null);
+              setCurrentScreen('landing');
+            }}
+            onCancel={() => { setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          />
+        )}
       </div></div></div>
     );
   }

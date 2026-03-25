@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
         'process.env.TENSORAX_IMAGE_KEY':        JSON.stringify(env.TENSORAX_IMAGE_KEY       || ''),
         'process.env.TENSORAX_IMAGE_MODEL':      JSON.stringify(env.TENSORAX_IMAGE_MODEL     || ''),
         'process.env.TENSORAX_KLING_KEY':        JSON.stringify(env.TENSORAX_KLING_KEY       || ''),
+        'process.env.TENSORAX_SHOTSTACK_KEY':    JSON.stringify(env.TENSORAX_SHOTSTACK_KEY   || ''),
       },
       resolve: {
         alias: {
