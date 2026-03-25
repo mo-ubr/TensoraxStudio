@@ -63,6 +63,9 @@ export { onScreenTextAgentPrompt } from './editing/onScreenTextAgent';
 // Production — Faithful reproduction
 export { faithfulImageReproductionAgentPrompt } from './production/faithfulImageReproductionAgent';
 
+// QA — Verification
+export { verificationAgentPrompt } from './qa/verificationAgent';
+
 // Distribution agents
 export { postingAgentPrompt } from './distribution/postingAgent';
 export { schedulingAgentPrompt } from './distribution/schedulingAgent';

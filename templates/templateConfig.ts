@@ -53,6 +53,7 @@ export type AgentId =
   | 'faithful-image-reproduction'
   // Production Team — QA
   | 'qa-consistency'
+  | 'verification'
   // Video Assembly Team
   | 'text-overlay'
   | 'music-direction'

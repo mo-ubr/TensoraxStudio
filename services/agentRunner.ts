@@ -13,6 +13,7 @@
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { type CreativityLevels, buildCreativityPreamble } from './creativityControl';
+import { verificationAgentPrompt } from '../prompts/qa/verificationAgent';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,33 @@ export interface AgentRunOptions {
   maxTokens?: number;
   /** Creativity control levels. When set, a binding preamble is injected before the agent prompt. */
   creativityLevels?: CreativityLevels;
+  /**
+   * Verification options. When set, a QA agent automatically checks the output
+   * against the original task and retries if verification fails.
+   */
+  verification?: {
+    /** The user's original text/copy that must appear verbatim in output */
+    providedText: string;
+    /** Where the text came from (e.g. 'uploaded .docx', 'pasted in chat') */
+    providedTextSource?: string;
+    /** Max retry attempts if verification fails. Default: 1 */
+    maxRetries?: number;
+  };
+}
+
+export interface VerificationResult {
+  passed: boolean;
+  score: number;
+  verdict: string;
+  issues: Array<{
+    severity: string;
+    category: string;
+    expected: string;
+    actual: string;
+    location: string;
+  }>;
+  correctionInstruction: string | null;
+  summary: string;
 }
 
 export interface AgentRunResult<T = unknown> {
@@ -50,6 +78,10 @@ export interface AgentRunResult<T = unknown> {
   model: string;
   /** Token usage if available */
   usage?: { inputTokens?: number; outputTokens?: number };
+  /** Verification result if verification was enabled */
+  verification?: VerificationResult;
+  /** Number of retry attempts made (0 if passed first time) */
+  retryCount?: number;
 }
 
 // ─── Key resolution ─────────────────────────────────────────────────────────
@@ -281,13 +313,71 @@ export async function runAgent<T = unknown>(opts: AgentRunOptions): Promise<Agen
     agentPrompt = `${preamble}\n\n${agentPrompt}`;
   }
 
-  const fullOpts = { ...opts, agentPrompt, resolvedKey, resolvedModel };
+  const maxRetries = opts.verification?.maxRetries ?? 1;
+  let lastResult: AgentRunResult;
+  let lastVerification: VerificationResult | undefined;
+  let retryCount = 0;
+  let currentUserMessage = opts.userMessage;
 
-  const result = provider === 'gemini'
-    ? await runGemini(fullOpts)
-    : await runClaude(fullOpts);
+  // Execution + verification loop
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const fullOpts = { ...opts, agentPrompt, userMessage: currentUserMessage, resolvedKey, resolvedModel };
 
-  return result as AgentRunResult<T>;
+    lastResult = provider === 'gemini'
+      ? await runGemini(fullOpts)
+      : await runClaude(fullOpts);
+
+    // Skip verification if not configured or no provided text
+    if (!opts.verification?.providedText) break;
+
+    // Run verification agent
+    try {
+      const verificationInput = JSON.stringify({
+        originalTask: opts.userMessage,
+        providedText: opts.verification.providedText,
+        providedTextSource: opts.verification.providedTextSource || 'user input',
+        agentOutput: lastResult.rawText.slice(0, 4000), // cap to avoid token overflow
+        agentId: 'unknown',
+        textFreedom: opts.creativityLevels?.text ?? 0,
+        visualFreedom: opts.creativityLevels?.visual ?? 3,
+      });
+
+      const verifyResult = await runGemini({
+        ...opts,
+        agentPrompt: verificationAgentPrompt,
+        userMessage: verificationInput,
+        images: undefined, // verifier doesn't need images
+        creativityLevels: undefined, // no creativity control on the verifier itself
+        resolvedKey,
+        resolvedModel: 'gemini-2.5-flash', // fast model for verification
+      } as any);
+
+      lastVerification = verifyResult.data as VerificationResult;
+
+      if (lastVerification.passed) {
+        console.log(`[Verification] PASSED (score: ${lastVerification.score}) on attempt ${attempt + 1}`);
+        break;
+      }
+
+      // Failed — if we have retries left, send correction back to the agent
+      if (attempt < maxRetries && lastVerification.correctionInstruction) {
+        retryCount++;
+        console.warn(`[Verification] FAILED (${lastVerification.verdict}, score: ${lastVerification.score}). Retrying with correction...`);
+        currentUserMessage = `CORRECTION REQUIRED — Your previous output failed verification.\n\n${lastVerification.correctionInstruction}\n\nORIGINAL TASK:\n${opts.userMessage}`;
+      } else {
+        console.warn(`[Verification] FAILED (${lastVerification.verdict}, score: ${lastVerification.score}). No retries left.`);
+      }
+    } catch (verifyErr) {
+      console.warn('[Verification] Verification agent failed, skipping:', verifyErr);
+      break; // Don't block on verification failures
+    }
+  }
+
+  return {
+    ...lastResult!,
+    verification: lastVerification,
+    retryCount,
+  } as AgentRunResult<T>;
 }
 
 /**
