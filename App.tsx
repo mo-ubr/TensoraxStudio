@@ -158,7 +158,7 @@ const LogoIcon = ({ className = "w-6 h-6" }: { className?: string }) => {
 };
 
 interface LandingPageProps {
-  onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects') => void;
+  onNavigate: (screen: 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'settings') => void;
   activeProject: Project | null;
   allProjects: Project[];
   assistantContext?: string;
@@ -317,6 +317,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
             <p className="text-sm text-[#888] mt-1">What would you like to do?</p>
           </div>
 
+          {/* API status warning */}
+          {(() => {
+            const hasMainKey = !!(localStorage.getItem('tensorax_main_api_key')?.trim());
+            if (!hasMainKey) return (
+              <div className="p-3 rounded-xl bg-[#f6f0f8] border border-[#ceadd4] flex items-center gap-3 cursor-pointer hover:bg-[#eadcef] transition-colors" onClick={() => onNavigate('settings')}>
+                <i className="fa-solid fa-circle-info text-[#91569c]" />
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-[#5c3a62]">No API configured</p>
+                  <p className="text-[10px] text-[#888]">Click here to set up your AI model in Settings</p>
+                </div>
+                <i className="fa-solid fa-arrow-right text-[#ceadd4]" />
+              </div>
+            );
+            return null;
+          })()}
+
           <div className="grid grid-cols-2 gap-4">
             {/* Open Existing Project */}
             <button
@@ -347,6 +363,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} template{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
             </button>
           </div>
+
+          {/* Settings shortcut */}
+          <button
+            onClick={() => onNavigate('settings')}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#e0d6e3] bg-white/60 hover:border-[#91569c]/40 hover:bg-[#f6f0f8] transition-all text-[#888] hover:text-[#91569c]"
+          >
+            <i className="fa-solid fa-gear text-sm" />
+            <span className="text-xs font-bold uppercase tracking-wide">Settings &amp; API Keys</span>
+          </button>
         </div>
       </div>
     );
@@ -585,9 +610,9 @@ const App: React.FC = () => {
       // Placeholder — future asset library screen
       setCurrentScreen('landing');
     } else if (screen === 'settings') {
-      // Map sidebar "Settings" to project-settings when a project is active
+      // Map sidebar "Settings" to project-settings when a project is active, global settings otherwise
       setLandingInitialView(undefined);
-      setCurrentScreen(activeProject ? 'project-settings' : 'landing');
+      setCurrentScreen(activeProject ? 'project-settings' : 'settings');
     } else {
       setLandingInitialView(undefined);
       setCurrentScreen(screen as any);
@@ -832,6 +857,7 @@ const App: React.FC = () => {
   const [background, setBackground] = useState<ReferenceInput>({ text: '', images: [] });
   const [scenePrompt, setScenePrompt] = useState('');
   const [isAutoGeneratingPrompts, setIsAutoGeneratingPrompts] = useState(false);
+  const [autoGenStatus, setAutoGenStatus] = useState('');
   const [shotPrompts, setShotPrompts] = useState<string[]>(() => Array(TOTAL_CELLS).fill(''));
   const [apiKeyModalType, setApiKeyModalType] = useState<'analysis' | 'copy' | 'image' | null>(null);
   const [apiKeyModalValue, setApiKeyModalValue] = useState('');
@@ -888,11 +914,10 @@ const App: React.FC = () => {
       ];
       setShotPrompts(testPrompts);
 
-      // 3. Use the character image as a mock grid image for all 9 slots
-      //    so the Frames grid appears fully populated
-      setImages(prev => prev.map((img, i) => ({
+      // 3. Reset grid frames to blank — images are only populated by generation
+      setImages(prev => prev.map((img) => ({
         ...img,
-        url: charUrl,
+        url: undefined,
         loading: false,
         error: undefined,
         promptSuffix: img.promptSuffix,
@@ -1013,13 +1038,34 @@ const App: React.FC = () => {
     }
 
     setIsAutoGeneratingPrompts(true);
+    setAutoGenStatus('Compressing images...');
     try {
-      const refImages = {
-        character: character.images,
-        clothing: clothing.images,
-        background: background.images,
+      // Downscale images to max 1024px, JPEG 0.7 — cuts payload from ~40MB to ~2MB
+      const shrink = async (urls: (string | undefined)[]) => {
+        const out: string[] = [];
+        for (const u of urls) {
+          if (!u) continue;
+          try {
+            const img = new Image();
+            await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = u; });
+            const MAX = 1024;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) { const r = Math.min(MAX / w, MAX / h); w = Math.round(w * r); h = Math.round(h * r); }
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+            out.push(c.toDataURL('image/jpeg', 0.7));
+          } catch { out.push(u); } // fallback to original if resize fails
+        }
+        return out;
       };
 
+      const refImages = {
+        character: await shrink(character.images),
+        clothing: await shrink(clothing.images),
+        background: await shrink(background.images),
+      };
+
+      setAutoGenStatus('Step 1/2 — Analysing reference images...');
       const res = await fetch('/api/generate-prompts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1037,6 +1083,7 @@ const App: React.FC = () => {
         throw new Error(data.error || `Request failed: ${res.status}`);
       }
 
+      setAutoGenStatus('Step 2/2 — Writing 9 shot prompts...');
       const { scenePrompt: genScene, shotPrompts: genShots } = await res.json();
       if (genScene) setScenePrompt(genScene);
       if (genShots?.length) setShotPrompts(genShots);
@@ -1050,6 +1097,7 @@ const App: React.FC = () => {
       alert(`Auto-generate failed:\n\n${msg}\n\nCheck the backend terminal for details (Step 1 / Step 2 logs).`);
     } finally {
       setIsAutoGeneratingPrompts(false);
+      setAutoGenStatus('');
     }
   };
 
@@ -1723,7 +1771,7 @@ const App: React.FC = () => {
                     className="w-full bg-[#edecec] hover:bg-[#585858] text-[#5c3a62] font-black uppercase text-[10px] tracking-wider py-2.5 rounded-lg border border-[#ceadd4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isAutoGeneratingPrompts ? (
-                      <span><i className="fa-solid fa-spinner fa-spin mr-2"></i>Generating...</span>
+                      <span><i className="fa-solid fa-spinner fa-spin mr-2"></i>{autoGenStatus || 'Generating...'}</span>
                     ) : (
                       'Auto Generate'
                     )}
@@ -1759,32 +1807,6 @@ const App: React.FC = () => {
                         <option value="openai">OpenAI (DALL-E / GPT Image)</option>
                         <option value="fal-edit">fal.ai (Flux Kontext)</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-2">API Keys</label>
-                      <div className="space-y-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openApiKeyModal('analysis')}
-                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-                        >
-                          <i className="fa-solid fa-eye w-4"></i> Analysis Key
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openApiKeyModal('copy')}
-                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-                        >
-                          <i className="fa-solid fa-pen w-4"></i> Copy / Prompt Key
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openApiKeyModal('image')}
-                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-                        >
-                          <i className="fa-solid fa-image w-4"></i> Image Generation Key
-                        </button>
-                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>

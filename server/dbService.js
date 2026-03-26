@@ -337,6 +337,28 @@ router.get("/projects/:id/directory", (req, res) => {
   }
 });
 
+// Pick a directory via native folder picker (general-purpose, no project needed)
+router.post("/projects/pick-directory", async (req, res) => {
+  try {
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    const psScript = `Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Select default asset directory'; $f.ShowNewFolderButton = $true; if ($f.ShowDialog() -eq 'OK') { $f.SelectedPath } else { '' }`;
+    const { stdout } = await execAsync(`powershell -Command "${psScript.replace(/"/g, '\\"')}"`, { timeout: 60000 });
+    const chosenPath = stdout.trim();
+
+    if (!chosenPath) {
+      return res.json({ cancelled: true, path: '' });
+    }
+
+    console.log(`[DB] Default asset directory picked: ${chosenPath}`);
+    res.json({ path: chosenPath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Pick a custom directory for project assets (opens native folder picker on Windows)
 router.post("/projects/:id/pick-directory", async (req, res) => {
   try {
