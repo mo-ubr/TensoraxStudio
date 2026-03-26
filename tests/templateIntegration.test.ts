@@ -100,11 +100,13 @@ const AGENT_PROMPT_MAP: Record<string, string | null> = {
 
 // Orchestrator files per team
 const TEAM_ORCHESTRATOR_MAP: Record<TeamId, string> = {
-  'research':         'services/orchestrators/researchOrchestrator.ts',
-  'production':       'services/orchestrators/conceptOrchestrator.ts',
-  'video-assembly':   'services/orchestrators/compositionOrchestrator.ts',
-  'image-assembly':   'services/orchestrators/imageAssemblyOrchestrator.ts',
-  'distribution':     'services/orchestrators/distributionOrchestrator.ts',
+  'research':           'services/orchestrators/researchOrchestrator.ts',
+  'copy-production':    'services/orchestrators/conceptOrchestrator.ts',
+  'image-production':   'services/orchestrators/imageProductionOrchestrator.ts',
+  'video-production':   'services/orchestrators/videoProductionOrchestrator.ts',
+  'video-assembly':     'services/orchestrators/compositionOrchestrator.ts',
+  'image-assembly':     'services/orchestrators/imageAssemblyOrchestrator.ts',
+  'distribution':       'services/orchestrators/distributionOrchestrator.ts',
 };
 
 // ─── Referential Integrity ──────────────────────────────────────────────────
@@ -199,8 +201,8 @@ describe('Product Marketing Campaign — uses all 5 teams', () => {
     expect(pmc.teams.find(t => t.teamId === 'research')).toBeDefined();
   });
 
-  it('activates production team', () => {
-    expect(pmc.teams.find(t => t.teamId === 'production')).toBeDefined();
+  it('activates copy-production team', () => {
+    expect(pmc.teams.find(t => t.teamId === 'copy-production')).toBeDefined();
   });
 
   it('activates video-assembly team', () => {

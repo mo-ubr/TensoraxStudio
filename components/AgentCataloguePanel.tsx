@@ -1,7 +1,7 @@
 /**
  * AgentCataloguePanel — Searchable overlay of all teams and agents
  *
- * Opened from the MasterOrchestrator's "Agent Catalogue" button.
+ * Opened from the MasterOrchestrator's "Agent Teams" button.
  * Shows all 5 teams and 43 agents in a searchable, browsable list.
  */
 
@@ -39,7 +39,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
       <div className="flex flex-col h-full bg-[#edecec]">
         {/* Header */}
         <div className="px-6 py-4 bg-white border-b border-[#e0d6e3] flex-shrink-0">
-          <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Catalogue</h2>
+          <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Teams</h2>
           <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} agents</p>
         </div>
 
@@ -119,7 +119,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#e0d6e3] flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Catalogue</h2>
+            <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Teams</h2>
             <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} agents</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-[#f0f0f0] flex items-center justify-center text-[#888]">

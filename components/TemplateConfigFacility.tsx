@@ -241,7 +241,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
     const newStep: TemplateStep = {
       order: t.steps.length + 1,
       name: `Step ${t.steps.length + 1}`,
-      teamId: 'production',
+      teamId: 'copy-production',
       agents: [],
       requiresReview: true,
       description: '',

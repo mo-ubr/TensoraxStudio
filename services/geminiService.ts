@@ -3,10 +3,10 @@ import { AspectRatio, ImageSize } from "../types";
 import { ANALYSIS_INSTRUCTION, ASSISTANT_SYSTEM_INSTRUCTION, COPY_INSTRUCTION } from "./promptConstants";
 
 const CHAT_MODEL = "gemini-2.5-flash";
-/** Gemini image models (generateContent) – same path as Google AI Studio. */
-const GEMINI_IMAGE_MODELS = ["gemini-2.5-flash-image", "gemini-2.5-flash", "gemini-3-pro-image-preview"];
+/** Gemini image models (generateContent) – best first. */
+const GEMINI_IMAGE_MODELS = ["gemini-3-pro-image-preview", "gemini-3.1-flash-image-preview", "gemini-2.5-flash-image"];
 /** Imagen models (generateImages). */
-const IMAGE_MODELS = ["imagen-3.0-capability"];
+const IMAGE_MODELS = ["imagen-4.0-ultra-generate-001", "imagen-4.0-standard-generate-001", "imagen-3.0-capability"];
 const VIDEO_MODELS = ["veo-3.1-generate-preview", "veo-2.0-generate-001"];
 const PROMPT_MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.0-flash"];
 const API_KEY_STORAGE_KEY = "gemini_api_key";

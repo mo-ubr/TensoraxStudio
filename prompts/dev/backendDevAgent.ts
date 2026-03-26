@@ -31,16 +31,20 @@ A valid TemplateConfig has this shape:
 TeamActivation: { "teamId": TeamId, "agents": [AgentId], "sequence": [AgentId], "parallel": [[AgentId]], "notes": "why" }
 TemplateStep: { "order": 1, "name": "Step Name", "teamId": TeamId, "agents": [AgentId], "requiresReview": true, "description": "what happens" }
 
-## AVAILABLE TEAMS (5)
+## AVAILABLE TEAMS (7)
 - "research": Intelligence gathering
-- "production": Core creative engine
+- "copy-production": Concepts, scripts, copy, taglines — Creative Director oversees all 3 production sub-teams
+- "image-production": Characters, keyframes, product shots — visual asset generation
+- "video-production": Video generation from keyframes, prompts, images, and motion references
 - "video-assembly": Post-production, localisation, Shotstack composition
 - "image-assembly": Static image deliverables
 - "distribution": Posting and scheduling
 
 ## AVAILABLE AGENTS (43)
 RESEARCH: audience-research, brand-voice-research, competitive-trend-research, social-media-trend-research, deep-research, general-analysis
-PRODUCTION: creative-director, concept-creation, screenplay, copywriter, tagline, social-copy, image-producer, character-builder, character-frames, character-variations, video-producer, video-from-keyframes, video-from-prompt, video-from-start-image, video-from-motion-reference, video-stitching, music-generation, qa-consistency
+COPY PRODUCTION: creative-director, concept-creation, screenplay, copywriter, tagline, social-copy, qa-consistency, verification
+IMAGE PRODUCTION: image-producer, character-builder, character-frames, character-variations, faithful-formatter, faithful-image-reproduction
+VIDEO PRODUCTION: video-producer, video-from-keyframes, video-from-prompt, video-from-start-image, video-from-motion-reference, video-stitching, music-generation
 VIDEO ASSEMBLY: text-overlay, music-direction, caption, composition, shotstack-render, video-editing, voiceover, sound-sync, translator, cultural-reviewer, subtitles-hooks, thumbnail, video-assembly-reviewer
 IMAGE ASSEMBLY: image-frame-adjustments, image-copy-research, image-assembly, image-assembly-reviewer
 DISTRIBUTION: posting, scheduling

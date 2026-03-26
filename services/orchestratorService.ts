@@ -1,7 +1,7 @@
 /**
  * OrchestratorService — Brain of the Master Orchestrator
  *
- * Builds the system prompt with agent catalogue and template awareness,
+ * Builds the system prompt with agent teams and template awareness,
  * parses the extended ACTION protocol, and converts pipeline plans
  * into executable TemplateConfig objects.
  */
@@ -69,7 +69,7 @@ export interface MasterChatMessage {
   attachments?: FileAttachment[];
 }
 
-// ─── Agent Catalogue Summary (for system prompt) ────────────────────────────
+// ─── Agent Teams Summary (for system prompt) ────────────────────────────
 
 function buildAgentCatalogueSummary(): string {
   return TEAM_CATALOGUE.map((team: TeamMeta) => {
@@ -111,11 +111,11 @@ Keep responses SHORT: 2-3 sentences + action tags. Be decisive, not conversation
   sections.push(`═══ CAPABILITIES ═══
 1. TEMPLATE DISPATCH — Launch a pre-built template by name ("Run the What If template")
 2. TEMPLATE MODIFICATION — Modify a template before running ("Run Staff Training but skip localisation")
-3. FREEFORM COMPOSITION — Build a custom pipeline from the agent catalogue ("Take photos, write copy, schedule posts")
+3. FREEFORM COMPOSITION — Build a custom pipeline from the agent teams ("Take photos, write copy, schedule posts")
 4. SINGLE AGENT CALLS — Route a task to one agent ("Rewrite this copy to be more playful")`);
 
-  // Agent Catalogue
-  sections.push(`═══ AGENT CATALOGUE (${TEAM_CATALOGUE.reduce((s, t) => s + t.agents.length, 0)} agents across ${TEAM_CATALOGUE.length} teams) ═══
+  // Agent Teams
+  sections.push(`═══ AGENT TEAMS (${TEAM_CATALOGUE.reduce((s, t) => s + t.agents.length, 0)} agents across ${TEAM_CATALOGUE.length} teams) ═══
 
 ${buildAgentCatalogueSummary()}`);
 

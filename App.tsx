@@ -57,9 +57,11 @@ const PipelineNav: React.FC<{ current: string; onNavigate: (screen: string) => v
 );
 
 const API_MODELS = [
-  { group: 'Gemini', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-3-flash-preview', 'gemini-3-pro-image-preview'] },
-  { group: 'Claude', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-3-5'] },
-  { group: 'Imagen', models: ['imagen-3.0-capability', 'imagen-4.0-generate-preview'] },
+  { group: 'Gemini (Analysis / Copy)', models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'] },
+  { group: 'Gemini (Image Generation)', models: ['gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview', 'gemini-2.5-flash-image'] },
+  { group: 'Claude (Analysis / Copy)', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-3-5'] },
+  { group: 'Imagen (Image Generation)', models: ['imagen-4.0-ultra-generate-001', 'imagen-4.0-standard-generate-001', 'imagen-4.0-fast-generate-001', 'imagen-3.0-capability'] },
+  { group: 'OpenAI (Image Generation)', models: ['gpt-image-1', 'dall-e-3'] },
   { group: 'Video', models: ['seedance-2.0', 'kling-v2.1', 'veo-3.1-generate-preview', 'veo-2.0-generate-001'] },
 ];
 
@@ -597,6 +599,7 @@ const App: React.FC = () => {
     : currentScreen === 'project-settings' ? 'settings'
     : currentScreen === 'studio' ? 'studio'
     : (currentScreen as string) === 'agents' ? 'agents'
+    : currentScreen === 'scenes' ? 'scenes'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
     : currentScreen;
@@ -1349,6 +1352,10 @@ const App: React.FC = () => {
             activeProject={activeProject}
             onAction={() => {}}
             onStartTemplate={(templateId, initialContext) => {
+              if (templateId === '9-camera-angle-frames') {
+                setCurrentScreen('scenes');
+                return;
+              }
               setSelectedRunnerTemplateId(templateId);
               setRunnerInitialContext(initialContext);
               setCurrentScreen('template-runner');
@@ -1368,6 +1375,10 @@ const App: React.FC = () => {
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <TemplateLibrary
             onSelectTemplate={(id) => {
+              if (id === '9-camera-angle-frames') {
+                setCurrentScreen('scenes');
+                return;
+              }
               setSelectedRunnerTemplateId(id);
               setCurrentScreen('template-runner');
             }}
@@ -1738,34 +1749,42 @@ const App: React.FC = () => {
                       </select>
                     </div>
                     <div>
+                      <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Image Provider</label>
+                      <select
+                        value={(() => { try { return localStorage.getItem('tensorax_image_provider') || 'gemini'; } catch { return 'gemini'; } })()}
+                        onChange={(e) => { localStorage.setItem('tensorax_image_provider', e.target.value); }}
+                        className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a]"
+                      >
+                        <option value="gemini">Gemini (Imagen)</option>
+                        <option value="openai">OpenAI (DALL-E / GPT Image)</option>
+                        <option value="fal-edit">fal.ai (Flux Kontext)</option>
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-2">API Keys</label>
-                      <div className="flex gap-2">
+                      <div className="space-y-1.5">
                         <button
                           type="button"
                           onClick={() => openApiKeyModal('analysis')}
-                          title="Analysis API Key"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
                         >
-                          <i className="fa-solid fa-eye"></i>
+                          <i className="fa-solid fa-eye w-4"></i> Analysis Key
                         </button>
                         <button
                           type="button"
                           onClick={() => openApiKeyModal('copy')}
-                          title="Copy API Key"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
                         >
-                          <i className="fa-solid fa-pen"></i>
+                          <i className="fa-solid fa-pen w-4"></i> Copy / Prompt Key
                         </button>
                         <button
                           type="button"
                           onClick={() => openApiKeyModal('image')}
-                          title="Image API Key (Imagen / Vertex)"
-                          className="flex-1 py-2 px-2 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] transition-colors flex items-center justify-center"
+                          className="w-full py-2 px-3 rounded-lg bg-[#edecec] text-[#5c3a62] border border-[#ceadd4] hover:bg-[#585858] hover:text-white transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
                         >
-                          <i className="fa-solid fa-image"></i>
+                          <i className="fa-solid fa-image w-4"></i> Image Generation Key
                         </button>
                       </div>
-                      <p className="mt-1 text-[9px] text-[#3a3a3a]/70">Image button: Imagen (Vertex) API key for generation.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>

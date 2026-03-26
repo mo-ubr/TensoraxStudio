@@ -14,9 +14,11 @@
 
 export type TeamId =
   | 'research'
-  | 'production'
-  | 'video-assembly'
+  | 'copy-production'
+  | 'image-production'
+  | 'video-production'
   | 'image-assembly'
+  | 'video-assembly'
   | 'distribution';
 
 // ─── Agent identifiers (every agent in the system) ───────────────────────────
@@ -29,18 +31,22 @@ export type AgentId =
   | 'social-media-trend-research'
   | 'deep-research'
   | 'general-analysis'
-  // Production Team — Creative Director
+  // Creative Director (oversees all 3 production sub-teams)
   | 'creative-director'
+  // Copy Production Team
   | 'concept-creation'
   | 'screenplay'
-  // Production Team — Asset Producers
   | 'copywriter'
   | 'tagline'
   | 'social-copy'
+  // Image Production Team
   | 'image-producer'
   | 'character-builder'
   | 'character-frames'
   | 'character-variations'
+  | 'faithful-formatter'
+  | 'faithful-image-reproduction'
+  // Video Production Team
   | 'video-producer'
   | 'video-from-keyframes'
   | 'video-from-prompt'
@@ -48,10 +54,7 @@ export type AgentId =
   | 'video-from-motion-reference'
   | 'video-stitching'
   | 'music-generation'
-  // Production Team — Utility
-  | 'faithful-formatter'
-  | 'faithful-image-reproduction'
-  // Production Team — QA
+  // QA (shared across production sub-teams)
   | 'qa-consistency'
   | 'verification'
   // Video Assembly Team

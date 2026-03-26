@@ -16,7 +16,7 @@ import { TEAM_CATALOGUE, ALL_AGENTS } from '../services/templateService';
 const VALID_CATEGORIES = ['marketing', 'training', 'social', 'live', 'custom'];
 const KEBAB_CASE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const ALL_TEAM_IDS: TeamId[] = ['research', 'production', 'video-assembly', 'image-assembly', 'distribution'];
+const ALL_TEAM_IDS: TeamId[] = ['research', 'copy-production', 'image-production', 'video-production', 'video-assembly', 'image-assembly', 'distribution'];
 const ALL_AGENT_IDS: AgentId[] = ALL_AGENTS.map(a => a.id);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -105,14 +105,11 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
   };
 
   const QUICK_ACTIONS = [
-    { icon: 'fa-pen-fancy',           label: 'Copy',          prompt: 'Help me write copy for a campaign' },
-    { icon: 'fa-image',               label: 'Image',         prompt: 'Generate images for a creative brief' },
-    { icon: 'fa-film',                label: 'Video',         prompt: 'Create a video concept and storyboard' },
-    { icon: 'fa-presentation-screen', label: 'Presentation',  prompt: 'Build a presentation deck' },
-    { icon: 'fa-graduation-cap',      label: 'Tutorial',      prompt: 'Create a training tutorial video' },
-    { icon: 'fa-magnifying-glass',    label: 'Research',      prompt: 'Research trends and competitors for a campaign' },
-    { icon: 'fa-chart-mixed',         label: 'Analyse',       prompt: 'Analyse performance of existing content' },
-    { icon: 'fa-calendar',            label: 'Schedule',      prompt: 'Plan a content schedule for the week' },
+    { icon: 'fa-microscope',          label: 'Research',      prompt: 'Research a topic — market trends, competitors, audience, or deep web research' },
+    { icon: 'fa-magnifying-glass',    label: 'Analyse',       prompt: 'Analyse something — a document, performance data, content, or a brief' },
+    { icon: 'fa-wand-magic-sparkles', label: 'Create',        prompt: 'Create something — copy, images, video, presentations, or a full campaign' },
+    { icon: 'fa-folder-tree',         label: 'Organise',      prompt: 'Organise my work — manage projects, assets, schedules, or content plans' },
+    { icon: 'fa-paper-plane',         label: 'Communicate',   prompt: 'Help me communicate — distribute content, post to platforms, or prepare outreach' },
   ];
 
   // ─── Send Message ──────────────────────────────────────────────────────────
@@ -603,7 +600,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
         </p>
       </div>
 
-      {/* Agent Catalogue Modal */}
+      {/* Agent Teams Modal */}
       {showCatalogue && (
         <AgentCataloguePanel
           onClose={() => setShowCatalogue(false)}

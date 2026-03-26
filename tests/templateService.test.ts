@@ -292,13 +292,15 @@ describe('importTemplate()', () => {
 
 describe('TEAM_CATALOGUE', () => {
   it('has 5 teams', () => {
-    expect(TEAM_CATALOGUE).toHaveLength(5);
+    expect(TEAM_CATALOGUE).toHaveLength(7);
   });
 
   it('has expected team IDs', () => {
     const ids = TEAM_CATALOGUE.map(t => t.id);
     expect(ids).toContain('research');
-    expect(ids).toContain('production');
+    expect(ids).toContain('copy-production');
+    expect(ids).toContain('image-production');
+    expect(ids).toContain('video-production');
     expect(ids).toContain('video-assembly');
     expect(ids).toContain('image-assembly');
     expect(ids).toContain('distribution');
@@ -355,9 +357,9 @@ describe('getAgentMeta()', () => {
 
 describe('getTeamMeta()', () => {
   it('returns correct team by ID', () => {
-    const team = getTeamMeta('production');
+    const team = getTeamMeta('copy-production');
     expect(team).toBeDefined();
-    expect(team!.name).toBe('Production Team');
+    expect(team!.name).toBe('Copy Production Team');
   });
 
   it('returns undefined for non-existent team', () => {

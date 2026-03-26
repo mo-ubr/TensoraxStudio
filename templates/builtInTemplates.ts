@@ -27,9 +27,14 @@ export const whatIfTransformation: TemplateConfig = {
       notes: 'General analysis agent used to extract transformation stages from reference video',
     },
     {
-      teamId: 'production',
-      agents: ['image-producer', 'video-producer', 'video-from-keyframes', 'video-stitching'],
+      teamId: 'image-production',
+      agents: ['image-producer'],
       notes: 'No creative director needed — user provides the creative direction via reference video',
+    },
+    {
+      teamId: 'video-production',
+      agents: ['video-producer', 'video-from-keyframes', 'video-stitching'],
+      notes: 'Generate video segments from keyframes and stitch',
     },
     {
       teamId: 'video-assembly',
@@ -42,7 +47,7 @@ export const whatIfTransformation: TemplateConfig = {
     {
       order: 1,
       name: 'Settings',
-      teamId: 'production',
+      teamId: 'image-production',
       agents: [],
       requiresReview: false,
       description: 'Upload source image, reference video, select brand and format',
@@ -58,7 +63,7 @@ export const whatIfTransformation: TemplateConfig = {
     {
       order: 3,
       name: 'Generate Images',
-      teamId: 'production',
+      teamId: 'image-production',
       agents: ['image-producer'],
       requiresReview: true,
       description: 'Generate keyframe images for each transformation stage',
@@ -66,7 +71,7 @@ export const whatIfTransformation: TemplateConfig = {
     {
       order: 4,
       name: 'Generate Videos',
-      teamId: 'production',
+      teamId: 'video-production',
       agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
       description: 'Generate video segments between keyframes, then stitch into one video',
@@ -115,7 +120,7 @@ export const videoFromKeyframes: TemplateConfig = {
 
   teams: [
     {
-      teamId: 'production',
+      teamId: 'video-production',
       agents: ['video-from-keyframes', 'video-stitching'],
       notes: 'Minimal production — user provides keyframes, we just generate video between them',
     },
@@ -130,7 +135,7 @@ export const videoFromKeyframes: TemplateConfig = {
     {
       order: 1,
       name: 'Upload Frames',
-      teamId: 'production',
+      teamId: 'video-production',
       agents: [],
       requiresReview: false,
       description: 'Upload keyframe images in the order they should appear, select format',
@@ -138,7 +143,7 @@ export const videoFromKeyframes: TemplateConfig = {
     {
       order: 2,
       name: 'Generate Videos',
-      teamId: 'production',
+      teamId: 'video-production',
       agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
       description: 'Generate video segments between keyframes, then stitch into one continuous video',
@@ -191,13 +196,19 @@ export const staffTrainingVideo: TemplateConfig = {
       notes: 'Internal staff profile only — no competitive or social trend research needed',
     },
     {
-      teamId: 'production',
-      agents: [
-        'creative-director', 'concept-creation', 'screenplay',
-        'copywriter', 'image-producer', 'video-producer',
-        'video-from-keyframes', 'video-stitching', 'qa-consistency',
-      ],
-      notes: 'Full creative pipeline. RAG bot can feed POS docs to Copywriter. Music optional.',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'qa-consistency'],
+      notes: 'Creative Director oversees all sub-teams. RAG bot can feed POS docs to Copywriter.',
+    },
+    {
+      teamId: 'image-production',
+      agents: ['image-producer'],
+      notes: 'Keyframe generation for training visuals',
+    },
+    {
+      teamId: 'video-production',
+      agents: ['video-producer', 'video-from-keyframes', 'video-stitching'],
+      notes: 'Video segments from keyframes. Music optional.',
     },
     {
       teamId: 'video-assembly',
@@ -222,29 +233,37 @@ export const staffTrainingVideo: TemplateConfig = {
     {
       order: 2,
       name: 'Script & Concept',
-      teamId: 'production',
+      teamId: 'copy-production',
       agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter'],
       requiresReview: true,
       description: 'AI generates training script, narration, and visual concept from the brief',
     },
     {
       order: 3,
-      name: 'Visuals',
-      teamId: 'production',
-      agents: ['image-producer', 'video-producer', 'video-from-keyframes'],
+      name: 'Images',
+      teamId: 'image-production',
+      agents: ['image-producer'],
       requiresReview: true,
-      description: 'Generate keyframe images and video segments illustrating each training step',
+      description: 'Generate keyframe images illustrating each training step',
     },
     {
       order: 4,
+      name: 'Video Segments',
+      teamId: 'video-production',
+      agents: ['video-producer', 'video-from-keyframes'],
+      requiresReview: true,
+      description: 'Generate video segments from keyframe images',
+    },
+    {
+      order: 5,
       name: 'Quality Check',
-      teamId: 'production',
+      teamId: 'copy-production',
       agents: ['qa-consistency'],
       requiresReview: true,
       description: 'QA agent checks all assets against brand guidelines and training accuracy',
     },
     {
-      order: 5,
+      order: 6,
       name: 'Assembly & Localise',
       teamId: 'video-assembly',
       agents: ['voiceover', 'translator', 'cultural-reviewer', 'subtitles-hooks', 'text-overlay', 'composition', 'shotstack-render'],
@@ -252,7 +271,7 @@ export const staffTrainingVideo: TemplateConfig = {
       description: 'Add voiceover, translate for target markets, cultural review, add subtitles, compose via Shotstack',
     },
     {
-      order: 6,
+      order: 7,
       name: 'Final Review',
       teamId: 'video-assembly',
       agents: ['video-assembly-reviewer'],
@@ -322,15 +341,19 @@ export const productMarketingCampaign: TemplateConfig = {
       notes: 'Full research intelligence suite. First 4 agents run in parallel, then deep-research synthesises their outputs.',
     },
     {
-      teamId: 'production',
-      agents: [
-        'creative-director', 'concept-creation', 'screenplay',
-        'copywriter', 'tagline', 'social-copy',
-        'image-producer', 'character-builder', 'character-frames',
-        'video-producer', 'video-from-keyframes', 'video-stitching',
-        'music-generation', 'qa-consistency',
-      ],
-      notes: 'Full creative suite — all producers active',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'tagline', 'social-copy', 'qa-consistency'],
+      notes: 'Creative Director oversees all sub-teams. Full copy suite.',
+    },
+    {
+      teamId: 'image-production',
+      agents: ['image-producer', 'character-builder', 'character-frames'],
+      notes: 'Character design, keyframes, product shots',
+    },
+    {
+      teamId: 'video-production',
+      agents: ['video-producer', 'video-from-keyframes', 'video-stitching', 'music-generation'],
+      notes: 'Video generation and music production',
     },
     {
       teamId: 'video-assembly',
@@ -367,7 +390,7 @@ export const productMarketingCampaign: TemplateConfig = {
     {
       order: 2,
       name: 'Concept & Copy',
-      teamId: 'production',
+      teamId: 'copy-production',
       agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'tagline', 'social-copy'],
       requiresReview: true,
       description: 'Creative concept, screenplay, taglines, and platform-specific copy',
@@ -375,7 +398,7 @@ export const productMarketingCampaign: TemplateConfig = {
     {
       order: 3,
       name: 'Characters & Images',
-      teamId: 'production',
+      teamId: 'image-production',
       agents: ['image-producer', 'character-builder', 'character-frames'],
       requiresReview: true,
       description: 'Character design, keyframes, product shots, and lifestyle imagery',
@@ -383,7 +406,7 @@ export const productMarketingCampaign: TemplateConfig = {
     {
       order: 4,
       name: 'Video Production',
-      teamId: 'production',
+      teamId: 'video-production',
       agents: ['video-producer', 'video-from-keyframes', 'video-stitching', 'music-generation'],
       requiresReview: true,
       description: 'Generate video segments from keyframes, produce background music',
@@ -391,7 +414,7 @@ export const productMarketingCampaign: TemplateConfig = {
     {
       order: 5,
       name: 'Quality Gate',
-      teamId: 'production',
+      teamId: 'copy-production',
       agents: ['qa-consistency'],
       requiresReview: true,
       description: 'QA checks all assets against brand guidelines and creative brief',
@@ -481,12 +504,14 @@ export const liveShoppingChannel: TemplateConfig = {
       notes: 'Real-time trend awareness. Brand voice pre-set, competitive not needed.',
     },
     {
-      teamId: 'production',
-      agents: [
-        'creative-director', 'concept-creation',
-        'copywriter', 'video-producer', 'qa-consistency',
-      ],
-      notes: 'Virtual presenter with lip sync is core. Image producer minimal.',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'copywriter', 'qa-consistency'],
+      notes: 'Creative Director oversees. Shopping script and presenter dialogue.',
+    },
+    {
+      teamId: 'video-production',
+      agents: ['video-producer'],
+      notes: 'Virtual presenter with lip sync is core.',
     },
     {
       teamId: 'video-assembly',
@@ -511,14 +536,22 @@ export const liveShoppingChannel: TemplateConfig = {
     },
     {
       order: 2,
-      name: 'Script & Presenter',
-      teamId: 'production',
-      agents: ['creative-director', 'concept-creation', 'copywriter', 'video-producer'],
+      name: 'Script',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'copywriter'],
       requiresReview: true,
-      description: 'Generate shopping script, virtual presenter video with lip sync',
+      description: 'Generate shopping script and presenter dialogue',
     },
     {
       order: 3,
+      name: 'Virtual Presenter',
+      teamId: 'video-production',
+      agents: ['video-producer'],
+      requiresReview: true,
+      description: 'Generate virtual presenter video with lip sync',
+    },
+    {
+      order: 4,
       name: 'Assembly',
       teamId: 'video-assembly',
       agents: ['subtitles-hooks', 'sound-sync', 'composition', 'shotstack-render'],
@@ -526,7 +559,7 @@ export const liveShoppingChannel: TemplateConfig = {
       description: 'Add product overlays, hooks, compose via Shotstack',
     },
     {
-      order: 4,
+      order: 5,
       name: 'Go Live',
       teamId: 'distribution',
       agents: ['posting', 'scheduling'],
@@ -575,6 +608,122 @@ export const liveShoppingChannel: TemplateConfig = {
   },
 };
 
+// ─── 6. 9 Camera Angle Frames ────────────────────────────────────────────────
+
+export const nineCameraAngleFrames: TemplateConfig = {
+  id: '9-camera-angle-frames',
+  name: '9 Camera Angle Frames',
+  description: 'Upload character, outfit, and background reference images. AI analyses them and generates 9 cinematic camera angle frames (ELS, LS, MLS, MS, MCU, CU, ECU, Low Angle, High Angle) ready for video production.',
+  icon: 'fa-clapperboard',
+  category: 'marketing',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['9-shot', 'storyboard', 'camera-angles', 'keyframes', 'character'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['general-analysis'],
+      notes: 'Analyses reference images (character, clothing, background) into structured description',
+    },
+    {
+      teamId: 'image-production',
+      agents: ['image-producer', 'character-builder', 'character-frames'],
+      notes: 'Generates 9 camera angle frames from structured analysis',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['qa-consistency'],
+      notes: 'QA checks visual consistency across all 9 frames',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload References',
+      teamId: 'image-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload character, outfit, and background reference images',
+    },
+    {
+      order: 2,
+      name: 'Analyse References',
+      teamId: 'research',
+      agents: ['general-analysis'],
+      requiresReview: true,
+      description: 'AI analyses the 3 image groups (character, clothing, scenery) into a structured description',
+    },
+    {
+      order: 3,
+      name: 'Generate Prompts',
+      teamId: 'image-production',
+      agents: ['character-frames'],
+      requiresReview: true,
+      description: 'Generate 9 shot-specific prompts from the structured analysis, one per camera angle',
+    },
+    {
+      order: 4,
+      name: 'Generate Frames',
+      teamId: 'image-production',
+      agents: ['image-producer'],
+      requiresReview: true,
+      description: 'Generate the 9 camera angle images from the shot prompts',
+    },
+    {
+      order: 5,
+      name: 'Consistency Check',
+      teamId: 'copy-production',
+      agents: ['qa-consistency'],
+      requiresReview: true,
+      description: 'QA reviews all 9 frames for character, outfit, and background consistency',
+    },
+  ],
+
+  defaults: {
+    aspectRatio: '9:16',
+  },
+
+  inputs: {
+    requiresSourceImages: true,
+    minImages: 3,
+    requiresBrand: false,
+    customFields: [
+      {
+        id: 'characterImages',
+        label: 'Character Reference Images',
+        type: 'textarea',
+        required: true,
+      },
+      {
+        id: 'outfitImages',
+        label: 'Outfit / Wardrobe Reference Images',
+        type: 'textarea',
+        required: true,
+      },
+      {
+        id: 'backgroundImages',
+        label: 'Background / Scenery Reference Images',
+        type: 'textarea',
+        required: true,
+      },
+      {
+        id: 'sceneDescription',
+        label: 'Scene Description (optional)',
+        type: 'textarea',
+        required: false,
+      },
+    ],
+  },
+
+  outputs: {
+    primary: 'image',
+    formats: ['jpg', 'png'],
+    usesShotstack: false,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -583,4 +732,5 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   staffTrainingVideo,
   productMarketingCampaign,
   liveShoppingChannel,
+  nineCameraAngleFrames,
 ];
