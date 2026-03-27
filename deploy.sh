@@ -24,5 +24,5 @@ echo "==> Restarting app with PM2..."
 pm2 reload ecosystem.config.cjs --env production
 
 echo ""
-echo "✓ Deploy complete. App is live."
+echo "Deploy complete. App is live."
 pm2 status
