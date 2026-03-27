@@ -517,7 +517,10 @@ export const GlobalSettings: React.FC = () => {
 
   useEffect(() => { localStorage.setItem(LS.defaultAspectRatio, aspectRatio); }, [aspectRatio]);
   useEffect(() => { localStorage.setItem(LS.defaultOutputType, outputType); }, [outputType]);
-  useEffect(() => { if (assetDir) localStorage.setItem(LS.defaultAssetDir, assetDir); }, [assetDir]);
+  useEffect(() => {
+    if (assetDir) localStorage.setItem(LS.defaultAssetDir, assetDir);
+    else localStorage.removeItem(LS.defaultAssetDir);
+  }, [assetDir]);
   useEffect(() => { persistBrandId(activeBrand); }, [activeBrand]);
 
   const updateSlot = (which: 'primary' | 'fallback', slotId: string, field: 'model' | 'key', value: string) => {
@@ -549,12 +552,20 @@ export const GlobalSettings: React.FC = () => {
 
   const anyConfigured = TASK_SLOTS.some(s => primary[s.id].model && primary[s.id].key);
 
+  const [browseError, setBrowseError] = useState('');
   const browseDirectory = async () => {
+    setBrowseError('');
     try {
       const res = await fetch('/api/db/projects/pick-directory', { method: 'POST' });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
-      if (data.path) setAssetDir(data.path);
-    } catch { /* ignore */ }
+      if (data.path) {
+        setAssetDir(data.path);
+        setBrowseError('');
+      }
+    } catch {
+      setBrowseError('Browse needs the full server running (npm run dev:full). You can type the path directly instead.');
+    }
   };
 
   return (
@@ -654,8 +665,8 @@ export const GlobalSettings: React.FC = () => {
             <input
               type="text"
               value={assetDir}
-              onChange={(e) => setAssetDir(e.target.value)}
-              placeholder="Choose where to save project files..."
+              onChange={(e) => { setAssetDir(e.target.value); setBrowseError(''); }}
+              placeholder="Type or paste the full path, e.g. C:\Users\marie\Documents\TensorAx Assets"
               className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] text-[#3a3a3a] placeholder:text-[#888] outline-none focus:ring-1 focus:ring-[#91569c]/50"
             />
             <button
@@ -665,7 +676,21 @@ export const GlobalSettings: React.FC = () => {
               <i className="fa-solid fa-folder-open mr-1.5" />Browse
             </button>
           </div>
-          <p className="text-[9px] text-[#888] mt-2">Interim and final assets will be saved here. Each project gets its own subfolder.</p>
+          {browseError && (
+            <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
+              <i className="fa-solid fa-circle-info text-amber-500 text-[9px] mt-0.5" />
+              <p className="text-[9px] text-amber-700">{browseError}</p>
+            </div>
+          )}
+          {assetDir && !browseError && (
+            <div className="mt-2 flex items-center gap-1.5">
+              <i className="fa-solid fa-circle-check text-green-500 text-[9px]" />
+              <p className="text-[9px] text-green-700">Saved — assets will be stored in: <strong>{assetDir}</strong></p>
+            </div>
+          )}
+          {!assetDir && (
+            <p className="text-[9px] text-[#888] mt-2">Type the full folder path where project files should be saved. Each project gets its own subfolder.</p>
+          )}
         </SectionCard>
 
         <div className="h-6" />
