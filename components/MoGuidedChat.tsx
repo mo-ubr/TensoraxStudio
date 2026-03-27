@@ -330,9 +330,21 @@ Score 7+ = approved. Only return JSON.`;
       }
     } catch (err: any) {
       setValidationStatus('needs-fixes');
+      // Show friendly error, not raw API JSON
+      const rawMsg = err?.message || 'Unknown error';
+      let friendlyMsg: string;
+      if (rawMsg.includes('API key not valid') || rawMsg.includes('API_KEY_INVALID')) {
+        friendlyMsg = 'Your Gemini API key isn\'t valid. Check it in Settings, or click **Skip Anyway** to continue without validation.';
+      } else if (rawMsg.includes('quota') || rawMsg.includes('RATE_LIMIT')) {
+        friendlyMsg = 'API rate limit reached. Wait a moment and try again, or **Skip Anyway** to continue.';
+      } else if (rawMsg.includes('Timeout')) {
+        friendlyMsg = 'Validation timed out. Try again, or **Skip Anyway** to continue.';
+      } else {
+        friendlyMsg = `Something went wrong with the AI check. You can **Skip Anyway** to continue.`;
+      }
       setMessages(prev => [...prev, {
         role: 'mo',
-        text: `⚠️ Couldn't validate: ${err?.message || 'Unknown error'}. You can skip and continue anyway.`,
+        text: `⚠️ ${friendlyMsg}`,
         stepOrder: currentStep?.order,
       }]);
     }
@@ -361,7 +373,7 @@ Score 7+ = approved. Only return JSON.`;
     } catch (err: any) {
       setMessages(prev => [...prev, {
         role: 'mo',
-        text: `Error: ${err?.message || 'Unknown'}`,
+        text: `⚠️ Couldn't send message. Check your API key in Settings.`,
         stepOrder: currentStep?.order,
       }]);
     } finally {
