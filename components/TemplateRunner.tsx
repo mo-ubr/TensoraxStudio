@@ -7,8 +7,7 @@ import {
 } from '../services/templateService';
 import { GeminiService, hasStoredKeyForType } from '../services/geminiService';
 import { TensorAxIcon } from './TensorAxIcon';
-import { MoCoachPanel } from './MoCoachPanel';
-import type { MoStatus, MoValidationResult } from './MoCoachPanel';
+import { MoGuidedChat } from './MoGuidedChat';
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -618,359 +617,92 @@ Execute ONLY this step. Deliver the specific output described above, using the u
         </button>
       </div>
 
-      {/* ── Body: sidebar + main content + Mo panel ── */}
+      {/* ── Body: sidebar + guided chat ── */}
       <div className="flex flex-1 min-h-0">
         {/* Step sidebar */}
-        <div className="w-64 flex-shrink-0 bg-white border-r border-[#e0d6e3] overflow-y-auto p-3 space-y-1">
+        <div className="w-64 flex-shrink-0 bg-white border-r border-[#e0d6e3] overflow-y-auto p-3 flex flex-col">
           <div className="px-3 py-2 mb-2">
             <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa]">
               Pipeline Steps
             </span>
           </div>
-          {template.steps.map((step, i) => (
-            <StepSidebarItem
-              key={i}
-              step={step}
-              index={i}
-              state={stepStates[i]}
-              isActive={i === activeStepIndex}
-              onClick={() => setActiveStepIndex(i)}
-            />
-          ))}
-        </div>
+          <div className="space-y-1 flex-1">
+            {template.steps.map((step, i) => (
+              <StepSidebarItem
+                key={i}
+                step={step}
+                index={i}
+                state={stepStates[i]}
+                isActive={i === activeStepIndex}
+                onClick={() => setActiveStepIndex(i)}
+              />
+            ))}
+          </div>
 
-        {/* Main content */}
-        <div className="flex-1 overflow-y-auto p-8">
-          {currentStep && currentState && (
-            <div className={`${hasGuidance ? 'max-w-3xl' : 'max-w-2xl'} mx-auto space-y-6`}>
-              {/* Step header */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa]">
-                    Step {currentStep.order}
+          {/* ── Toggles (project-level options) ── */}
+          {template.inputs?.customFields?.some(f => f.type === 'toggle') && (
+            <div className="mt-3 pt-3 border-t border-[#f0eff0] space-y-2">
+              <span className="text-[8px] font-black uppercase tracking-wider text-[#aaa] px-3 block">
+                Options
+              </span>
+              {template.inputs.customFields.filter(f => f.type === 'toggle').map(field => (
+                <div key={field.id} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[#f9f7fa]">
+                  <span className="text-[9px] font-bold text-[#5c3a62] leading-tight flex-1 mr-2">
+                    {field.id === 'outfitStandalone' ? '🏷️ Outfit Standalone' :
+                     field.id === 'filmMode' ? '🎬 Film Mode' :
+                     field.label}
                   </span>
-                  <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_CONFIG[currentState.status].bgColour} ${STATUS_CONFIG[currentState.status].colour}`}>
-                    {STATUS_CONFIG[currentState.status].label}
-                  </span>
-                  {hasGuidance && moStatus === 'approved' && (
-                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                      <i className="fa-solid fa-robot mr-1 text-[7px]" />
-                      Mo Approved
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-lg font-black text-[#5c3a62] uppercase tracking-wide">
-                  {currentStep.name}
-                </h3>
-                <p className="text-[12px] text-[#888] mt-2 leading-relaxed">
-                  {currentStep.description}
-                </p>
-              </div>
-
-              {/* ── Step Inputs (uploads, toggles, text fields) ── */}
-              {hasStepInputs && currentState.status === 'pending' && (
-                <div className="space-y-4">
-                  {currentStep.stepInputs!.map(input => {
-                    const uploads = stepUploads[activeStepIndex]?.[input.id] || [];
-                    const toggleVal = stepToggles[activeStepIndex]?.[input.id] || false;
-                    const textVal = stepTexts[activeStepIndex]?.[input.id] || '';
-
-                    return (
-                      <div key={input.id}>
-                        {/* ── Image Upload Input ── */}
-                        {input.type === 'upload-images' && (
-                          <div>
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa] mb-2 block">
-                              <i className="fa-solid fa-cloud-arrow-up text-[8px] mr-1" />
-                              {input.label}
-                              {input.required && <span className="text-red-400 ml-1">*</span>}
-                            </span>
-
-                            {/* Upload zone */}
-                            <div
-                              className="rounded-xl border-2 border-dashed border-[#d4c9d9] hover:border-[#91569c] bg-[#faf8fb] hover:bg-[#f6f0f8] transition-all p-6 text-center cursor-pointer"
-                              onClick={() => {
-                                const inp = document.createElement('input');
-                                inp.type = 'file';
-                                inp.accept = input.accept || 'image/*';
-                                inp.multiple = input.multiple !== false;
-                                inp.onchange = () => handleFileUpload(input.id, inp.files);
-                                inp.click();
-                              }}
-                            >
-                              <i className="fa-solid fa-cloud-arrow-up text-2xl text-[#91569c]/40 mb-2" />
-                              <p className="text-[10px] font-bold text-[#888]">
-                                Click to upload or drag & drop
-                              </p>
-                              <p className="text-[9px] text-[#bbb] mt-1">
-                                {input.placeholder || 'Upload image files'}
-                              </p>
-                            </div>
-
-                            {/* Uploaded file thumbnails */}
-                            {uploads.length > 0 && (
-                              <div className="mt-3 grid grid-cols-4 gap-2">
-                                {uploads.map((file, fi) => (
-                                  <div key={fi} className="relative group rounded-lg overflow-hidden border border-[#e0d6e3] bg-white">
-                                    <img
-                                      src={URL.createObjectURL(file)}
-                                      alt={file.name}
-                                      className="w-full h-20 object-cover"
-                                    />
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleRemoveFile(input.id, fi); }}
-                                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <i className="fa-solid fa-xmark text-[7px]" />
-                                    </button>
-                                    <span className="block text-[7px] text-[#888] px-1 py-0.5 truncate">
-                                      {file.name}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Count badge */}
-                            {uploads.length > 0 && (
-                              <span className="inline-block mt-2 text-[9px] font-bold text-[#91569c] bg-[#f6f0f8] px-2 py-1 rounded-full">
-                                {uploads.length} file{uploads.length !== 1 ? 's' : ''} uploaded
-                                {input.min && uploads.length < input.min && (
-                                  <span className="text-red-400 ml-1">
-                                    (need at least {input.min})
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* ── Toggle Input ── */}
-                        {input.type === 'toggle' && (
-                          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-[#e0d6e3]">
-                            <div className="flex-1 mr-4">
-                              <span className="block text-[10px] font-black uppercase tracking-wider text-[#5c3a62]">
-                                {input.label}
-                              </span>
-                              {input.placeholder && (
-                                <span className="block text-[9px] text-[#999] mt-0.5">
-                                  {input.placeholder}
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleToggle(input.id)}
-                              className={`w-11 h-6 rounded-full flex items-center transition-all ${
-                                toggleVal ? 'bg-[#91569c] justify-end' : 'bg-[#d4d4d4] justify-start'
-                              }`}
-                            >
-                              <div className="w-5 h-5 rounded-full bg-white shadow mx-0.5" />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* ── Text Input ── */}
-                        {input.type === 'text' && (
-                          <div>
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa] mb-2 block">
-                              {input.label}
-                              {input.required && <span className="text-red-400 ml-1">*</span>}
-                            </span>
-                            <input
-                              type="text"
-                              value={textVal}
-                              onChange={(e) => handleTextChange(input.id, e.target.value)}
-                              placeholder={input.placeholder}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#e0d6e3] bg-white text-[11px] text-[#333] placeholder-[#bbb] focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20 transition-all"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Proceed button for upload steps (no agents) */}
-                  {currentStep.agents.length === 0 && (
-                    <div className="flex gap-3">
-                      {hasGuidance && moStatus !== 'approved' ? (
-                        /* Mo needs to check first — the Check My Work button is in the Mo panel */
-                        <div className="w-full rounded-xl bg-[#f9f7fa] border border-[#f0eaf2] p-4 text-center">
-                          <i className="fa-solid fa-robot text-[#91569c]/40 text-lg mb-1" />
-                          <p className="text-[10px] text-[#888]">
-                            Use the <strong className="text-[#91569c]">Check My Work</strong> button in Mo's panel to validate →
-                          </p>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            updateStepState(activeStepIndex, { status: 'completed', completedAt: Date.now() });
-                            if (activeStepIndex < totalSteps - 1) {
-                              setActiveStepIndex(activeStepIndex + 1);
-                            } else {
-                              setPipelineComplete(true);
-                            }
-                          }}
-                          disabled={!canValidateStep}
-                          className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
-                            canValidateStep
-                              ? 'bg-[#91569c] hover:bg-[#7a4685] text-white'
-                              : 'bg-[#e0d6e3] text-[#aaa] cursor-not-allowed'
-                          }`}
-                        >
-                          <i className="fa-solid fa-arrow-right text-[10px]" />
-                          Continue to Next Step
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Team badge (only for agent steps) */}
-              {teamMeta && currentStep.agents.length > 0 && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-[#e0d6e3]">
-                  <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] flex items-center justify-center">
-                    <i className={`fa-solid ${teamMeta.icon} text-sm text-[#91569c]`} />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#5c3a62]">
-                      {teamMeta.name}
-                    </span>
-                    <p className="text-[9px] text-[#999]">{teamMeta.description}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Active agents */}
-              {currentStep.agents.length > 0 && (
-                <div>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa] mb-2 block">
-                    Active Agents
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {currentStep.agents.map(agentId => (
-                      <AgentChip key={agentId} agentId={agentId} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Running animation with spinning TensorAx icon */}
-              {currentState.status === 'running' && (
-                <div className="flex flex-col items-center justify-center py-12 rounded-xl bg-white border border-[#e0d6e3]">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f6f0f8] to-[#eadcef] flex items-center justify-center mb-4">
-                    <TensorAxIcon className="w-8 h-8 text-[#91569c]" spinning />
-                  </div>
-                  <span className="text-sm font-black text-[#5c3a62] uppercase tracking-wide">
-                    Agents working...
-                  </span>
-                  <p className="text-[10px] text-[#999] mt-2">
-                    {currentStep.agents.length} agent{currentStep.agents.length !== 1 ? 's' : ''} processing this step
-                  </p>
-                  {/* Progress dots */}
-                  <div className="mt-4 flex items-center gap-1.5">
-                    {[0, 1, 2, 3, 4, 5].map(i => (
-                      <div
-                        key={i}
-                        className="h-1.5 rounded-full bg-[#91569c] animate-pulse"
-                        style={{ width: `${12 + i * 3}px`, animationDelay: `${i * 200}ms` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Output display (when completed or in review) */}
-              {(currentState.outputText || currentState.output) && (currentState.status === 'completed' || currentState.status === 'review') && (
-                <OutputDisplay output={currentState.output || {}} outputText={currentState.outputText} />
-              )}
-
-              {/* Failed step — show error */}
-              {currentState.status === 'failed' && currentState.outputText && (
-                <div className="rounded-xl bg-red-50 border border-red-200 p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className="fa-solid fa-circle-xmark text-red-500" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-red-700">Step Failed</span>
-                  </div>
-                  <p className="text-[11px] text-red-800">{currentState.outputText}</p>
                   <button
-                    onClick={handleReject}
-                    className="mt-3 px-4 py-2 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wider transition-all"
+                    onClick={() => handleToggle(field.id)}
+                    className={`w-9 h-5 rounded-full flex items-center transition-all flex-shrink-0 ${
+                      (stepToggles[0]?.[field.id] || false) ? 'bg-[#91569c] justify-end' : 'bg-[#d4d4d4] justify-start'
+                    }`}
                   >
-                    <i className="fa-solid fa-rotate-left mr-1.5 text-[9px]" />Retry Step
+                    <div className="w-4 h-4 rounded-full bg-white shadow mx-0.5" />
                   </button>
                 </div>
-              )}
-
-              {/* Review actions */}
-              {currentState.status === 'review' && (
-                <div className="rounded-xl bg-amber-50 border border-amber-200 p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <i className="fa-solid fa-eye text-amber-500" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
-                      Review Required
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-amber-800 mb-4">
-                    This step requires your approval before proceeding to the next step.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={handleApprove}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
-                    >
-                      <i className="fa-solid fa-check text-[9px]" />
-                      Approve & Continue
-                    </button>
-                    <button
-                      onClick={handleReject}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-wider transition-all"
-                    >
-                      <i className="fa-solid fa-rotate-left text-[9px]" />
-                      Reject & Retry
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Run button (only when pending and has agents) */}
-              {currentState.status === 'pending' && currentStep.agents.length > 0 && (
-                <button
-                  onClick={handleRunStep}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#91569c] hover:bg-[#7a4685] text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm"
-                >
-                  <i className="fa-solid fa-play text-[10px]" />
-                  Run Step
-                </button>
-              )}
-
-              {/* Completed step — show "Next" if not auto-advanced */}
-              {currentState.status === 'completed' && activeStepIndex < totalSteps - 1 && (
-                <button
-                  onClick={() => setActiveStepIndex(activeStepIndex + 1)}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-[#e0d6e3] bg-white hover:bg-[#f6f0f8] text-[#91569c] text-xs font-black uppercase tracking-wider transition-all"
-                >
-                  <i className="fa-solid fa-arrow-right text-[10px]" />
-                  Next Step
-                </button>
-              )}
+              ))}
             </div>
           )}
         </div>
 
-        {/* ── Mo Coaching Panel (right side) ── */}
-        {hasGuidance && currentStep?.moGuidance && (
-          <MoCoachPanel
-            guidance={currentStep.moGuidance}
-            stepName={currentStep.name}
-            stepOrder={currentStep.order}
-            status={moStatus}
-            validationResult={moValidation}
-            canValidate={canValidateStep}
-            onRequestValidation={handleMoValidation}
-            onSkipValidation={handleMoSkipValidation}
-          />
-        )}
+        {/* ── Guided chat (centre) ── */}
+        <MoGuidedChat
+          steps={template.steps}
+          activeStepIndex={activeStepIndex}
+          stepFiles={stepUploads}
+          toggleValues={stepToggles[0] || {}}
+          onFilesAdded={(inputId, files) => {
+            setStepUploads(prev => {
+              const stepFiles = prev[activeStepIndex] || {};
+              const existing = stepFiles[inputId] || [];
+              return {
+                ...prev,
+                [activeStepIndex]: { ...stepFiles, [inputId]: [...existing, ...files] },
+              };
+            });
+          }}
+          onStepApproved={() => {
+            updateStepState(activeStepIndex, { status: 'completed', completedAt: Date.now() });
+            if (activeStepIndex < totalSteps - 1) {
+              setActiveStepIndex(activeStepIndex + 1);
+            } else {
+              setPipelineComplete(true);
+            }
+          }}
+          onStepSkipped={() => {
+            updateStepState(activeStepIndex, { status: 'completed', completedAt: Date.now() });
+            if (activeStepIndex < totalSteps - 1) {
+              setActiveStepIndex(activeStepIndex + 1);
+            } else {
+              setPipelineComplete(true);
+            }
+          }}
+          onRunAgentStep={handleRunStep}
+          agentRunning={currentState?.status === 'running'}
+          agentOutput={currentState?.outputText}
+          agentInReview={currentState?.status === 'review'}
+        />
       </div>
     </div>
   );
