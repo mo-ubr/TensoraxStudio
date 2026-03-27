@@ -1400,10 +1400,6 @@ const App: React.FC = () => {
             activeProject={activeProject}
             onAction={() => {}}
             onStartTemplate={(templateId, initialContext) => {
-              if (templateId === '9-camera-angle-frames') {
-                setCurrentScreen('scenes');
-                return;
-              }
               setSelectedRunnerTemplateId(templateId);
               setRunnerInitialContext(initialContext);
               setCurrentScreen('template-runner');
@@ -1423,10 +1419,6 @@ const App: React.FC = () => {
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <TemplateLibrary
             onSelectTemplate={(id) => {
-              if (id === '9-camera-angle-frames') {
-                setCurrentScreen('scenes');
-                return;
-              }
               setSelectedRunnerTemplateId(id);
               setCurrentScreen('template-runner');
             }}

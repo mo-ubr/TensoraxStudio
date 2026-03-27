@@ -96,6 +96,44 @@ export interface TeamActivation {
   notes?: string;
 }
 
+// ─── Mo Guidance (AI coaching per step) ──────────────────────────────────────
+
+export interface MoGuidance {
+  /** What Mo tells the user before they start this step */
+  instructions: string;
+  /** Bullet-point checklist Mo shows the user */
+  checklist?: string[];
+  /** What Mo should validate when user clicks "Check My Work" */
+  validationPrompt?: string;
+  /** Pass/fail criteria (displayed as tooltips or badges) */
+  approvalCriteria?: string[];
+  /** Tips Mo shows after approval to prep for the next step */
+  nextStepTip?: string;
+}
+
+// ─── Step input type (what the user provides in upload steps) ────────────────
+
+export type StepInputType = 'upload-images' | 'upload-video' | 'text' | 'toggle' | 'none';
+
+export interface StepInput {
+  /** Unique ID for this input */
+  id: string;
+  /** Display label */
+  label: string;
+  /** Input type */
+  type: StepInputType;
+  /** Whether this input is required */
+  required: boolean;
+  /** Allow multiple files/values */
+  multiple?: boolean;
+  /** Placeholder or helper text */
+  placeholder?: string;
+  /** Accepted file types (for uploads) */
+  accept?: string;
+  /** Minimum number of items */
+  min?: number;
+}
+
 // ─── Pipeline step definition ────────────────────────────────────────────────
 
 export interface TemplateStep {
@@ -113,6 +151,10 @@ export interface TemplateStep {
   description: string;
   /** Step-specific parameters passed to the orchestrator */
   params?: Record<string, unknown>;
+  /** Mo's guidance for this step (coaching instructions, validation, tips) */
+  moGuidance?: MoGuidance;
+  /** Structured inputs the user provides in this step */
+  stepInputs?: StepInput[];
 }
 
 // ─── Full template configuration ─────────────────────────────────────────────

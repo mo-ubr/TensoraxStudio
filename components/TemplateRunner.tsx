@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import type { TemplateConfig, TemplateStep } from '../templates/templateConfig';
 import {
   getTemplate,
@@ -7,6 +7,8 @@ import {
 } from '../services/templateService';
 import { GeminiService, hasStoredKeyForType } from '../services/geminiService';
 import { TensorAxIcon } from './TensorAxIcon';
+import { MoCoachPanel } from './MoCoachPanel';
+import type { MoStatus, MoValidationResult } from './MoCoachPanel';
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -197,6 +199,17 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
   );
   const [pipelineComplete, setPipelineComplete] = useState(false);
 
+  // ── Mo coaching state ──
+  const [moStatus, setMoStatus] = useState<MoStatus>('instructing');
+  const [moValidation, setMoValidation] = useState<MoValidationResult | null>(null);
+  /** Per-step uploaded files: stepIndex → inputId → File[] */
+  const [stepUploads, setStepUploads] = useState<Record<number, Record<string, File[]>>>({});
+  /** Per-step toggle values: stepIndex → inputId → boolean */
+  const [stepToggles, setStepToggles] = useState<Record<number, Record<string, boolean>>>({});
+  /** Per-step text values: stepIndex → inputId → string */
+  const [stepTexts, setStepTexts] = useState<Record<number, Record<string, string>>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // ── Helpers ──
 
   const updateStepState = useCallback((index: number, updates: Partial<StepState>) => {
@@ -207,6 +220,169 @@ export const TemplateRunner: React.FC<TemplateRunnerProps> = ({
   const currentState = stepStates[activeStepIndex];
   const completedCount = stepStates.filter(s => s.status === 'completed').length;
   const totalSteps = template?.steps.length || 0;
+  const hasGuidance = !!currentStep?.moGuidance;
+  const hasStepInputs = !!(currentStep?.stepInputs && currentStep.stepInputs.length > 0);
+
+  // ── Reset Mo state when step changes ──
+  const prevStepRef = useRef(activeStepIndex);
+  if (prevStepRef.current !== activeStepIndex) {
+    prevStepRef.current = activeStepIndex;
+    setMoStatus('instructing');
+    setMoValidation(null);
+  }
+
+  // ── File upload handler ──
+  const handleFileUpload = useCallback((inputId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setStepUploads(prev => {
+      const stepFiles = prev[activeStepIndex] || {};
+      const existing = stepFiles[inputId] || [];
+      return {
+        ...prev,
+        [activeStepIndex]: {
+          ...stepFiles,
+          [inputId]: [...existing, ...Array.from(files)],
+        },
+      };
+    });
+  }, [activeStepIndex]);
+
+  const handleRemoveFile = useCallback((inputId: string, fileIndex: number) => {
+    setStepUploads(prev => {
+      const stepFiles = prev[activeStepIndex] || {};
+      const existing = stepFiles[inputId] || [];
+      return {
+        ...prev,
+        [activeStepIndex]: {
+          ...stepFiles,
+          [inputId]: existing.filter((_, i) => i !== fileIndex),
+        },
+      };
+    });
+  }, [activeStepIndex]);
+
+  const handleToggle = useCallback((inputId: string) => {
+    setStepToggles(prev => {
+      const stepVals = prev[activeStepIndex] || {};
+      return {
+        ...prev,
+        [activeStepIndex]: { ...stepVals, [inputId]: !stepVals[inputId] },
+      };
+    });
+  }, [activeStepIndex]);
+
+  const handleTextChange = useCallback((inputId: string, value: string) => {
+    setStepTexts(prev => {
+      const stepVals = prev[activeStepIndex] || {};
+      return {
+        ...prev,
+        [activeStepIndex]: { ...stepVals, [inputId]: value },
+      };
+    });
+  }, [activeStepIndex]);
+
+  // ── Check if upload step has enough inputs to validate ──
+  const canValidateStep = useMemo(() => {
+    if (!currentStep?.stepInputs) return true;
+    const uploads = stepUploads[activeStepIndex] || {};
+    return currentStep.stepInputs
+      .filter(inp => inp.required && inp.type === 'upload-images')
+      .every(inp => (uploads[inp.id]?.length || 0) >= (inp.min || 1));
+  }, [currentStep, activeStepIndex, stepUploads]);
+
+  // ── Mo validation handler (calls AI to check work) ──
+  const handleMoValidation = useCallback(async () => {
+    if (!currentStep?.moGuidance?.validationPrompt) return;
+
+    setMoStatus('checking');
+
+    try {
+      if (!hasStoredKeyForType('analysis')) {
+        setMoValidation({
+          status: 'needs-fixes',
+          feedback: 'No API key set. Please configure a Gemini key in Settings to enable Mo\'s validation.',
+          issues: ['Missing API key'],
+        });
+        setMoStatus('needs-fixes');
+        return;
+      }
+
+      // Build context about what the user has uploaded/entered
+      const uploads = stepUploads[activeStepIndex] || {};
+      const toggles = stepToggles[activeStepIndex] || {};
+      const texts = stepTexts[activeStepIndex] || {};
+
+      const uploadSummary = Object.entries(uploads)
+        .map(([id, files]) => `${id}: ${files.length} file(s) — ${files.map(f => f.name).join(', ')}`)
+        .join('\n');
+      const toggleSummary = Object.entries(toggles)
+        .map(([id, val]) => `${id}: ${val ? 'ON' : 'OFF'}`)
+        .join('\n');
+      const textSummary = Object.entries(texts)
+        .filter(([, val]) => val)
+        .map(([id, val]) => `${id}: ${val}`)
+        .join('\n');
+
+      const prompt = `${currentStep.moGuidance.validationPrompt}
+
+USER INPUT FOR THIS STEP:
+${uploadSummary || '(no files uploaded)'}
+${toggleSummary || ''}
+${textSummary || ''}
+
+Respond in this exact JSON format:
+{
+  "status": "approved" or "needs-fixes",
+  "feedback": "Brief summary of your assessment",
+  "issues": ["specific issue 1", "specific issue 2"],
+  "score": 7
+}
+
+Score 1-10 where 7+ = approved. Only return the JSON, nothing else.`;
+
+      const chat = GeminiService.createChat('gemini-2.5-flash');
+      const response = await Promise.race([
+        chat.sendMessage({ message: prompt }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Validation timed out')), 30000)
+        ),
+      ]);
+
+      const text = (response as any)?.text || '';
+
+      // Try to parse JSON response
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]) as MoValidationResult;
+          setMoValidation(result);
+          setMoStatus(result.status === 'approved' ? 'approved' : 'needs-fixes');
+        } else {
+          // Fallback: treat as approved with the text as feedback
+          setMoValidation({ status: 'approved', feedback: text, score: 8 });
+          setMoStatus('approved');
+        }
+      } catch {
+        setMoValidation({ status: 'approved', feedback: text, score: 7 });
+        setMoStatus('approved');
+      }
+    } catch (err: any) {
+      setMoValidation({
+        status: 'needs-fixes',
+        feedback: `Validation error: ${err?.message || 'Unknown error'}`,
+        issues: [err?.message || 'Unknown error'],
+      });
+      setMoStatus('needs-fixes');
+    }
+  }, [currentStep, activeStepIndex, stepUploads, stepToggles, stepTexts]);
+
+  const handleMoSkipValidation = useCallback(() => {
+    setMoStatus('approved');
+    setMoValidation({
+      status: 'approved',
+      feedback: 'Skipped validation — proceeding with current work.',
+    });
+  }, []);
 
   // ── Build context from prior steps ──
 
@@ -442,7 +618,7 @@ Execute ONLY this step. Deliver the specific output described above, using the u
         </button>
       </div>
 
-      {/* ── Body: sidebar + main content ── */}
+      {/* ── Body: sidebar + main content + Mo panel ── */}
       <div className="flex flex-1 min-h-0">
         {/* Step sidebar */}
         <div className="w-64 flex-shrink-0 bg-white border-r border-[#e0d6e3] overflow-y-auto p-3 space-y-1">
@@ -466,7 +642,7 @@ Execute ONLY this step. Deliver the specific output described above, using the u
         {/* Main content */}
         <div className="flex-1 overflow-y-auto p-8">
           {currentStep && currentState && (
-            <div className="max-w-2xl mx-auto space-y-6">
+            <div className={`${hasGuidance ? 'max-w-3xl' : 'max-w-2xl'} mx-auto space-y-6`}>
               {/* Step header */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -476,6 +652,12 @@ Execute ONLY this step. Deliver the specific output described above, using the u
                   <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${STATUS_CONFIG[currentState.status].bgColour} ${STATUS_CONFIG[currentState.status].colour}`}>
                     {STATUS_CONFIG[currentState.status].label}
                   </span>
+                  {hasGuidance && moStatus === 'approved' && (
+                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                      <i className="fa-solid fa-robot mr-1 text-[7px]" />
+                      Mo Approved
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-black text-[#5c3a62] uppercase tracking-wide">
                   {currentStep.name}
@@ -485,8 +667,167 @@ Execute ONLY this step. Deliver the specific output described above, using the u
                 </p>
               </div>
 
-              {/* Team badge */}
-              {teamMeta && (
+              {/* ── Step Inputs (uploads, toggles, text fields) ── */}
+              {hasStepInputs && currentState.status === 'pending' && (
+                <div className="space-y-4">
+                  {currentStep.stepInputs!.map(input => {
+                    const uploads = stepUploads[activeStepIndex]?.[input.id] || [];
+                    const toggleVal = stepToggles[activeStepIndex]?.[input.id] || false;
+                    const textVal = stepTexts[activeStepIndex]?.[input.id] || '';
+
+                    return (
+                      <div key={input.id}>
+                        {/* ── Image Upload Input ── */}
+                        {input.type === 'upload-images' && (
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa] mb-2 block">
+                              <i className="fa-solid fa-cloud-arrow-up text-[8px] mr-1" />
+                              {input.label}
+                              {input.required && <span className="text-red-400 ml-1">*</span>}
+                            </span>
+
+                            {/* Upload zone */}
+                            <div
+                              className="rounded-xl border-2 border-dashed border-[#d4c9d9] hover:border-[#91569c] bg-[#faf8fb] hover:bg-[#f6f0f8] transition-all p-6 text-center cursor-pointer"
+                              onClick={() => {
+                                const inp = document.createElement('input');
+                                inp.type = 'file';
+                                inp.accept = input.accept || 'image/*';
+                                inp.multiple = input.multiple !== false;
+                                inp.onchange = () => handleFileUpload(input.id, inp.files);
+                                inp.click();
+                              }}
+                            >
+                              <i className="fa-solid fa-cloud-arrow-up text-2xl text-[#91569c]/40 mb-2" />
+                              <p className="text-[10px] font-bold text-[#888]">
+                                Click to upload or drag & drop
+                              </p>
+                              <p className="text-[9px] text-[#bbb] mt-1">
+                                {input.placeholder || 'Upload image files'}
+                              </p>
+                            </div>
+
+                            {/* Uploaded file thumbnails */}
+                            {uploads.length > 0 && (
+                              <div className="mt-3 grid grid-cols-4 gap-2">
+                                {uploads.map((file, fi) => (
+                                  <div key={fi} className="relative group rounded-lg overflow-hidden border border-[#e0d6e3] bg-white">
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      alt={file.name}
+                                      className="w-full h-20 object-cover"
+                                    />
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveFile(input.id, fi); }}
+                                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <i className="fa-solid fa-xmark text-[7px]" />
+                                    </button>
+                                    <span className="block text-[7px] text-[#888] px-1 py-0.5 truncate">
+                                      {file.name}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Count badge */}
+                            {uploads.length > 0 && (
+                              <span className="inline-block mt-2 text-[9px] font-bold text-[#91569c] bg-[#f6f0f8] px-2 py-1 rounded-full">
+                                {uploads.length} file{uploads.length !== 1 ? 's' : ''} uploaded
+                                {input.min && uploads.length < input.min && (
+                                  <span className="text-red-400 ml-1">
+                                    (need at least {input.min})
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Toggle Input ── */}
+                        {input.type === 'toggle' && (
+                          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-[#e0d6e3]">
+                            <div className="flex-1 mr-4">
+                              <span className="block text-[10px] font-black uppercase tracking-wider text-[#5c3a62]">
+                                {input.label}
+                              </span>
+                              {input.placeholder && (
+                                <span className="block text-[9px] text-[#999] mt-0.5">
+                                  {input.placeholder}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleToggle(input.id)}
+                              className={`w-11 h-6 rounded-full flex items-center transition-all ${
+                                toggleVal ? 'bg-[#91569c] justify-end' : 'bg-[#d4d4d4] justify-start'
+                              }`}
+                            >
+                              <div className="w-5 h-5 rounded-full bg-white shadow mx-0.5" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* ── Text Input ── */}
+                        {input.type === 'text' && (
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#aaa] mb-2 block">
+                              {input.label}
+                              {input.required && <span className="text-red-400 ml-1">*</span>}
+                            </span>
+                            <input
+                              type="text"
+                              value={textVal}
+                              onChange={(e) => handleTextChange(input.id, e.target.value)}
+                              placeholder={input.placeholder}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#e0d6e3] bg-white text-[11px] text-[#333] placeholder-[#bbb] focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20 transition-all"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Proceed button for upload steps (no agents) */}
+                  {currentStep.agents.length === 0 && (
+                    <div className="flex gap-3">
+                      {hasGuidance && moStatus !== 'approved' ? (
+                        /* Mo needs to check first — the Check My Work button is in the Mo panel */
+                        <div className="w-full rounded-xl bg-[#f9f7fa] border border-[#f0eaf2] p-4 text-center">
+                          <i className="fa-solid fa-robot text-[#91569c]/40 text-lg mb-1" />
+                          <p className="text-[10px] text-[#888]">
+                            Use the <strong className="text-[#91569c]">Check My Work</strong> button in Mo's panel to validate →
+                          </p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            updateStepState(activeStepIndex, { status: 'completed', completedAt: Date.now() });
+                            if (activeStepIndex < totalSteps - 1) {
+                              setActiveStepIndex(activeStepIndex + 1);
+                            } else {
+                              setPipelineComplete(true);
+                            }
+                          }}
+                          disabled={!canValidateStep}
+                          className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+                            canValidateStep
+                              ? 'bg-[#91569c] hover:bg-[#7a4685] text-white'
+                              : 'bg-[#e0d6e3] text-[#aaa] cursor-not-allowed'
+                          }`}
+                        >
+                          <i className="fa-solid fa-arrow-right text-[10px]" />
+                          Continue to Next Step
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Team badge (only for agent steps) */}
+              {teamMeta && currentStep.agents.length > 0 && (
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-[#e0d6e3]">
                   <div className="w-9 h-9 rounded-lg bg-[#f6f0f8] flex items-center justify-center">
                     <i className={`fa-solid ${teamMeta.icon} text-sm text-[#91569c]`} />
@@ -592,8 +933,8 @@ Execute ONLY this step. Deliver the specific output described above, using the u
                 </div>
               )}
 
-              {/* Run button (only when pending) */}
-              {currentState.status === 'pending' && (
+              {/* Run button (only when pending and has agents) */}
+              {currentState.status === 'pending' && currentStep.agents.length > 0 && (
                 <button
                   onClick={handleRunStep}
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#91569c] hover:bg-[#7a4685] text-white text-xs font-black uppercase tracking-wider transition-colors shadow-sm"
@@ -616,6 +957,20 @@ Execute ONLY this step. Deliver the specific output described above, using the u
             </div>
           )}
         </div>
+
+        {/* ── Mo Coaching Panel (right side) ── */}
+        {hasGuidance && currentStep?.moGuidance && (
+          <MoCoachPanel
+            guidance={currentStep.moGuidance}
+            stepName={currentStep.name}
+            stepOrder={currentStep.order}
+            status={moStatus}
+            validationResult={moValidation}
+            canValidate={canValidateStep}
+            onRequestValidation={handleMoValidation}
+            onSkipValidation={handleMoSkipValidation}
+          />
+        )}
       </div>
     </div>
   );

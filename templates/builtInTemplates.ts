@@ -613,71 +613,245 @@ export const liveShoppingChannel: TemplateConfig = {
 export const nineCameraAngleFrames: TemplateConfig = {
   id: '9-camera-angle-frames',
   name: '9 Camera Angle Frames',
-  description: 'Upload character, outfit, and background reference images. AI analyses them and generates 9 cinematic camera angle frames (ELS, LS, MLS, MS, MCU, CU, ECU, Low Angle, High Angle) ready for video production.',
+  description: 'Upload character, outfit, and background reference images. AI analyses them and generates 9 cinematic camera angle frames (ELS, LS, MLS, MS, MCU, CU, ECU, Low Angle, High Angle). Supports multiple outfits (apparel collection mode) and multiple locations (film mode).',
   icon: 'fa-clapperboard',
   category: 'marketing',
-  version: '1.0.0',
+  version: '2.0.0',
   builtIn: true,
-  tags: ['9-shot', 'storyboard', 'camera-angles', 'keyframes', 'character'],
+  tags: ['9-shot', 'storyboard', 'camera-angles', 'keyframes', 'character', 'apparel', 'lookbook', 'film'],
 
   teams: [
     {
       teamId: 'research',
       agents: ['general-analysis'],
-      notes: 'Analyses reference images (character, clothing, background) into structured description',
+      notes: 'Analyses reference images (character, clothing, background) into structured descriptions',
     },
     {
       teamId: 'image-production',
-      agents: ['image-producer', 'character-builder', 'character-frames'],
-      notes: 'Generates 9 camera angle frames from structured analysis',
+      agents: ['image-producer', 'character-builder', 'character-frames', 'character-variations'],
+      notes: 'character-builder extracts character profile, character-frames generates 9-angle prompts, character-variations handles outfit-only standalone shots, image-producer renders all frames',
     },
     {
       teamId: 'copy-production',
       agents: ['qa-consistency'],
-      notes: 'QA checks visual consistency across all 9 frames',
+      notes: 'QA checks visual consistency across all generated frames',
     },
   ],
 
   steps: [
+    // ── Step 1: Upload Character ──
     {
       order: 1,
-      name: 'Upload References',
+      name: 'Upload Character',
       teamId: 'image-production',
       agents: [],
       requiresReview: false,
-      description: 'Upload character, outfit, and background reference images',
+      description: 'Upload reference images of your character — face, body, distinctive features',
+      stepInputs: [
+        {
+          id: 'characterImages',
+          label: 'Character Reference Images',
+          type: 'upload-images',
+          required: true,
+          multiple: true,
+          min: 1,
+          accept: 'image/*',
+          placeholder: 'Upload at least one clear photo of your character',
+        },
+      ],
+      moGuidance: {
+        instructions: 'Upload clear reference images of your character. I need to see who this person is — their face, body type, and any distinctive features.',
+        checklist: [
+          'At least one clear full-body shot',
+          'Face clearly visible (not obscured or in shadow)',
+          'Good lighting — avoid harsh shadows or backlight',
+          'Neutral or simple background preferred',
+        ],
+        validationPrompt: 'Analyse these character reference images. Check: (1) Is a face clearly visible? (2) Is the full body shown in at least one image? (3) Is the lighting adequate to distinguish features? (4) Are there any quality issues (blur, low resolution, heavy filters)? Rate each image and give specific feedback.',
+        approvalCriteria: [
+          'At least 1 image uploaded',
+          'Face clearly visible in at least 1 image',
+          'Resolution adequate (≥512px on shortest side)',
+        ],
+        nextStepTip: 'Great character references! Next we\'ll add the outfits — you can upload multiple if you want to showcase a collection.',
+      },
     },
+
+    // ── Step 2: Upload Outfits ──
     {
       order: 2,
+      name: 'Upload Outfits',
+      teamId: 'image-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload outfit/wardrobe reference images. Multiple outfits = apparel collection mode. Toggle "outfit standalone" for garment-only shots.',
+      stepInputs: [
+        {
+          id: 'outfitImages',
+          label: 'Outfit / Wardrobe Reference Images',
+          type: 'upload-images',
+          required: true,
+          multiple: true,
+          min: 1,
+          accept: 'image/*',
+          placeholder: 'Upload one or more outfit references — group shots by outfit',
+        },
+        {
+          id: 'outfitStandalone',
+          label: 'Generate outfit-only shots (no character)',
+          type: 'toggle',
+          required: false,
+          placeholder: 'Creates additional flat-lay / ghost mannequin / styled product shots for each outfit',
+        },
+      ],
+      moGuidance: {
+        instructions: 'Upload reference images for each outfit. If you\'re showcasing a collection, upload multiple outfits — I\'ll generate 9 camera angles for each one.\n\nTip: Turn on "outfit standalone" to also get product-only shots (flat lay, ghost mannequin style) — perfect for lookbooks and e-commerce.',
+        checklist: [
+          'Each outfit clearly visible (full garment, not cropped)',
+          'Colours accurate (no heavy filters that distort colours)',
+          'If multiple outfits, try to separate them clearly',
+          'Include accessories if they\'re part of the look',
+        ],
+        validationPrompt: 'Analyse these outfit/wardrobe reference images. Check: (1) How many distinct outfits can you identify? List each one. (2) Is each outfit fully visible (not cropped or obscured)? (3) Are colours accurate or heavily filtered? (4) Any accessories visible? Describe each outfit briefly.',
+        approvalCriteria: [
+          'At least 1 outfit clearly shown',
+          'Garment not heavily cropped or obscured',
+        ],
+        nextStepTip: 'Outfits locked in! Next: backgrounds and locations. Upload multiple to create a "film journey" through different spaces.',
+      },
+    },
+
+    // ── Step 3: Upload Locations ──
+    {
+      order: 3,
+      name: 'Upload Locations',
+      teamId: 'image-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload background/location reference images. Multiple locations = film mode (character moves through different spaces like scenes in a film).',
+      stepInputs: [
+        {
+          id: 'backgroundImages',
+          label: 'Background / Location Reference Images',
+          type: 'upload-images',
+          required: true,
+          multiple: true,
+          min: 1,
+          accept: 'image/*',
+          placeholder: 'Upload one or more location/background references',
+        },
+        {
+          id: 'filmMode',
+          label: 'Film mode — character in multiple locations',
+          type: 'toggle',
+          required: false,
+          placeholder: 'Generates a full set of 9 camera angles at EACH location, like scenes in a film',
+        },
+        {
+          id: 'sceneDescription',
+          label: 'Scene Description (optional)',
+          type: 'text',
+          required: false,
+          placeholder: 'E.g. "Luxury apartment in Athens, warm afternoon light, modern minimalist interior"',
+        },
+      ],
+      moGuidance: {
+        instructions: 'Upload background/location images. This sets the stage for your character.\n\n🎬 Film Mode: Upload multiple locations (living room, kitchen, street, studio…) and I\'ll generate all 9 camera angles at each location — like scenes in a film.\n\n📍 Single location: Upload one background and I\'ll keep all frames consistent.',
+        checklist: [
+          'Background clearly shows the space/environment',
+          'Good depth — avoid flat walls with no context',
+          'Lighting style matches your creative vision',
+          'If multiple locations, each should be distinctly different',
+        ],
+        validationPrompt: 'Analyse these background/location reference images. Check: (1) How many distinct locations can you identify? Describe each. (2) Is each location suitable as a backdrop for fashion/character photography? (3) Are there lighting or perspective issues? (4) Do the locations have enough depth and visual interest? Rate each location.',
+        approvalCriteria: [
+          'At least 1 location clearly shown',
+          'Location suitable for character photography',
+        ],
+        nextStepTip: 'All references uploaded! Now I\'ll analyse everything — character, outfits, and locations — to build a detailed description for the frame generator.',
+      },
+    },
+
+    // ── Step 4: Analyse Everything ──
+    {
+      order: 4,
       name: 'Analyse References',
       teamId: 'research',
       agents: ['general-analysis'],
       requiresReview: true,
-      description: 'AI analyses the 3 image groups (character, clothing, scenery) into a structured description',
+      description: 'AI analyses all uploaded references — character traits, outfit details, location descriptions — into structured profiles',
+      moGuidance: {
+        instructions: 'I\'m studying all your reference images now. I\'ll build a detailed profile of:\n\n👤 Character — face shape, skin tone, build, hair, distinctive features\n👗 Each outfit — garment type, colours, fabric, styling details\n🏠 Each location — space type, lighting, mood, key elements\n\nThis takes a moment...',
+        validationPrompt: 'Review the AI analysis output. Check: (1) Does the character description match the uploaded images? (2) Are all outfits described accurately? (3) Are all locations described? (4) Are there any obvious errors or missing details? Suggest corrections if needed.',
+        approvalCriteria: [
+          'Character description matches uploaded images',
+          'All outfits identified and described',
+          'All locations identified and described',
+        ],
+        nextStepTip: 'Analysis looks good! Check that I\'ve described everything accurately — edit anything that\'s off before we generate the prompts.',
+      },
     },
+
+    // ── Step 5: Generate Prompts ──
     {
-      order: 3,
+      order: 5,
       name: 'Generate Prompts',
       teamId: 'image-production',
-      agents: ['character-frames'],
+      agents: ['character-frames', 'character-variations'],
       requiresReview: true,
-      description: 'Generate 9 shot-specific prompts from the structured analysis, one per camera angle',
+      description: 'Generate image prompts: 9 camera angles × outfits × locations, plus optional outfit-only standalone shots',
+      moGuidance: {
+        instructions: 'I\'m creating the image generation prompts now. For each combination of outfit + location, I\'ll write 9 camera angle prompts:\n\n📐 ELS → ECU (Extreme Long Shot to Extreme Close-Up)\n📸 Low Angle + High Angle\n\nIf you enabled outfit standalone, I\'ll also create flat-lay and styled product prompts for each outfit.',
+        validationPrompt: 'Review the generated prompts. Check: (1) Do all 9 camera angles follow the correct cinematic conventions (ELS, LS, MLS, MS, MCU, CU, ECU, Low Angle, High Angle)? (2) Is the character description consistent across all prompts? (3) Are outfit details accurate per prompt set? (4) Are location details accurate per prompt set? (5) If outfit standalone prompts exist, are they well-suited for product photography?',
+        approvalCriteria: [
+          'All 9 camera angles present per outfit×location combo',
+          'Character description consistent across prompts',
+          'Outfit and location details accurate',
+        ],
+        nextStepTip: 'Prompts ready! Review them — you can edit any prompt text before we generate. Next step fires up the image generator.',
+      },
     },
+
+    // ── Step 6: Generate Frames ──
     {
-      order: 4,
+      order: 6,
       name: 'Generate Frames',
       teamId: 'image-production',
       agents: ['image-producer'],
       requiresReview: true,
-      description: 'Generate the 9 camera angle images from the shot prompts',
+      description: 'Generate all camera angle images from the approved prompts',
+      moGuidance: {
+        instructions: 'Generating all frames now. This may take a while depending on how many outfit×location combinations you have.\n\nI\'ll show each frame as it completes so you can spot issues early.',
+        validationPrompt: 'Review the generated frames. For each frame check: (1) Does the character match the reference? (2) Is the outfit correct for this set? (3) Is the background/location correct? (4) Is the camera angle correct (ELS, LS, etc.)? (5) Overall image quality — any artifacts, distortions, or inconsistencies? Flag specific frames that need regeneration.',
+        approvalCriteria: [
+          'Character recognisable across all frames',
+          'Correct outfit shown in each frame set',
+          'Correct location shown in each frame set',
+          'Camera angles correctly represented',
+        ],
+        nextStepTip: 'Frames generated! Click any frame to regenerate it if needed. Once you\'re happy, the final consistency check will verify everything hangs together.',
+      },
     },
+
+    // ── Step 7: Consistency Check ──
     {
-      order: 5,
+      order: 7,
       name: 'Consistency Check',
       teamId: 'copy-production',
       agents: ['qa-consistency'],
       requiresReview: true,
-      description: 'QA reviews all 9 frames for character, outfit, and background consistency',
+      description: 'QA reviews all frames for character, outfit, and location consistency across the entire set',
+      moGuidance: {
+        instructions: 'Running the final quality check. I\'m comparing all frames to ensure:\n\n✅ Same character across every frame\n✅ Correct outfit in each set\n✅ Consistent lighting and colour palette per location\n✅ No jarring inconsistencies between camera angles',
+        validationPrompt: 'Perform a comprehensive consistency review across ALL generated frames. Check: (1) Character consistency — does the same person appear in every frame? (2) Outfit consistency — is each outfit set internally consistent? (3) Location consistency — does each location set feel like the same space? (4) Cross-set coherence — do all frames feel like they belong to the same production? Score overall consistency 1-10 and list specific issues.',
+        approvalCriteria: [
+          'Character consistent across all frames',
+          'Each outfit set internally consistent',
+          'Each location set internally consistent',
+          'Overall consistency score ≥ 7/10',
+        ],
+        nextStepTip: 'All done! Your frames are ready for video production or direct use in lookbooks, social media, and marketing materials.',
+      },
     },
   ],
 
@@ -691,27 +865,17 @@ export const nineCameraAngleFrames: TemplateConfig = {
     requiresBrand: false,
     customFields: [
       {
-        id: 'characterImages',
-        label: 'Character Reference Images',
-        type: 'textarea',
-        required: true,
+        id: 'outfitStandalone',
+        label: 'Apparel Collection Mode — generate outfit-only standalone shots',
+        type: 'toggle',
+        defaultValue: false,
+        required: false,
       },
       {
-        id: 'outfitImages',
-        label: 'Outfit / Wardrobe Reference Images',
-        type: 'textarea',
-        required: true,
-      },
-      {
-        id: 'backgroundImages',
-        label: 'Background / Scenery Reference Images',
-        type: 'textarea',
-        required: true,
-      },
-      {
-        id: 'sceneDescription',
-        label: 'Scene Description (optional)',
-        type: 'textarea',
+        id: 'filmMode',
+        label: 'Film Mode — generate frames at each location separately',
+        type: 'toggle',
+        defaultValue: false,
         required: false,
       },
     ],
