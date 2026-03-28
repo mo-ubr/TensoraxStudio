@@ -2299,6 +2299,497 @@ export const codeReviewAssistant: TemplateConfig = {
   },
 };
 
+// ─── 19. Email Inbox Organiser ───────────────────────────────────────────────
+
+export const emailInboxOrganiser: TemplateConfig = {
+  id: 'email-inbox-organiser',
+  name: 'Email Inbox Organiser',
+  description: 'Analyse your inbox, classify emails by priority and category, identify what needs replies, set reminders for follow-ups, and suggest auto-forwarding rules to reduce inbox noise.',
+  icon: 'fa-inbox',
+  category: 'productivity',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['email', 'inbox', 'organise', 'priority', 'productivity', 'automation'],
+
+  teams: [
+    {
+      teamId: 'email-organisation',
+      agents: ['email-classifier', 'email-organiser', 'email-auto-forwarder', 'email-reminder'],
+      notes: 'Full inbox management: classify, organise, set forwarding rules, create reminders',
+    },
+    {
+      teamId: 'text-analysis',
+      agents: ['email-analyser', 'sentiment-analyser'],
+      notes: 'Analyse email content and detect urgency/sentiment',
+    },
+    {
+      teamId: 'email-comms',
+      agents: ['reply-idea-generator', 'correspondence-tracker'],
+      notes: 'Suggest reply approaches and track ongoing conversations',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Connect Inbox',
+      teamId: 'email-organisation',
+      agents: [],
+      requiresReview: false,
+      description: 'Connect to your email (Gmail). Specify date range and any existing folder/label structure.',
+    },
+    {
+      order: 2,
+      name: 'Classify & Prioritise',
+      teamId: 'email-organisation',
+      agents: ['email-classifier'],
+      requiresReview: true,
+      description: 'Scan emails and classify by: urgency (P1-P4), category (client, internal, newsletter, billing, personal), and action required (reply, review, FYI, archive).',
+    },
+    {
+      order: 3,
+      name: 'Conversation Threads',
+      teamId: 'email-comms',
+      agents: ['correspondence-tracker'],
+      requiresReview: false,
+      description: 'Identify ongoing conversation threads, stalled conversations awaiting your reply, and items you\'re waiting on from others.',
+    },
+    {
+      order: 4,
+      name: 'Reply Suggestions',
+      teamId: 'email-comms',
+      agents: ['reply-idea-generator'],
+      requiresReview: true,
+      description: 'For emails needing replies, generate quick reply suggestions — one-liners for simple responses, structured outlines for complex ones.',
+    },
+    {
+      order: 5,
+      name: 'Organise & Rules',
+      teamId: 'email-organisation',
+      agents: ['email-organiser', 'email-auto-forwarder', 'email-reminder'],
+      requiresReview: true,
+      description: 'Suggest folder/label reorganisation, auto-forwarding rules for recurring senders, and reminders for time-sensitive items.',
+    },
+  ],
+
+  defaults: {
+    lookbackDays: 7,
+    priorityLevels: 4,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresEmailAccess: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md'],
+    includesClassification: true,
+    includesRules: true,
+    includesReminders: true,
+  },
+};
+
+// ─── 20. File Structure Audit ────────────────────────────────────────────────
+
+export const fileStructureAudit: TemplateConfig = {
+  id: 'file-structure-audit',
+  name: 'File Structure Audit',
+  description: 'Analyse a folder or drive structure. AI maps the hierarchy, identifies disorganisation, missing files, duplicates, and naming inconsistencies — then recommends a clean structure with a migration plan.',
+  icon: 'fa-folder-tree',
+  category: 'productivity',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['files', 'folders', 'organisation', 'audit', 'cleanup', 'structure'],
+
+  teams: [
+    {
+      teamId: 'file-organisation',
+      agents: ['file-structure-analyser', 'file-structure-monitor', 'reorganisation-advisor', 'missing-info-detector'],
+      notes: 'Full file structure analysis, monitoring, and reorganisation',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator', 'diagram-builder'],
+      notes: 'Generate audit report and folder structure diagrams',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Select Location',
+      teamId: 'file-organisation',
+      agents: [],
+      requiresReview: false,
+      description: 'Specify the folder path, drive, or cloud storage location to audit. Set any naming conventions or expected structure.',
+    },
+    {
+      order: 2,
+      name: 'Structure Analysis',
+      teamId: 'file-organisation',
+      agents: ['file-structure-analyser'],
+      requiresReview: true,
+      description: 'Map the full folder hierarchy: depth, file counts per folder, file types, sizes, last modified dates, and naming patterns.',
+    },
+    {
+      order: 3,
+      name: 'Gap & Duplicate Detection',
+      teamId: 'file-organisation',
+      agents: ['missing-info-detector'],
+      requiresReview: true,
+      description: 'Identify missing expected files (e.g. no README, no index), duplicate files across folders, empty folders, and orphaned files.',
+    },
+    {
+      order: 4,
+      name: 'Reorganisation Plan',
+      teamId: 'file-organisation',
+      agents: ['reorganisation-advisor'],
+      requiresReview: true,
+      description: 'Propose a clean folder structure with: naming conventions, archive strategy, and a file-by-file migration plan showing current → new location.',
+    },
+    {
+      order: 5,
+      name: 'Audit Report',
+      teamId: 'document-production',
+      agents: ['report-generator', 'diagram-builder'],
+      requiresReview: true,
+      description: 'Compile the full audit: structure diagram, findings summary, reorganisation plan, and estimated effort.',
+    },
+  ],
+
+  defaults: {},
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresFolderPath: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesStructureDiagram: true,
+    includesMigrationPlan: true,
+  },
+};
+
+// ─── 21. Dashboard Builder ───────────────────────────────────────────────────
+
+export const dashboardBuilder: TemplateConfig = {
+  id: 'dashboard-builder',
+  name: 'Dashboard Builder',
+  description: 'Turn raw data into a visual dashboard. Upload spreadsheets or database exports — AI identifies the key metrics, creates charts, and assembles a branded interactive dashboard or presentation.',
+  icon: 'fa-chart-column',
+  category: 'data',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['dashboard', 'visualisation', 'charts', 'data', 'reporting', 'presentation'],
+
+  teams: [
+    {
+      teamId: 'data-analysis',
+      agents: ['spreadsheet-analyser', 'data-profiler', 'statistical-analyser'],
+      notes: 'Analyse data to identify key metrics and patterns',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['chart-creator', 'diagram-builder'],
+      notes: 'Create chart specifications and data visualisations',
+    },
+    {
+      teamId: 'presentation-comms',
+      agents: ['data-summary-presenter', 'dashboard-creator', 'branded-presentation-builder'],
+      notes: 'Assemble charts into a cohesive dashboard or branded presentation',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Data',
+      teamId: 'data-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload data files (Excel, CSV, JSON) or describe the data source. Specify what questions the dashboard should answer.',
+    },
+    {
+      order: 2,
+      name: 'Data Analysis',
+      teamId: 'data-analysis',
+      agents: ['spreadsheet-analyser', 'data-profiler', 'statistical-analyser'],
+      requiresReview: true,
+      description: 'Profile the data, identify key metrics, trends, outliers, and relationships. Recommend which metrics belong on the dashboard.',
+    },
+    {
+      order: 3,
+      name: 'Chart Design',
+      teamId: 'document-production',
+      agents: ['chart-creator'],
+      requiresReview: true,
+      description: 'Select optimal chart types for each metric (bar, line, pie, heatmap, KPI card). Generate chart specifications with data mappings.',
+    },
+    {
+      order: 4,
+      name: 'Dashboard Assembly',
+      teamId: 'presentation-comms',
+      agents: ['dashboard-creator', 'data-summary-presenter'],
+      requiresReview: true,
+      description: 'Lay out charts into a dashboard: KPI cards at top, trend charts in the middle, detailed tables at the bottom. Add filters and drill-down suggestions.',
+    },
+    {
+      order: 5,
+      name: 'Branded Presentation',
+      teamId: 'presentation-comms',
+      agents: ['branded-presentation-builder'],
+      requiresReview: true,
+      description: 'Optionally convert the dashboard into a branded presentation deck suitable for stakeholder meetings.',
+    },
+  ],
+
+  defaults: {
+    chartCount: 6,
+    kpiCount: 4,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresDataFile: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['html', 'json', 'pptx'],
+    includesDashboard: true,
+    includesPresentation: true,
+  },
+};
+
+// ─── 22. Support Bot Builder ─────────────────────────────────────────────────
+
+export const supportBotBuilder: TemplateConfig = {
+  id: 'support-bot-builder',
+  name: 'Support Bot Builder',
+  description: 'Build a customer or staff support chatbot from your knowledge base. Upload FAQs, manuals, policies, and product docs — AI structures them into a retrieval-ready knowledge base with conversation flows and escalation rules.',
+  icon: 'fa-robot',
+  category: 'communication',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['chatbot', 'support', 'customer-service', 'knowledge-base', 'FAQ', 'automation'],
+
+  teams: [
+    {
+      teamId: 'text-analysis',
+      agents: ['document-summariser', 'ocr-extractor'],
+      notes: 'Parse and summarise source documents for the knowledge base',
+    },
+    {
+      teamId: 'research',
+      agents: ['audience-research'],
+      notes: 'Understand the target users (customers or staff) to design appropriate conversation tone',
+    },
+    {
+      teamId: 'bot-comms',
+      agents: ['customer-support-bot', 'staff-support-bot', 'training-repo-builder'],
+      notes: 'Design bot persona, conversation flows, and build the training data repository',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['copywriter'],
+      notes: 'Write bot responses, greeting messages, and escalation messages',
+    },
+    {
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      notes: 'Test conversation flows for consistency and completeness',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Knowledge Base',
+      teamId: 'text-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload source documents: FAQs, product manuals, policy docs, training materials, common support tickets.',
+    },
+    {
+      order: 2,
+      name: 'Parse & Structure',
+      teamId: 'text-analysis',
+      agents: ['document-summariser', 'ocr-extractor'],
+      requiresReview: true,
+      description: 'Extract and structure knowledge into Q&A pairs, topic categories, and decision trees from all source documents.',
+    },
+    {
+      order: 3,
+      name: 'Audience & Tone',
+      teamId: 'research',
+      agents: ['audience-research'],
+      requiresReview: false,
+      description: 'Define the bot\'s target users and appropriate conversation tone (formal, friendly, technical).',
+    },
+    {
+      order: 4,
+      name: 'Conversation Flows',
+      teamId: 'bot-comms',
+      agents: ['customer-support-bot', 'staff-support-bot'],
+      requiresReview: true,
+      description: 'Design conversation flows: greeting, topic detection, multi-turn Q&A, clarification prompts, and escalation to human agent rules.',
+    },
+    {
+      order: 5,
+      name: 'Response Writing',
+      teamId: 'copy-production',
+      agents: ['copywriter'],
+      requiresReview: true,
+      description: 'Write polished bot responses for each knowledge topic. Include variations for natural conversation and edge case handling.',
+    },
+    {
+      order: 6,
+      name: 'Training Repository',
+      teamId: 'bot-comms',
+      agents: ['training-repo-builder'],
+      requiresReview: true,
+      description: 'Compile the structured knowledge base, conversation flows, and response templates into a training-ready repository for deployment.',
+    },
+    {
+      order: 7,
+      name: 'QA Testing',
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      requiresReview: false,
+      description: 'Test conversation flows for gaps, contradictions, dead ends, and tone consistency across all topics.',
+    },
+  ],
+
+  defaults: {
+    botType: 'customer',
+    escalationThreshold: 3,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresKnowledgeBase: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md'],
+    includesKnowledgeBase: true,
+    includesConversationFlows: true,
+    includesTrainingRepo: true,
+  },
+};
+
+// ─── 23. Database Migration Planner ──────────────────────────────────────────
+
+export const databaseMigrationPlanner: TemplateConfig = {
+  id: 'database-migration-planner',
+  name: 'Database Migration Planner',
+  description: 'Plan a database migration: analyse the source schema, normalise structure, detect data quality issues, map to target schema, and produce a step-by-step migration plan with rollback strategy.',
+  icon: 'fa-database',
+  category: 'development',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['database', 'migration', 'schema', 'planning', 'data', 'development'],
+
+  teams: [
+    {
+      teamId: 'data-analysis',
+      agents: ['database-auditor', 'data-profiler', 'data-quality-checker', 'spreadsheet-analyser'],
+      notes: 'Analyse source database: schema, data quality, relationships',
+    },
+    {
+      teamId: 'code-analysis',
+      agents: ['schema-reviewer'],
+      notes: 'Review schema design and suggest normalisation improvements',
+    },
+    {
+      teamId: 'data-organisation',
+      agents: ['database-normaliser', 'data-deduplicator', 'data-migration-planner'],
+      notes: 'Plan normalisation, deduplication, and migration steps',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator', 'diagram-builder'],
+      notes: 'Generate migration plan document with schema diagrams',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Source Schema',
+      teamId: 'data-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload source database schema (SQL dump, ERD, or spreadsheet). Describe the target system if known.',
+    },
+    {
+      order: 2,
+      name: 'Schema Audit',
+      teamId: 'data-analysis',
+      agents: ['database-auditor', 'data-profiler'],
+      requiresReview: true,
+      description: 'Audit the source schema: table structure, relationships, indexes, constraints, data types, and row counts per table.',
+    },
+    {
+      order: 3,
+      name: 'Data Quality Assessment',
+      teamId: 'data-analysis',
+      agents: ['data-quality-checker'],
+      requiresReview: true,
+      description: 'Check data quality: null rates, orphaned records, referential integrity violations, format inconsistencies, and duplicates.',
+    },
+    {
+      order: 4,
+      name: 'Schema Review & Normalisation',
+      teamId: 'code-analysis',
+      agents: ['schema-reviewer'],
+      requiresReview: true,
+      description: 'Review schema design: normalisation level, anti-patterns, missing indexes, and suggested improvements for the target schema.',
+    },
+    {
+      order: 5,
+      name: 'Migration Plan',
+      teamId: 'data-organisation',
+      agents: ['data-migration-planner', 'database-normaliser', 'data-deduplicator'],
+      requiresReview: true,
+      description: 'Generate step-by-step migration plan: table creation order, data transformation scripts, deduplication strategy, and rollback procedures.',
+    },
+    {
+      order: 6,
+      name: 'Migration Report',
+      teamId: 'document-production',
+      agents: ['report-generator', 'diagram-builder'],
+      requiresReview: true,
+      description: 'Compile the full migration report: source/target schema diagrams, transformation mappings, risk assessment, estimated timeline, and rollback plan.',
+    },
+  ],
+
+  defaults: {},
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresSchemaFile: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json', 'sql'],
+    includesSchemaDiagrams: true,
+    includesMigrationPlan: true,
+    includesRollbackPlan: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -2320,4 +2811,9 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   brandAudit,
   meetingNotesProcessor,
   codeReviewAssistant,
+  emailInboxOrganiser,
+  fileStructureAudit,
+  dashboardBuilder,
+  supportBotBuilder,
+  databaseMigrationPlanner,
 ];
