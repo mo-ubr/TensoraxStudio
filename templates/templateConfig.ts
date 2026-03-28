@@ -1,52 +1,125 @@
 /**
- * Template Configuration System
+ * Template Configuration System — v2 (5-Domain Architecture)
  *
  * Templates are "job specs" — blueprints that select and sequence
- * teams (persistent agent resources) for a specific content type.
+ * teams (persistent agent resources) for any task across 5 domains:
+ *   Research → Analyse → Create → Organise → Communicate
  *
  * The construction site model:
  * - Teams are resources (electricians, carpenters, bricklayers)
  * - Templates are project briefs that pull from the shared pool
  * - Specialists are scheduled, not duplicated
+ * - Tools are the equipment agents use (web search, SQL, file I/O, etc.)
  */
 
-// ─── Team identifiers ────────────────────────────────────────────────────────
+// ─── Capability Domains ─────────────────────────────────────────────────────
+
+export type DomainId = 'research' | 'analyse' | 'create' | 'organise' | 'communicate';
+
+// ─── Team identifiers (grouped by domain) ───────────────────────────────────
 
 export type TeamId =
-  | 'research'
-  | 'copy-production'
-  | 'image-production'
-  | 'video-production'
-  | 'image-assembly'
-  | 'video-assembly'
-  | 'distribution';
+  // ══ RESEARCH domain ══
+  | 'research'                // Deep web, social, monitoring, data extraction
+  // ══ ANALYSE domain ══
+  | 'text-analysis'           // Document summariser, email analyser, sentiment, OCR
+  | 'data-analysis'           // Database audit, data quality, spreadsheet, statistical
+  | 'code-analysis'           // Bug detector, optimisation, architecture review, security
+  | 'media-analysis'          // Image/video/sound analysis (encoding, style, mood)
+  // ══ CREATE domain ══
+  | 'copy-production'         // Concepts, scripts, copy, taglines, social copy
+  | 'image-production'        // Characters, keyframes, product shots, faithful reproduction
+  | 'video-production'        // Video generation from prompts, keyframes, motion refs
+  | 'sound-production'        // Voice generation, voiceover, music, songs
+  | 'document-production'     // Reports, proposals, presentations, charts, contracts
+  | 'code-production'         // App ideas, architecture, frontend, backend, tests
+  | 'image-assembly'          // Post-production for static image deliverables
+  | 'video-assembly'          // Post-production: editing, localisation, subtitling
+  // ══ ORGANISE domain ══
+  | 'email-organisation'      // Classify, forward, organise, remind
+  | 'file-organisation'       // Structure analysis, monitoring, reorganisation
+  | 'calendar-organisation'   // Calendar, meeting notes, meeting prep
+  | 'data-organisation'       // DB normalise, deduplicate, static data, migration
+  // ══ COMMUNICATE domain ══
+  | 'email-comms'             // Reply drafter, reply ideas, email sender
+  | 'messaging-comms'         // WhatsApp, Viber, Discord, SMS — reply and send
+  | 'presentation-comms'      // Data summaries, dashboards, branded decks
+  | 'bot-comms'               // Staff/customer support bots (chat, voice, talking head)
+  | 'distribution';           // Posting, scheduling across platforms
 
-// ─── Agent identifiers (every agent in the system) ───────────────────────────
+// ─── Agent identifiers (every agent in the system) ──────────────────────────
 
 export type AgentId =
-  // Research Team
+  // ── RESEARCH team ──
   | 'audience-research'
   | 'brand-voice-research'
   | 'competitive-trend-research'
   | 'social-media-trend-research'
   | 'deep-research'
   | 'general-analysis'
-  // Creative Director (oversees all 3 production sub-teams)
+  | 'web-scraper'
+  | 'data-extractor'
+  | 'social-media-monitor'
+  | 'webpage-monitor'
+  | 'regulatory-monitor'
+  | 'news-monitor'
+  | 'competitor-monitor'
+  // ── TEXT ANALYSIS team ──
+  | 'document-summariser'
+  | 'email-analyser'
+  | 'feed-summariser'
+  | 'message-analyser'
+  | 'ocr-extractor'
+  | 'trend-identifier'
+  | 'sentiment-analyser'
+  | 'legal-clause-analyser'
+  | 'contract-risk-assessor'
+  // ── DATA ANALYSIS team ──
+  | 'database-auditor'
+  | 'data-quality-checker'
+  | 'relationship-mapper'
+  | 'spreadsheet-analyser'
+  | 'statistical-analyser'
+  | 'data-profiler'
+  | 'sql-query-agent'
+  // ── CODE ANALYSIS team ──
+  | 'bug-detector'
+  | 'optimisation-advisor'
+  | 'missing-coverage-identifier'
+  | 'architecture-reviewer'
+  | 'security-scanner'
+  | 'schema-reviewer'
+  // ── MEDIA ANALYSIS team ──
+  | 'image-encoder'
+  | 'image-summariser'
+  | 'style-identifier'
+  | 'mood-identifier'
+  | 'brand-consistency-checker'
+  | 'video-summariser'
+  | 'movement-analyser'
+  | 'cctv-analyser'
+  | 'transcript-extractor'
+  | 'voice-parameter-analyser'
+  // ── COPY PRODUCTION team ── (Creative Director oversees all production sub-teams)
   | 'creative-director'
-  // Copy Production Team
   | 'concept-creation'
   | 'screenplay'
   | 'copywriter'
   | 'tagline'
   | 'social-copy'
-  // Image Production Team
+  | 'blog-article-writer'
+  | 'email-sequence-writer'
+  | 'prompt-engineer'
+  // ── IMAGE PRODUCTION team ──
   | 'image-producer'
   | 'character-builder'
   | 'character-frames'
   | 'character-variations'
   | 'faithful-formatter'
   | 'faithful-image-reproduction'
-  // Video Production Team
+  | 'style-transfer'
+  | 'image-editor'
+  // ── VIDEO PRODUCTION team ──
   | 'video-producer'
   | 'video-from-keyframes'
   | 'video-from-prompt'
@@ -54,15 +127,37 @@ export type AgentId =
   | 'video-from-motion-reference'
   | 'video-stitching'
   | 'music-generation'
-  // QA (shared across production sub-teams)
+  // ── SOUND PRODUCTION team ──
+  | 'voice-generator'
+  | 'voiceover-producer'
+  | 'music-track-generator'
+  | 'style-matched-music'
+  | 'song-creator'
+  // ── DOCUMENT PRODUCTION team ──
+  | 'report-generator'
+  | 'proposal-generator'
+  | 'presentation-creator'
+  | 'financial-summary-builder'
+  | 'chart-creator'
+  | 'diagram-builder'
+  | 'contract-drafter'
+  | 'invoice-processor'
+  // ── CODE PRODUCTION team ──
+  | 'app-idea-generator'
+  | 'architecture-designer'
+  | 'frontend-builder'
+  | 'backend-builder'
+  | 'test-generator'
+  | 'code-documenter'
+  // ── QA (shared across production sub-teams) ──
   | 'qa-consistency'
   | 'verification'
-  // Video Assembly Team
+  // ── VIDEO ASSEMBLY team ──
   | 'text-overlay'
   | 'music-direction'
   | 'caption'
-  | 'composition'          // Shotstack Edit JSON builder
-  | 'shotstack-render'     // Shotstack rendering service
+  | 'composition'
+  | 'shotstack-render'
   | 'video-editing'
   | 'voiceover'
   | 'sound-sync'
@@ -71,14 +166,107 @@ export type AgentId =
   | 'subtitles-hooks'
   | 'thumbnail'
   | 'video-assembly-reviewer'
-  // Image Assembly Team
+  // ── IMAGE ASSEMBLY team ──
   | 'image-frame-adjustments'
   | 'image-copy-research'
   | 'image-assembly'
   | 'image-assembly-reviewer'
-  // Distribution Team
+  // ── EMAIL ORGANISATION team ──
+  | 'email-classifier'
+  | 'email-auto-forwarder'
+  | 'email-organiser'
+  | 'correspondence-summariser'
+  | 'email-reminder'
+  // ── FILE ORGANISATION team ──
+  | 'file-structure-analyser'
+  | 'file-structure-monitor'
+  | 'reorganisation-advisor'
+  | 'missing-info-detector'
+  | 'training-repo-builder'
+  // ── CALENDAR ORGANISATION team ──
+  | 'calendar-organiser'
+  | 'meeting-notes-processor'
+  | 'meeting-prep-brief'
+  // ── DATA ORGANISATION team ──
+  | 'database-normaliser'
+  | 'data-deduplicator'
+  | 'static-data-maintainer'
+  | 'data-migration-planner'
+  // ── EMAIL COMMS team ──
+  | 'reply-drafter'
+  | 'reply-idea-generator'
+  | 'email-sender'
+  | 'correspondence-tracker'
+  // ── MESSAGING COMMS team ──
+  | 'message-reply-drafter'
+  | 'message-idea-generator'
+  | 'message-sender'
+  | 'message-reminder'
+  // ── PRESENTATION COMMS team ──
+  | 'data-summary-presenter'
+  | 'dashboard-creator'
+  | 'branded-presentation-builder'
+  | 'interactive-presentation-builder'
+  // ── BOT COMMS team ──
+  | 'staff-support-bot'
+  | 'customer-support-bot'
+  // ── DISTRIBUTION team ──
   | 'posting'
   | 'scheduling';
+
+// ─── Tool identifiers (external capabilities agents can use) ────────────────
+
+export type ToolId =
+  // File & Document tools
+  | 'file-read'              // Read local files (.docx, .pdf, .xlsx, .csv, .md, .txt)
+  | 'file-write'             // Write/create files
+  | 'file-list'              // List directory contents
+  | 'gdrive-read'            // Read from Google Drive
+  | 'gdrive-write'           // Write to Google Drive
+  // Web tools
+  | 'web-search'             // Search the web
+  | 'web-fetch'              // Fetch and parse a URL
+  | 'web-scrape'             // Structured web scraping
+  // Data tools
+  | 'sql-query'              // Execute SQL queries against databases
+  | 'sql-schema'             // Read database schema
+  | 'spreadsheet-read'       // Read Excel/CSV files
+  | 'spreadsheet-write'      // Write Excel/CSV files
+  | 'airtable-read'          // Read from Airtable
+  | 'airtable-write'         // Write to Airtable
+  // Communication tools
+  | 'gmail-read'             // Read Gmail messages
+  | 'gmail-send'             // Send Gmail messages
+  | 'gmail-draft'            // Create Gmail drafts
+  | 'calendar-read'          // Read Google Calendar
+  | 'calendar-write'         // Create/update calendar events
+  | 'whatsapp-send'          // Send WhatsApp messages
+  | 'slack-send'             // Send Slack messages
+  // AI tools
+  | 'gemini-generate'        // Gemini text/image/video generation
+  | 'claude-generate'        // Claude text generation
+  | 'vertex-imagen'          // Vertex AI Imagen 3
+  | 'dall-e'                 // DALL-E image generation
+  | 'fal-ai'                 // fal.ai (Seedance, Kling, Flux)
+  | 'elevenlabs'             // ElevenLabs voice synthesis
+  // Design tools
+  | 'canva-create'           // Create Canva designs
+  | 'canva-edit'             // Edit Canva designs
+  | 'figma-read'             // Read Figma designs
+  // Automation tools
+  | 'n8n-trigger'            // Trigger n8n workflows
+  | 'n8n-webhook'            // Receive n8n webhook data
+  | 'cron-schedule';         // Schedule recurring tasks
+
+// ─── Tool requirement (what an agent needs) ─────────────────────────────────
+
+export interface ToolRequirement {
+  toolId: ToolId;
+  /** Whether this tool is required (vs optional fallback) */
+  required: boolean;
+  /** Why the agent needs this tool */
+  purpose: string;
+}
 
 // ─── Team activation config ──────────────────────────────────────────────────
 
@@ -113,7 +301,20 @@ export interface MoGuidance {
 
 // ─── Step input type (what the user provides in upload steps) ────────────────
 
-export type StepInputType = 'upload-images' | 'upload-video' | 'text' | 'toggle' | 'none';
+export type StepInputType =
+  | 'upload-images'
+  | 'upload-video'
+  | 'upload-documents'      // .docx, .pdf, .xlsx, .csv, .md, .txt
+  | 'upload-any'            // Any file type
+  | 'text'
+  | 'textarea'
+  | 'select'
+  | 'number'
+  | 'toggle'
+  | 'email-select'          // Pick from Gmail inbox
+  | 'file-browse'           // Browse local/shared drive
+  | 'sql-connection'        // Database connection string
+  | 'none';
 
 export interface StepInput {
   /** Unique ID for this input */
@@ -168,8 +369,23 @@ export interface TemplateConfig {
   description: string;
   /** Font Awesome icon class */
   icon: string;
-  /** Category for grouping in the UI */
-  category: 'marketing' | 'training' | 'social' | 'live' | 'custom';
+  /** Category for grouping in the UI (aligned to 5 domains + sub-categories) */
+  category:
+    | 'research'            // Research domain templates
+    | 'analysis'            // Analyse domain templates
+    | 'marketing'           // Create domain — marketing content
+    | 'training'            // Create domain — staff training
+    | 'social'              // Create domain — social media
+    | 'live'                // Create domain — live commerce
+    | 'documents'           // Create domain — reports, proposals, contracts
+    | 'code'                // Create domain — software development
+    | 'organisation'        // Organise domain templates
+    | 'communication'       // Communicate domain templates
+    | 'finance'             // Finance & admin automation
+    | 'legal'               // Legal review & contract analysis
+    | 'custom';             // User-created templates
+  /** Which domain this template belongs to */
+  domain?: DomainId;
   /** Version for tracking config changes */
   version: string;
   /** Author/creator */
@@ -223,11 +439,26 @@ export interface TemplateConfig {
   /** Output configuration */
   outputs: {
     /** Primary output type */
-    primary: 'video' | 'image' | 'mixed';
+    primary: 'video' | 'image' | 'audio' | 'document' | 'data' | 'email' | 'message' | 'presentation' | 'code' | 'report' | 'mixed';
     /** Expected deliverable formats */
     formats?: string[];
     /** Whether Shotstack composition is used for final assembly */
     usesShotstack?: boolean;
+    /** Where to save output (project folder, Drive, email, etc.) */
+    destination?: 'project' | 'gdrive' | 'email' | 'download' | 'clipboard';
+  };
+
+  /** Tools this template requires (checked at runtime) */
+  requiredTools?: ToolId[];
+
+  /** Scheduling configuration (for recurring templates like monitors) */
+  schedule?: {
+    /** Whether this template can run on a schedule */
+    schedulable: boolean;
+    /** Suggested interval */
+    suggestedInterval?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+    /** Cron expression for custom scheduling */
+    cronExpression?: string;
   };
 
   /** Tags for search/filtering */
