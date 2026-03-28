@@ -64,6 +64,9 @@ export type AgentId =
   | 'regulatory-monitor'
   | 'news-monitor'
   | 'competitor-monitor'
+  | 'youtube-channel-analyser'
+  | 'content-calendar'
+  | 'performance-report'
   // ── TEXT ANALYSIS team ──
   | 'document-summariser'
   | 'email-analyser'

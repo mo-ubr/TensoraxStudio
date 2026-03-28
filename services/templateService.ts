@@ -76,6 +76,9 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
       { id: 'regulatory-monitor', name: 'Regulatory Monitor', team: 'research', description: 'Track legal, tax, and regulatory changes by jurisdiction (BG, GR, UK)', icon: 'fa-gavel' },
       { id: 'news-monitor', name: 'News Monitor', team: 'research', description: 'Monitor news sources for topics/companies defined by user', icon: 'fa-newspaper', tools: [{ toolId: 'web-search', required: true, purpose: 'Search news sources' }] },
       { id: 'competitor-monitor', name: 'Competitor Monitor', team: 'research', description: 'Track competitor activity across web and social channels', icon: 'fa-binoculars', tools: [{ toolId: 'web-scrape', required: true, purpose: 'Scrape competitor sites' }] },
+      { id: 'youtube-channel-analyser', name: 'YouTube Channel Analyser', team: 'research', description: 'Analyse YouTube channel content strategy, audience, performance, and competitive positioning', icon: 'fa-youtube', tools: [{ toolId: 'web-fetch', required: true, purpose: 'Fetch YouTube channel data' }, { toolId: 'web-search', required: true, purpose: 'Search for channel context and benchmarks' }] },
+      { id: 'content-calendar', name: 'Content Calendar', team: 'research', description: 'Plan structured content calendars with topics, formats, platforms, and publishing dates', icon: 'fa-calendar-days' },
+      { id: 'performance-report', name: 'Performance Report', team: 'research', description: 'Compile and analyse content performance data across platforms with recommendations', icon: 'fa-chart-pie' },
     ],
   },
 

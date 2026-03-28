@@ -1095,6 +1095,149 @@ export const legalExpert: TemplateConfig = {
   requiredTools: ['file-read', 'file-write'],
 };
 
+// ─── 8. Social Media Content Automation ──────────────────────────────────────
+
+export const socialMediaContentAutomation: TemplateConfig = {
+  id: 'social-media-content-automation',
+  name: 'Social Media Content Automation',
+  description: 'End-to-end social media content pipeline: analyse your YouTube channel and competitors, research trends, plan a content calendar, generate scripts and thumbnails, prepare platform-specific posting packages, and track performance.',
+  icon: 'fa-share-nodes',
+  category: 'marketing',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['social-media', 'youtube', 'content-planning', 'automation', 'scheduling', 'analytics'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: [
+        'youtube-channel-analyser',
+        'social-media-trend-research',
+        'competitive-trend-research',
+        'audience-research',
+        'content-calendar',
+        'performance-report',
+      ],
+      notes: 'Full research stack: channel analysis, trends, competitors, audience, calendar planning, and performance reporting',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'social-copy', 'tagline'],
+      notes: 'Script and copy generation for each content piece in the calendar',
+    },
+    {
+      teamId: 'image-production',
+      agents: ['image-producer'],
+      notes: 'Thumbnail and visual asset generation',
+    },
+    {
+      teamId: 'video-assembly',
+      agents: ['thumbnail'],
+      notes: 'Thumbnail specifications for each video',
+    },
+    {
+      teamId: 'distribution',
+      agents: ['posting', 'scheduling'],
+      notes: 'Platform-specific posting packages and optimal scheduling',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Channel Setup',
+      teamId: 'research',
+      agents: [],
+      requiresReview: false,
+      description: 'Provide your YouTube channel URL, brand guidelines, competitor channels, and target platforms',
+    },
+    {
+      order: 2,
+      name: 'Channel Analysis',
+      teamId: 'research',
+      agents: ['youtube-channel-analyser'],
+      requiresReview: true,
+      description: 'Deep analysis of your channel — content performance, audience, SEO, what works and what doesn\'t',
+    },
+    {
+      order: 3,
+      name: 'Trend & Competitor Research',
+      teamId: 'research',
+      agents: ['social-media-trend-research', 'competitive-trend-research', 'audience-research'],
+      requiresReview: true,
+      description: 'Research current social media trends, competitor strategies, and audience behaviour across platforms',
+      parallel: true,
+    },
+    {
+      order: 4,
+      name: 'Content Calendar',
+      teamId: 'research',
+      agents: ['content-calendar'],
+      requiresReview: true,
+      description: 'Generate a structured content calendar with topics, formats, platforms, and dates based on all research',
+    },
+    {
+      order: 5,
+      name: 'Script & Copy Generation',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay', 'social-copy'],
+      requiresReview: true,
+      description: 'Write scripts, captions, and platform-specific copy for each content piece in the calendar',
+    },
+    {
+      order: 6,
+      name: 'Thumbnail & Visual Assets',
+      teamId: 'image-production',
+      agents: ['image-producer'],
+      requiresReview: true,
+      description: 'Generate thumbnail concepts and visual assets for each piece of content',
+    },
+    {
+      order: 7,
+      name: 'Posting Packages',
+      teamId: 'distribution',
+      agents: ['posting'],
+      requiresReview: true,
+      description: 'Prepare platform-specific posting packages with optimised copy, hashtags, SEO metadata, and specs',
+    },
+    {
+      order: 8,
+      name: 'Publishing Schedule',
+      teamId: 'distribution',
+      agents: ['scheduling'],
+      requiresReview: true,
+      description: 'Generate optimal publishing schedule across platforms, accounting for time zones and algorithm behaviour',
+    },
+    {
+      order: 9,
+      name: 'Performance Report',
+      teamId: 'research',
+      agents: ['performance-report'],
+      requiresReview: false,
+      description: 'After content is published, analyse performance and generate recommendations for the next cycle',
+    },
+  ],
+
+  defaults: {
+    calendarWeeks: 4,
+    platforms: ['youtube', 'instagram', 'tiktok', 'linkedin'],
+    contentMix: { educational: 40, entertaining: 25, community: 20, promotional: 15 },
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresChannelUrl: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md'],
+    includesCalendar: true,
+    includesPostingPackages: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -1105,4 +1248,5 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   liveShoppingChannel,
   nineCameraAngleFrames,
   legalExpert,
+  socialMediaContentAutomation,
 ];
