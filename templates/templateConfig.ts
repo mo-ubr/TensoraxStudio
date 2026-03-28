@@ -145,6 +145,8 @@ export type AgentId =
   | 'diagram-builder'
   | 'contract-drafter'
   | 'invoice-processor'
+  | 'bank-statement-parser'
+  | 'reconciliation-matcher'
   // ── CODE PRODUCTION team ──
   | 'app-idea-generator'
   | 'architecture-designer'

@@ -239,6 +239,8 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
       { id: 'diagram-builder', name: 'Diagram Builder', team: 'document-production', description: 'Create process flows, org charts, and system diagrams', icon: 'fa-diagram-project' },
       { id: 'contract-drafter', name: 'Contract & Agreement Drafter', team: 'document-production', description: 'Draft contracts and agreements from templates and parameters', icon: 'fa-file-signature', tools: [{ toolId: 'file-write', required: true, purpose: 'Write contract files' }] },
       { id: 'invoice-processor', name: 'Invoice Processor', team: 'document-production', description: 'Extract, code, and record invoice data from PDFs, scans, emails', icon: 'fa-file-invoice-dollar', tools: [{ toolId: 'file-read', required: true, purpose: 'Read invoice files' }, { toolId: 'gmail-read', required: false, purpose: 'Read invoices from email' }] },
+      { id: 'bank-statement-parser', name: 'Bank Statement Parser', team: 'document-production', description: 'Extract structured transaction data from bank statements (PDF, CSV, scanned)', icon: 'fa-building-columns', tools: [{ toolId: 'file-read', required: true, purpose: 'Read bank statement files' }, { toolId: 'spreadsheet-read', required: false, purpose: 'Read CSV/Excel bank exports' }] },
+      { id: 'reconciliation-matcher', name: 'Reconciliation Matcher', team: 'document-production', description: 'Match invoices to bank transactions, flag discrepancies, produce aging analysis', icon: 'fa-scale-balanced', tools: [{ toolId: 'spreadsheet-write', required: false, purpose: 'Write reconciliation report to Excel' }] },
     ],
   },
   {

@@ -1238,6 +1238,109 @@ export const socialMediaContentAutomation: TemplateConfig = {
   },
 };
 
+// ─── 9. Invoice Processor + Bank Reconciliation ─────────────────────────────
+
+export const invoiceReconciliation: TemplateConfig = {
+  id: 'invoice-reconciliation',
+  name: 'Invoice Processor + Bank Reconciliation',
+  description: 'Upload invoices and bank statements. AI extracts data from both, matches payments to invoices, flags discrepancies, calculates aging, and produces a reconciliation report with action items.',
+  icon: 'fa-scale-balanced',
+  category: 'finance',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['finance', 'invoices', 'bank-reconciliation', 'accounting', 'bookkeeping'],
+
+  teams: [
+    {
+      teamId: 'document-production',
+      agents: ['invoice-processor', 'bank-statement-parser', 'reconciliation-matcher', 'financial-summary-builder'],
+      notes: 'Invoice parsing, bank statement parsing, matching, and summary report generation',
+    },
+    {
+      teamId: 'text-analysis',
+      agents: ['ocr-extractor'],
+      notes: 'OCR for scanned invoices and bank statements',
+    },
+    {
+      teamId: 'data-analysis',
+      agents: ['spreadsheet-analyser', 'data-quality-checker'],
+      notes: 'Validate extracted data quality and analyse patterns in transaction data',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Documents',
+      teamId: 'document-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload invoices (PDF, scanned, email) and bank statements (PDF, CSV, Excel). Set company details and currency.',
+    },
+    {
+      order: 2,
+      name: 'Parse Invoices',
+      teamId: 'document-production',
+      agents: ['invoice-processor'],
+      requiresReview: true,
+      description: 'Extract supplier, amounts, dates, VAT, line items from each invoice. Validate math, check for duplicates.',
+    },
+    {
+      order: 3,
+      name: 'Parse Bank Statements',
+      teamId: 'document-production',
+      agents: ['bank-statement-parser'],
+      requiresReview: true,
+      description: 'Extract transactions from bank statements. Validate balance continuity, categorise transactions.',
+    },
+    {
+      order: 4,
+      name: 'Data Quality Check',
+      teamId: 'data-analysis',
+      agents: ['data-quality-checker'],
+      requiresReview: false,
+      description: 'Verify extracted data quality — check for missing fields, format issues, and anomalies in both datasets.',
+    },
+    {
+      order: 5,
+      name: 'Reconciliation',
+      teamId: 'document-production',
+      agents: ['reconciliation-matcher'],
+      requiresReview: true,
+      description: 'Match invoices to bank transactions using reference, amount, date, and counterparty matching. Flag discrepancies.',
+    },
+    {
+      order: 6,
+      name: 'Reconciliation Report',
+      teamId: 'document-production',
+      agents: ['financial-summary-builder'],
+      requiresReview: true,
+      description: 'Generate a comprehensive reconciliation report: matched items, outstanding invoices with aging, unexplained transactions, action items.',
+    },
+  ],
+
+  defaults: {
+    currency: 'EUR',
+    amountTolerance: 0.01,
+    dateTolerance: 5,
+    agingBuckets: [30, 60, 90, 120],
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresInvoices: true,
+    requiresBankStatements: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'xlsx', 'md'],
+    includesReconciliationReport: true,
+    includesAgingAnalysis: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -1249,4 +1352,5 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   nineCameraAngleFrames,
   legalExpert,
   socialMediaContentAutomation,
+  invoiceReconciliation,
 ];
