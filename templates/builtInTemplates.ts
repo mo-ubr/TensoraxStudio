@@ -888,6 +888,213 @@ export const nineCameraAngleFrames: TemplateConfig = {
   },
 };
 
+// ─── 7. Legal Expert — Contract Review & Analysis ───────────────────────────
+
+export const legalExpert: TemplateConfig = {
+  id: 'legal-expert',
+  name: 'Legal Expert',
+  description: 'Upload contracts for clause-by-clause analysis, risk assessment, comparison of old vs new versions, alternative wording suggestions, and translation to EN/BG/GR with bilingual output.',
+  icon: 'fa-scale-balanced',
+  category: 'legal',
+  domain: 'analyse',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['legal', 'contract', 'lease', 'review', 'risk', 'translation', 'comparison', 'clauses'],
+
+  teams: [
+    {
+      teamId: 'text-analysis',
+      agents: ['document-summariser', 'legal-clause-analyser', 'contract-risk-assessor', 'ocr-extractor'],
+      notes: 'Core legal analysis: parse document, extract clauses, assess risk. OCR for scanned contracts.',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['copywriter', 'qa-consistency'],
+      notes: 'Alternative wording drafting and quality check on recommendations.',
+    },
+    {
+      teamId: 'video-assembly',
+      agents: ['translator'],
+      notes: 'Legal translation between EN, BG, GR with bilingual version creation.',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      notes: 'Final analysis report generation as Word document.',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Documents',
+      teamId: 'text-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload the contract(s) to review. Optionally upload an older version for comparison.',
+      stepInputs: [
+        {
+          id: 'contractDocument',
+          label: 'Contract to Review',
+          type: 'upload-documents',
+          required: true,
+          multiple: false,
+          accept: '.docx,.pdf,.doc,.txt,.md',
+          placeholder: 'Upload the contract you want reviewed',
+        },
+        {
+          id: 'previousVersion',
+          label: 'Previous Version (for comparison)',
+          type: 'upload-documents',
+          required: false,
+          multiple: false,
+          accept: '.docx,.pdf,.doc,.txt,.md',
+          placeholder: 'Optional: upload an older version to compare against',
+        },
+        {
+          id: 'companyRole',
+          label: 'Which party are we?',
+          type: 'text',
+          required: true,
+          placeholder: 'e.g. "Tenant / Lessee", "Buyer", "Franchisee", "Service Provider"',
+        },
+        {
+          id: 'targetLanguages',
+          label: 'Translation languages (optional)',
+          type: 'text',
+          required: false,
+          placeholder: 'e.g. "EN, BG" or "EN, GR" — always includes English',
+        },
+      ],
+      moGuidance: {
+        instructions: 'Upload the contract you want me to review. If you have an older version, upload that too and I\'ll do a clause-by-clause comparison.\n\nTell me which party we represent (e.g. "Tenant", "Buyer", "Franchisee") so I can analyse from our perspective.',
+        checklist: [
+          'Contract document uploaded (.docx, .pdf, or .doc)',
+          'Our role/party identified',
+          'Previous version uploaded if comparison needed',
+        ],
+      },
+    },
+    {
+      order: 2,
+      name: 'Parse & Extract',
+      teamId: 'text-analysis',
+      agents: ['document-summariser', 'legal-clause-analyser'],
+      requiresReview: true,
+      description: 'AI parses the contract into structured clauses, identifies parties, dates, obligations, and key terms.',
+      moGuidance: {
+        instructions: 'I\'m reading the contract now and extracting every clause, party, date, and obligation into a structured format.',
+        approvalCriteria: [
+          'All clauses identified and numbered',
+          'Parties correctly identified',
+          'Key dates and financial terms extracted',
+        ],
+      },
+    },
+    {
+      order: 3,
+      name: 'Risk Analysis',
+      teamId: 'text-analysis',
+      agents: ['contract-risk-assessor'],
+      requiresReview: true,
+      description: 'Each clause rated green/amber/red for risk. Identifies unfavourable terms, missing protections, and business impact.',
+      moGuidance: {
+        instructions: 'Analysing every clause from our perspective. I\'ll flag anything that\'s risky, unusual, or missing.',
+        approvalCriteria: [
+          'Every clause has a risk rating',
+          'Red flags clearly identified',
+          'Missing standard protections listed',
+          'Business impact explained in plain English',
+        ],
+      },
+    },
+    {
+      order: 4,
+      name: 'Compare Versions',
+      teamId: 'text-analysis',
+      agents: ['legal-clause-analyser'],
+      requiresReview: true,
+      description: 'If a previous version was uploaded, compares old vs new clause-by-clause. Identifies additions, deletions, and hidden changes.',
+      params: { skipIfNoPreviousVersion: true },
+      moGuidance: {
+        instructions: 'Comparing old and new versions clause by clause. I\'ll catch every change — including subtle wording shifts that change legal meaning.',
+        approvalCriteria: [
+          'All changes identified',
+          'Each change classified by significance',
+          'Hidden implications flagged',
+        ],
+      },
+    },
+    {
+      order: 5,
+      name: 'Alternative Wording',
+      teamId: 'copy-production',
+      agents: ['copywriter'],
+      requiresReview: true,
+      description: 'For each red/amber clause, suggests alternative wording that protects our interests while remaining commercially reasonable.',
+      moGuidance: {
+        instructions: 'Drafting alternative wording for every problematic clause. Each suggestion includes a fallback position and negotiation advice.',
+        approvalCriteria: [
+          'Every red/amber clause has a proposed alternative',
+          'Alternatives are in the same language as the original',
+          'Negotiation strategy included',
+        ],
+      },
+    },
+    {
+      order: 6,
+      name: 'Translation',
+      teamId: 'video-assembly',
+      agents: ['translator'],
+      requiresReview: true,
+      description: 'Translate to target languages. Creates bilingual version (always includes English). Legal terminology glossary included.',
+      params: { skipIfNoTranslationRequested: true },
+      moGuidance: {
+        instructions: 'Translating with legal precision. I\'ll flag terms that don\'t have exact equivalents across jurisdictions.',
+        approvalCriteria: [
+          'Translation complete in target language(s)',
+          'Bilingual version aligned clause-by-clause',
+          'Terminology glossary provided',
+        ],
+      },
+    },
+    {
+      order: 7,
+      name: 'Final Report',
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      requiresReview: true,
+      description: 'Generate a complete analysis report as a Word document with executive summary, clause analysis, red flags, recommendations, and negotiation strategy.',
+      moGuidance: {
+        instructions: 'Compiling everything into a single Word document you can use immediately — executive summary, full analysis, alternative wording, and negotiation strategy.',
+        approvalCriteria: [
+          'Word document generated',
+          'Executive summary present',
+          'All findings included',
+          'Negotiation strategy with priorities',
+        ],
+      },
+    },
+  ],
+
+  defaults: {
+    provider: 'gemini',
+  },
+
+  inputs: {
+    requiresBrief: false,
+    requiresBrand: false,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['docx', 'pdf'],
+    destination: 'project',
+  },
+
+  requiredTools: ['file-read', 'file-write'],
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -897,4 +1104,5 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   productMarketingCampaign,
   liveShoppingChannel,
   nineCameraAngleFrames,
+  legalExpert,
 ];
