@@ -8,6 +8,7 @@
 
 import type { TemplateConfig, TemplateStep, TeamActivation, TeamId, AgentId, DomainId } from '../templates/templateConfig';
 import { TEAM_CATALOGUE, DOMAIN_CATALOGUE, getAllTemplates, type TeamMeta, type DomainMeta } from './templateService';
+import { buildToolAvailabilitySummary } from './toolRegistry';
 import type { BrandProfile } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -160,6 +161,10 @@ Distribution: ${ctx.distribution ? 'Scheduled' : 'Not started'}`);
     sections.push(`═══ CURRENT PROJECT ═══
 No active project. User may start a new pipeline or select a template.`);
   }
+
+  // Tools
+  sections.push(`═══ AVAILABLE TOOLS ═══
+${buildToolAvailabilitySummary()}`);
 
   // Brand
   if (brand) {
