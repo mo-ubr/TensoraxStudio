@@ -1341,6 +1341,368 @@ export const invoiceReconciliation: TemplateConfig = {
   },
 };
 
+// ─── 10. Content Localisation Pack ───────────────────────────────────────────
+
+export const contentLocalisationPack: TemplateConfig = {
+  id: 'content-localisation-pack',
+  name: 'Content Localisation Pack',
+  description: 'Translate and culturally adapt content for multiple markets. Upload scripts, copy, subtitles, or social media text — get localised versions with cultural review, brand voice validation, and regulatory compliance checks.',
+  icon: 'fa-globe',
+  category: 'localisation',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['localisation', 'translation', 'transcreation', 'multilingual', 'cultural-review'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['brand-voice-research', 'audience-research'],
+      notes: 'Establish brand voice rules and audience profile for each target market',
+    },
+    {
+      teamId: 'video-assembly',
+      agents: ['translator', 'cultural-reviewer', 'subtitles-hooks'],
+      notes: 'Translation, cultural review, and subtitle generation for video content',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['social-copy', 'copywriter'],
+      notes: 'Adapt social copy and marketing text per market',
+    },
+    {
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      notes: 'Cross-language consistency check — ensure brand terms and messaging align',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Source Content & Markets',
+      teamId: 'video-assembly',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload source content (scripts, copy, subtitles, social posts). Select target languages and markets.',
+    },
+    {
+      order: 2,
+      name: 'Brand Voice Analysis',
+      teamId: 'research',
+      agents: ['brand-voice-research'],
+      requiresReview: false,
+      description: 'Analyse brand voice and tone rules to guide translation approach for each target market.',
+    },
+    {
+      order: 3,
+      name: 'Translation & Transcreation',
+      teamId: 'video-assembly',
+      agents: ['translator'],
+      requiresReview: true,
+      description: 'Translate all content with transcreation — adapting idioms, humour, and cultural references while preserving brand voice and timing.',
+    },
+    {
+      order: 4,
+      name: 'Cultural Review',
+      teamId: 'video-assembly',
+      agents: ['cultural-reviewer'],
+      requiresReview: true,
+      description: 'Review translations for cultural sensitivity, tone, regulatory compliance, and technical localisation (dates, numbers, RTL).',
+    },
+    {
+      order: 5,
+      name: 'Localised Social Copy',
+      teamId: 'copy-production',
+      agents: ['social-copy'],
+      requiresReview: true,
+      description: 'Generate platform-specific social media copy in each target language with localised hashtags and CTAs.',
+    },
+    {
+      order: 6,
+      name: 'Consistency Check',
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      requiresReview: false,
+      description: 'Cross-language QA — verify brand terminology, key messages, and tone are consistent across all localised versions.',
+    },
+  ],
+
+  defaults: {
+    sourceLanguage: 'en',
+    targetLanguages: ['bg', 'el', 'de'],
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresSourceContent: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md', 'srt'],
+    includesTranslations: true,
+    includesCulturalReview: true,
+  },
+};
+
+// ─── 11. Campaign Video Producer ─────────────────────────────────────────────
+
+export const campaignVideoProducer: TemplateConfig = {
+  id: 'campaign-video-producer',
+  name: 'Campaign Video Producer',
+  description: 'End-to-end branded video production: from brief and concept through screenplay, character design, keyframe generation, video segments, composition, and final delivery with subtitles and music.',
+  icon: 'fa-film',
+  category: 'marketing',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['video', 'campaign', 'production', 'end-to-end', 'branded-content'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['audience-research', 'competitive-trend-research', 'social-media-trend-research'],
+      notes: 'Research audience, competitors, and trends to inform the creative brief',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'tagline', 'social-copy'],
+      notes: 'Full copy pipeline: concept → screenplay → taglines → social copy',
+    },
+    {
+      teamId: 'image-production',
+      agents: ['image-producer', 'character-builder', 'character-variations'],
+      notes: 'Character design and keyframe image generation',
+    },
+    {
+      teamId: 'video-production',
+      agents: ['video-from-keyframes', 'video-stitching'],
+      notes: 'Generate video segments from keyframes and stitch into continuous video',
+    },
+    {
+      teamId: 'video-assembly',
+      agents: [
+        'voiceover', 'music-direction', 'subtitles-hooks', 'text-overlay',
+        'caption', 'composition', 'shotstack-render', 'thumbnail',
+        'video-assembly-reviewer',
+      ],
+      notes: 'Full post-production: VO, music, subtitles, overlays, thumbnails, Shotstack render, final QA',
+    },
+    {
+      teamId: 'distribution',
+      agents: ['posting', 'scheduling'],
+      notes: 'Platform-specific posting packages and publishing schedule',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Brief & Research',
+      teamId: 'research',
+      agents: ['audience-research', 'competitive-trend-research', 'social-media-trend-research'],
+      requiresReview: true,
+      description: 'Input campaign brief. Research audience, competitors, and trends to inform creative direction.',
+      parallel: true,
+    },
+    {
+      order: 2,
+      name: 'Concept & Screenplay',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'concept-creation', 'screenplay'],
+      requiresReview: true,
+      description: 'Develop campaign concept, creative direction, and full screenplay with shot descriptions.',
+    },
+    {
+      order: 3,
+      name: 'Characters & Key Visuals',
+      teamId: 'image-production',
+      agents: ['character-builder', 'character-variations', 'image-producer'],
+      requiresReview: true,
+      description: 'Design characters (or use existing references), create wardrobe/expression variations, generate keyframe images for each scene.',
+    },
+    {
+      order: 4,
+      name: 'Video Generation',
+      teamId: 'video-production',
+      agents: ['video-from-keyframes', 'video-stitching'],
+      requiresReview: true,
+      description: 'Generate video segments between keyframes and stitch into one continuous video.',
+    },
+    {
+      order: 5,
+      name: 'Post-Production',
+      teamId: 'video-assembly',
+      agents: ['voiceover', 'music-direction', 'subtitles-hooks', 'text-overlay', 'caption', 'composition'],
+      requiresReview: true,
+      description: 'Add voiceover, music, subtitles, text overlays, and captions. Compose the final edit.',
+    },
+    {
+      order: 6,
+      name: 'Final Render & Thumbnails',
+      teamId: 'video-assembly',
+      agents: ['shotstack-render', 'thumbnail', 'video-assembly-reviewer'],
+      requiresReview: true,
+      description: 'Render final video via Shotstack, generate thumbnails, run QA review on the assembled video.',
+    },
+    {
+      order: 7,
+      name: 'Copy & Posting Packages',
+      teamId: 'copy-production',
+      agents: ['tagline', 'social-copy'],
+      requiresReview: true,
+      description: 'Generate taglines, social media copy, and platform-specific posting packages.',
+    },
+    {
+      order: 8,
+      name: 'Publishing Schedule',
+      teamId: 'distribution',
+      agents: ['posting', 'scheduling'],
+      requiresReview: true,
+      description: 'Prepare per-platform posting packages and generate optimal publishing schedule.',
+    },
+  ],
+
+  defaults: {
+    aspectRatio: '9:16',
+    segmentDuration: 5,
+    transition: 'fade',
+    platforms: ['instagram', 'tiktok', 'youtube'],
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresBrief: true,
+  },
+
+  outputs: {
+    primary: 'video',
+    formats: ['mp4'],
+    usesShotstack: true,
+    includesPostingPackages: true,
+  },
+};
+
+// ─── 12. Character Design Studio ─────────────────────────────────────────────
+
+export const characterDesignStudio: TemplateConfig = {
+  id: 'character-design-studio',
+  name: 'Character Design Studio',
+  description: 'Build a complete virtual character from a reference image or text description. Generates a character sheet with expression variations, wardrobe options, age progressions, and scene poses — all maintaining consistency for use across campaigns.',
+  icon: 'fa-person-dress',
+  category: 'creative',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['character', 'virtual-influencer', 'character-sheet', 'consistency', 'design'],
+
+  teams: [
+    {
+      teamId: 'image-production',
+      agents: ['character-builder', 'character-frames', 'character-variations', 'image-producer', 'style-transfer'],
+      notes: 'Full character design pipeline: build, variations, frames, and style options',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['creative-director', 'copywriter'],
+      notes: 'Character bio, personality profile, and brand voice for the character',
+    },
+    {
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      notes: 'Verify visual consistency across all generated character images',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Character Brief',
+      teamId: 'image-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload reference image(s) or describe the character. Set age, ethnicity, style, personality traits.',
+    },
+    {
+      order: 2,
+      name: 'Base Character',
+      teamId: 'image-production',
+      agents: ['character-builder', 'image-producer'],
+      requiresReview: true,
+      description: 'Generate the base character in a neutral pose — this becomes the canonical reference for all variations.',
+    },
+    {
+      order: 3,
+      name: 'Expression Sheet',
+      teamId: 'image-production',
+      agents: ['character-variations'],
+      requiresReview: true,
+      description: 'Generate expression variations: happy, serious, surprised, confident, thoughtful, laughing — maintaining character identity.',
+    },
+    {
+      order: 4,
+      name: 'Wardrobe Options',
+      teamId: 'image-production',
+      agents: ['character-variations'],
+      requiresReview: true,
+      description: 'Generate wardrobe variations: casual, professional, formal, seasonal, branded — same character, different outfits.',
+    },
+    {
+      order: 5,
+      name: 'Scene Poses',
+      teamId: 'image-production',
+      agents: ['character-frames'],
+      requiresReview: true,
+      description: 'Generate the character in various scene contexts: office, outdoor, studio, retail, lifestyle — different angles and poses.',
+    },
+    {
+      order: 6,
+      name: 'Style Variations',
+      teamId: 'image-production',
+      agents: ['style-transfer'],
+      requiresReview: true,
+      description: 'Apply different visual styles to the character: photorealistic, illustration, anime, watercolour — for different campaign needs.',
+    },
+    {
+      order: 7,
+      name: 'Character Profile',
+      teamId: 'copy-production',
+      agents: ['creative-director', 'copywriter'],
+      requiresReview: true,
+      description: 'Write the character bio, personality profile, brand voice guidelines, and usage rules for campaign consistency.',
+    },
+    {
+      order: 8,
+      name: 'Consistency Check',
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      requiresReview: false,
+      description: 'QA review across all generated images — verify facial consistency, proportions, and brand alignment.',
+    },
+  ],
+
+  defaults: {
+    expressionCount: 6,
+    wardrobeCount: 4,
+    sceneCount: 6,
+    styleCount: 3,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    minImages: 0,
+    requiresBrand: true,
+    acceptsReferenceImages: true,
+  },
+
+  outputs: {
+    primary: 'images',
+    formats: ['png', 'jpg'],
+    includesCharacterSheet: true,
+    includesCharacterProfile: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -1353,4 +1715,7 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   legalExpert,
   socialMediaContentAutomation,
   invoiceReconciliation,
+  contentLocalisationPack,
+  campaignVideoProducer,
+  characterDesignStudio,
 ];
