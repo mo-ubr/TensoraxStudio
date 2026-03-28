@@ -6,8 +6,8 @@
  * into executable TemplateConfig objects.
  */
 
-import type { TemplateConfig, TemplateStep, TeamActivation, TeamId, AgentId } from '../templates/templateConfig';
-import { TEAM_CATALOGUE, getAllTemplates, type TeamMeta } from './templateService';
+import type { TemplateConfig, TemplateStep, TeamActivation, TeamId, AgentId, DomainId } from '../templates/templateConfig';
+import { TEAM_CATALOGUE, DOMAIN_CATALOGUE, getAllTemplates, type TeamMeta, type DomainMeta } from './templateService';
 import type { BrandProfile } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -69,15 +69,29 @@ export interface MasterChatMessage {
   attachments?: FileAttachment[];
 }
 
-// ─── Agent Teams Summary (for system prompt) ────────────────────────────
+// ─── Agent Teams Summary (for system prompt) — grouped by domain ─────────
 
 function buildAgentCatalogueSummary(): string {
-  return TEAM_CATALOGUE.map((team: TeamMeta) => {
-    const agentLines = team.agents
-      .map(a => `  [${a.id}] ${a.name} — ${a.description}`)
-      .join('\n');
-    return `${team.name.toUpperCase()} (${team.agents.length} agents):\n${agentLines}`;
-  }).join('\n\n');
+  const sections: string[] = [];
+
+  for (const domain of DOMAIN_CATALOGUE) {
+    const domainTeams = TEAM_CATALOGUE.filter(t => t.domain === domain.id);
+    const totalAgents = domainTeams.reduce((sum, t) => sum + t.agents.length, 0);
+
+    const teamSections = domainTeams.map((team: TeamMeta) => {
+      const agentLines = team.agents
+        .map(a => {
+          const toolNote = a.tools?.length ? ` [tools: ${a.tools.map(t => t.toolId).join(', ')}]` : '';
+          return `    [${a.id}] ${a.name} — ${a.description}${toolNote}`;
+        })
+        .join('\n');
+      return `  ${team.name} (${team.agents.length} agents):\n${agentLines}`;
+    }).join('\n\n');
+
+    sections.push(`── ${domain.name.toUpperCase()} (${totalAgents} agents across ${domainTeams.length} teams) ──\n${domain.description}\n\n${teamSections}`);
+  }
+
+  return sections.join('\n\n');
 }
 
 // ─── Template Catalogue Summary (for system prompt) ─────────────────────────
@@ -99,23 +113,31 @@ export function buildMasterSystemPrompt(
 ): string {
   const sections: string[] = [];
 
+  const totalAgents = TEAM_CATALOGUE.reduce((s, t) => s + t.agents.length, 0);
+  const totalTeams = TEAM_CATALOGUE.length;
+
   // Role
   sections.push(`═══ ROLE ═══
-You are the Master Orchestrator for TensorAx Studio — a creative production platform that generates branded video campaigns using AI agents.
+You are MO — Master Orchestrator of TensorAx Studio, an AI-powered operations platform for UBR Retail.
 
-You are the command centre. You don't just answer questions — you plan and execute production pipelines by routing work to specialised AI agents.
+You handle ANY task across 5 domains: Research, Analyse, Create, Organise, and Communicate. You are not limited to creative production — you manage legal reviews, financial automation, competitor monitoring, email management, database analysis, document generation, and everything else a business needs.
 
-Keep responses SHORT: 2-3 sentences + action tags. Be decisive, not conversational.`);
+You are the command centre. You plan and execute by routing work to specialised AI agents. Keep responses SHORT: 2-3 sentences + action tags. Be decisive, not conversational.`);
 
   // Capabilities
   sections.push(`═══ CAPABILITIES ═══
-1. TEMPLATE DISPATCH — Launch a pre-built template by name ("Run the What If template")
-2. TEMPLATE MODIFICATION — Modify a template before running ("Run Staff Training but skip localisation")
-3. FREEFORM COMPOSITION — Build a custom pipeline from the agent teams ("Take photos, write copy, schedule posts")
-4. SINGLE AGENT CALLS — Route a task to one agent ("Rewrite this copy to be more playful")`);
+1. TEMPLATE DISPATCH — Launch a pre-built template by name ("Review this contract")
+2. TEMPLATE MODIFICATION — Modify a template before running ("Run Sales Analysis but skip budget comparison")
+3. FREEFORM COMPOSITION — Build a custom pipeline from agents ("Scrape competitor prices, analyse trends, write a report")
+4. SINGLE AGENT CALLS — Route a task to one agent ("Summarise this document")
+5. CROSS-DOMAIN PIPELINES — Chain agents from different domains ("Research competitors → Analyse findings → Create campaign brief → Generate visuals → Schedule posts")`);
+
+  // Domain Overview
+  sections.push(`═══ 5 CAPABILITY DOMAINS ═══
+${DOMAIN_CATALOGUE.map(d => `• ${d.name.toUpperCase()} — ${d.description}`).join('\n')}`);
 
   // Agent Teams
-  sections.push(`═══ AGENT TEAMS (${TEAM_CATALOGUE.reduce((s, t) => s + t.agents.length, 0)} agents across ${TEAM_CATALOGUE.length} teams) ═══
+  sections.push(`═══ AGENT TEAMS (${totalAgents} agents across ${totalTeams} teams in 5 domains) ═══
 
 ${buildAgentCatalogueSummary()}`);
 
