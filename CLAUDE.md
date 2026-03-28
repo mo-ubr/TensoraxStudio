@@ -45,9 +45,18 @@ Production deploy (DigitalOcean/PM2): `bash deploy.sh` runs git pull → npm ci 
 
 ## What This Project Is
 
-Tensorax Studio is an AI-powered creative production platform for branded video campaigns — the core product of UBR Retail's pivot from physical retail to a B2B AI services company for other retailers.
+Tensorax Studio is an AI-powered operations platform with a chat-based UI (MO — Master Orchestrator) and a backend library of pre-built workflow templates. It covers five capability domains: **Research**, **Analyse**, **Create**, **Organise**, and **Communicate**.
 
-It guides users through a pipeline: **Copy** (concept/screenplay) → **Images** (character/key visual generation) → **Frames** (9-shot storyboard grid) → **Video** (AI video generation).
+The current production pipeline handles: **Copy** (concept/screenplay) → **Images** (character/key visual generation) → **Frames** (9-shot storyboard grid) → **Video** (AI video generation). Additional capabilities (analytics, finance automation, monitoring, communications) are being built per the scope document.
+
+## Capability Scope & Template Registry
+
+The full capability scope lives in **`docs/capability-scope.md`** (machine-readable) and **`H:\Shared drives\zLibraries\TENSORAX\Methodology\Tensorax Studio Capability Scope v2.docx`** (formatted document).
+
+**Rules:**
+- When building any new template or capability, update `docs/capability-scope.md` (change status from `planned` to `built`) AND update the Word document.
+- Items marked 🔴 or **P1** in the scope are priorities from Mariella's original brief.
+- The scope document is the single source of truth for what Tensorax Studio should do. Consult it when designing new features or deciding what to build next.
 
 ## The Bigger Picture — UBR Retail's B2B Pivot
 
