@@ -1703,6 +1703,602 @@ export const characterDesignStudio: TemplateConfig = {
   },
 };
 
+// ─── 13. Competitor Intelligence Report ──────────────────────────────────────
+
+export const competitorIntelligenceReport: TemplateConfig = {
+  id: 'competitor-intelligence-report',
+  name: 'Competitor Intelligence Report',
+  description: 'Monitor competitors across web, social media, and news. Produces a structured intelligence digest with positioning analysis, content gaps, pricing signals, and strategic opportunities.',
+  icon: 'fa-binoculars',
+  category: 'research',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['competitor', 'intelligence', 'monitoring', 'research', 'strategy'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['competitor-monitor', 'competitive-trend-research', 'news-monitor', 'social-media-monitor', 'web-scraper', 'deep-research'],
+      notes: 'Full competitive intelligence stack: web, social, news, and deep research',
+    },
+    {
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser', 'trend-identifier'],
+      notes: 'Sentiment analysis on competitor mentions and trend identification',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      notes: 'Produce the intelligence report with visualisations',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Define Competitors',
+      teamId: 'research',
+      agents: [],
+      requiresReview: false,
+      description: 'List competitor names, URLs, social handles, and key topics to monitor.',
+    },
+    {
+      order: 2,
+      name: 'Web & Social Scan',
+      teamId: 'research',
+      agents: ['competitor-monitor', 'social-media-monitor', 'web-scraper'],
+      requiresReview: false,
+      description: 'Scan competitor websites, social media accounts, and product pages for changes and new content.',
+      parallel: true,
+    },
+    {
+      order: 3,
+      name: 'News & PR Monitoring',
+      teamId: 'research',
+      agents: ['news-monitor'],
+      requiresReview: false,
+      description: 'Search news sources for competitor mentions, press releases, and industry coverage.',
+    },
+    {
+      order: 4,
+      name: 'Deep Analysis',
+      teamId: 'research',
+      agents: ['competitive-trend-research', 'deep-research'],
+      requiresReview: true,
+      description: 'Analyse competitor positioning, messaging strategy, content approach, and identify market gaps.',
+    },
+    {
+      order: 5,
+      name: 'Sentiment & Trends',
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser', 'trend-identifier'],
+      requiresReview: false,
+      description: 'Analyse sentiment around competitor brands and identify emerging trends in the competitive landscape.',
+    },
+    {
+      order: 6,
+      name: 'Intelligence Report',
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      requiresReview: true,
+      description: 'Compile findings into a structured report: competitor profiles, SWOT, positioning map, content gaps, opportunities, and recommended actions.',
+    },
+  ],
+
+  defaults: {
+    monitoringPeriod: '7d',
+    maxCompetitors: 5,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresCompetitorList: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesCompetitorProfiles: true,
+    includesPositioningMap: true,
+  },
+};
+
+// ─── 14. Email Campaign Builder ──────────────────────────────────────────────
+
+export const emailCampaignBuilder: TemplateConfig = {
+  id: 'email-campaign-builder',
+  name: 'Email Campaign Builder',
+  description: 'Design multi-email sequences from a campaign brief. AI researches the audience, writes subject lines and body copy with A/B variants, builds the drip logic, and prepares scheduling recommendations.',
+  icon: 'fa-envelope-open-text',
+  category: 'marketing',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['email', 'campaign', 'sequence', 'drip', 'nurture', 'marketing-automation'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['audience-research', 'brand-voice-research'],
+      notes: 'Audience segmentation and brand voice to guide copy tone',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['creative-director', 'copywriter', 'email-sequence-writer', 'tagline'],
+      notes: 'Full email copy pipeline: strategy, subject lines, body copy, CTAs, A/B variants',
+    },
+    {
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      notes: 'Check consistency across the sequence — tone, messaging, CTA progression',
+    },
+    {
+      teamId: 'distribution',
+      agents: ['scheduling'],
+      notes: 'Optimal send time recommendations for each email in the sequence',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Campaign Brief',
+      teamId: 'copy-production',
+      agents: [],
+      requiresReview: false,
+      description: 'Define campaign goal (nurture, launch, re-engagement, onboarding), audience segment, and desired sequence length.',
+    },
+    {
+      order: 2,
+      name: 'Audience & Voice Research',
+      teamId: 'research',
+      agents: ['audience-research', 'brand-voice-research'],
+      requiresReview: true,
+      description: 'Research target audience pain points, motivations, and preferred communication style. Establish brand voice for the sequence.',
+      parallel: true,
+    },
+    {
+      order: 3,
+      name: 'Sequence Strategy',
+      teamId: 'copy-production',
+      agents: ['creative-director'],
+      requiresReview: true,
+      description: 'Design the sequence arc: email count, theme per email, CTA progression, branching logic, and exit conditions.',
+    },
+    {
+      order: 4,
+      name: 'Email Copy & Variants',
+      teamId: 'copy-production',
+      agents: ['email-sequence-writer', 'copywriter', 'tagline'],
+      requiresReview: true,
+      description: 'Write each email: subject line (3 A/B variants), preview text, body copy, CTA buttons. Generate A/B variants for top-of-funnel emails.',
+    },
+    {
+      order: 5,
+      name: 'Consistency Check',
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      requiresReview: false,
+      description: 'Verify tone, messaging, and CTA progression are coherent across the entire sequence.',
+    },
+    {
+      order: 6,
+      name: 'Send Schedule',
+      teamId: 'distribution',
+      agents: ['scheduling'],
+      requiresReview: true,
+      description: 'Generate optimal send times, day-of-week recommendations, and delay intervals between emails.',
+    },
+  ],
+
+  defaults: {
+    sequenceLength: 5,
+    abVariants: 3,
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresBrief: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md', 'html'],
+    includesAbVariants: true,
+    includesSendSchedule: true,
+  },
+};
+
+// ─── 15. Data Quality Audit ──────────────────────────────────────────────────
+
+export const dataQualityAudit: TemplateConfig = {
+  id: 'data-quality-audit',
+  name: 'Data Quality Audit',
+  description: 'Upload a database export, spreadsheet, or CSV. AI profiles every column, detects anomalies, finds duplicates, checks referential integrity, and produces an actionable data quality report with fix recommendations.',
+  icon: 'fa-database',
+  category: 'data',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['data-quality', 'audit', 'database', 'spreadsheet', 'cleaning', 'anomaly-detection'],
+
+  teams: [
+    {
+      teamId: 'data-analysis',
+      agents: ['data-profiler', 'data-quality-checker', 'database-auditor', 'spreadsheet-analyser', 'statistical-analyser'],
+      notes: 'Full data analysis stack: profiling, quality checks, auditing, statistical analysis',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      notes: 'Generate the quality report with visualisations',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Data',
+      teamId: 'data-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload database export, spreadsheet (Excel/CSV), or connect to a data source. Describe expected schema if available.',
+    },
+    {
+      order: 2,
+      name: 'Data Profiling',
+      teamId: 'data-analysis',
+      agents: ['data-profiler', 'spreadsheet-analyser'],
+      requiresReview: true,
+      description: 'Profile every column: data types, null rates, unique counts, value distributions, min/max/mean, and pattern detection.',
+    },
+    {
+      order: 3,
+      name: 'Quality Checks',
+      teamId: 'data-analysis',
+      agents: ['data-quality-checker'],
+      requiresReview: false,
+      description: 'Run quality rules: missing values, format inconsistencies, out-of-range values, orphaned records, referential integrity violations.',
+    },
+    {
+      order: 4,
+      name: 'Duplicate Detection',
+      teamId: 'data-analysis',
+      agents: ['database-auditor'],
+      requiresReview: true,
+      description: 'Find exact and fuzzy duplicates using name matching, address normalisation, and record similarity scoring.',
+    },
+    {
+      order: 5,
+      name: 'Statistical Analysis',
+      teamId: 'data-analysis',
+      agents: ['statistical-analyser'],
+      requiresReview: false,
+      description: 'Detect outliers, correlations, and distribution anomalies that may indicate data entry errors or systemic issues.',
+    },
+    {
+      order: 6,
+      name: 'Quality Report',
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      requiresReview: true,
+      description: 'Compile a data quality scorecard: overall health score, column-by-column findings, prioritised fix recommendations, and estimated effort.',
+    },
+  ],
+
+  defaults: {
+    duplicateThreshold: 0.85,
+    outlierMethod: 'iqr',
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresDataFile: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['json', 'md', 'xlsx'],
+    includesQualityScorecard: true,
+    includesFixRecommendations: true,
+  },
+};
+
+// ─── 16. Brand Audit ─────────────────────────────────────────────────────────
+
+export const brandAudit: TemplateConfig = {
+  id: 'brand-audit',
+  name: 'Brand Audit',
+  description: 'Upload existing marketing content (ads, social posts, emails, website copy). AI analyses it against your brand guidelines and produces a consistency report with specific fixes for off-brand elements.',
+  icon: 'fa-trademark',
+  category: 'marketing',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['brand', 'audit', 'consistency', 'brand-voice', 'guidelines', 'quality'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['brand-voice-research'],
+      notes: 'Establish the brand voice baseline to audit against',
+    },
+    {
+      teamId: 'media-analysis',
+      agents: ['brand-consistency-checker', 'style-identifier', 'mood-identifier'],
+      notes: 'Visual brand consistency — colours, typography, imagery style, mood alignment',
+    },
+    {
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser', 'trend-identifier'],
+      notes: 'Tone and messaging analysis across content pieces',
+    },
+    {
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      notes: 'Cross-content consistency check',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      notes: 'Generate the brand audit report',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Content & Guidelines',
+      teamId: 'research',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload brand guidelines and the content to audit (images, copy, social posts, emails, ads, website screenshots).',
+    },
+    {
+      order: 2,
+      name: 'Brand Baseline',
+      teamId: 'research',
+      agents: ['brand-voice-research'],
+      requiresReview: true,
+      description: 'Analyse brand guidelines to establish the voice, tone, colour palette, typography, and messaging pillars to audit against.',
+    },
+    {
+      order: 3,
+      name: 'Visual Consistency Check',
+      teamId: 'media-analysis',
+      agents: ['brand-consistency-checker', 'style-identifier', 'mood-identifier'],
+      requiresReview: true,
+      description: 'Analyse each visual asset: colour usage, typography, logo placement, imagery style, and mood alignment vs brand guidelines.',
+    },
+    {
+      order: 4,
+      name: 'Copy & Tone Analysis',
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser'],
+      requiresReview: true,
+      description: 'Analyse written content: tone of voice, vocabulary, messaging alignment, CTA consistency, and sentiment match.',
+    },
+    {
+      order: 5,
+      name: 'Cross-Content Consistency',
+      teamId: 'qa',
+      agents: ['qa-consistency'],
+      requiresReview: false,
+      description: 'Check for consistency across all content pieces — are they recognisably the same brand?',
+    },
+    {
+      order: 6,
+      name: 'Brand Audit Report',
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      requiresReview: true,
+      description: 'Compile findings: overall brand health score, per-asset audit results, specific deviations with before/after fix suggestions, priority actions.',
+    },
+  ],
+
+  defaults: {},
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: true,
+    requiresContentToAudit: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesBrandScorecard: true,
+    includesFixSuggestions: true,
+  },
+};
+
+// ─── 17. Meeting Notes Processor ─────────────────────────────────────────────
+
+export const meetingNotesProcessor: TemplateConfig = {
+  id: 'meeting-notes-processor',
+  name: 'Meeting Notes Processor',
+  description: 'Upload meeting notes, transcript, or recording summary. AI extracts structured minutes, decisions, action items with owners and deadlines, and drafts follow-up emails.',
+  icon: 'fa-clipboard-list',
+  category: 'productivity',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['meeting', 'notes', 'action-items', 'minutes', 'follow-up', 'productivity'],
+
+  teams: [
+    {
+      teamId: 'text-analysis',
+      agents: ['document-summariser', 'sentiment-analyser'],
+      notes: 'Summarise meeting content and detect sentiment/tone of discussions',
+    },
+    {
+      teamId: 'calendar-organisation',
+      agents: ['meeting-notes-processor', 'meeting-prep-brief'],
+      notes: 'Structure meeting notes and prepare follow-up brief',
+    },
+    {
+      teamId: 'email-comms',
+      agents: ['reply-drafter'],
+      notes: 'Draft follow-up emails with action items for each attendee',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      notes: 'Format the final meeting minutes document',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Notes',
+      teamId: 'text-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload meeting transcript, notes, or recording summary. Optionally add attendee list and agenda.',
+    },
+    {
+      order: 2,
+      name: 'Summarise & Extract',
+      teamId: 'text-analysis',
+      agents: ['document-summariser'],
+      requiresReview: true,
+      description: 'Parse the meeting content: identify topics discussed, key points per topic, decisions made, and open questions.',
+    },
+    {
+      order: 3,
+      name: 'Action Items',
+      teamId: 'calendar-organisation',
+      agents: ['meeting-notes-processor'],
+      requiresReview: true,
+      description: 'Extract action items with: description, owner, deadline, priority, and dependencies. Flag items without clear owners.',
+    },
+    {
+      order: 4,
+      name: 'Meeting Minutes',
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      requiresReview: true,
+      description: 'Format structured meeting minutes: attendees, agenda, discussion summary, decisions, action items, and next meeting date.',
+    },
+    {
+      order: 5,
+      name: 'Follow-Up Emails',
+      teamId: 'email-comms',
+      agents: ['reply-drafter'],
+      requiresReview: true,
+      description: 'Draft follow-up emails for each attendee with their specific action items, deadlines, and relevant context from the meeting.',
+    },
+  ],
+
+  defaults: {},
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresMeetingNotes: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesMinutes: true,
+    includesActionItems: true,
+    includesFollowUpEmails: true,
+  },
+};
+
+// ─── 18. Code Review Assistant ───────────────────────────────────────────────
+
+export const codeReviewAssistant: TemplateConfig = {
+  id: 'code-review-assistant',
+  name: 'Code Review Assistant',
+  description: 'Upload code files or point to a repository. AI runs bug detection, security scanning, architecture review, and test coverage analysis — producing a prioritised review report with fix suggestions.',
+  icon: 'fa-code',
+  category: 'development',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['code-review', 'security', 'bugs', 'architecture', 'testing', 'development'],
+
+  teams: [
+    {
+      teamId: 'code-analysis',
+      agents: ['bug-detector', 'security-scanner', 'architecture-reviewer', 'optimisation-advisor', 'missing-coverage-identifier', 'schema-reviewer'],
+      notes: 'Full code analysis suite: bugs, security, architecture, performance, test coverage, schema',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      notes: 'Generate the code review report',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Upload Code',
+      teamId: 'code-analysis',
+      agents: [],
+      requiresReview: false,
+      description: 'Upload code files, paste code, or provide a repository URL. Specify language, framework, and areas of concern.',
+    },
+    {
+      order: 2,
+      name: 'Bug Detection',
+      teamId: 'code-analysis',
+      agents: ['bug-detector'],
+      requiresReview: false,
+      description: 'Scan for logic errors, null reference risks, race conditions, off-by-one errors, and common language-specific pitfalls.',
+    },
+    {
+      order: 3,
+      name: 'Security Scan',
+      teamId: 'code-analysis',
+      agents: ['security-scanner'],
+      requiresReview: true,
+      description: 'Check for OWASP top 10 vulnerabilities, injection risks, authentication flaws, data exposure, and dependency vulnerabilities.',
+    },
+    {
+      order: 4,
+      name: 'Architecture Review',
+      teamId: 'code-analysis',
+      agents: ['architecture-reviewer', 'optimisation-advisor'],
+      requiresReview: true,
+      description: 'Evaluate code structure, separation of concerns, dependency management, scalability patterns, and performance optimisation opportunities.',
+    },
+    {
+      order: 5,
+      name: 'Test Coverage Analysis',
+      teamId: 'code-analysis',
+      agents: ['missing-coverage-identifier'],
+      requiresReview: false,
+      description: 'Identify untested code paths, missing edge case tests, and critical functions without test coverage.',
+    },
+    {
+      order: 6,
+      name: 'Review Report',
+      teamId: 'document-production',
+      agents: ['report-generator'],
+      requiresReview: true,
+      description: 'Compile a prioritised code review report: critical issues, warnings, suggestions, and specific fix recommendations with code examples.',
+    },
+  ],
+
+  defaults: {},
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresCodeFiles: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesReviewReport: true,
+    includesFixSuggestions: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -1718,4 +2314,10 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   contentLocalisationPack,
   campaignVideoProducer,
   characterDesignStudio,
+  competitorIntelligenceReport,
+  emailCampaignBuilder,
+  dataQualityAudit,
+  brandAudit,
+  meetingNotesProcessor,
+  codeReviewAssistant,
 ];
