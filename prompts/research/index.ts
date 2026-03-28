@@ -7,3 +7,8 @@ export { socialMediaTrendResearchAgentPrompt } from './socialMediaTrendResearchA
 export { youtubeChannelAnalyserAgentPrompt } from './youtubeChannelAnalyserAgent';
 export { contentCalendarAgentPrompt } from './contentCalendarAgent';
 export { performanceReportAgentPrompt } from './performanceReportAgent';
+export { competitorMonitorAgentPrompt } from './competitorMonitorAgent';
+export { newsMonitorAgentPrompt } from './newsMonitorAgent';
+export { socialMediaMonitorAgentPrompt } from './socialMediaMonitorAgent';
+export { webScraperAgentPrompt } from './webScraperAgent';
+export { deepResearchAgentPrompt } from './deepResearchAgent';
