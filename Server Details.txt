@@ -1,0 +1,38 @@
+
+David:
+ssh mo@tensorax.com
+Unicorn1
+cd /var/www/tensorax && bash deploy.sh
+
+
+sudo git clone https://github.com/mo-ubr/TensoraxStudio.git /var/www/tensorax
+sudo chown -R $USER:$USER /var/www/tensorax
+cd /var/www/tensorax
+npm ci
+npm run build
+npm prune --omit=dev
+pm2 start ecosystem.config.cjs --env production
+
+
+
+
+Claude:
+
+Ask your colleague for the server IP if you don't have it
+ssh mo@tensorax.com then enter pw and then type cd /var/www/tensorax && bash deploy.sh   is this right
+
+
+
+Almost — you don't need the cd part. Two separate steps:
+
+Step 1 — Connect:
+
+ssh mo@tensorax.com
+
+(enter password when asked Unicorn1
+
+Step 2 — Once you're in, run the setup script (not deploy.sh, since the directory is broken):
+
+curl -sL https://raw.githubusercontent.com/mo-ubr/TensoraxStudio/master/setup-server.sh | bash
+
+deploy.sh is for future updates. This first time you need setup-server.sh because the directory isn't a proper git repo.
