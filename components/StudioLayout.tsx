@@ -14,6 +14,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { MasterOrchestrator } from './MasterOrchestrator';
 import type { MasterAction, PipelinePlan } from '../services/orchestratorService';
+import { generateAndWait, hasGammaApiKey } from '../services/gammaService';
 import { composeTemplateFromPlan } from '../services/orchestratorService';
 import { createTemplate, getTemplate } from '../services/templateService';
 import {
@@ -51,6 +52,9 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
   const [activePipeline, setActivePipeline] = useState<PipelineState | null>(null);
   const [pipelineEvents, setPipelineEvents] = useState<PipelineEvent[]>([]);
   const [showPipelinePanel, setShowPipelinePanel] = useState(false);
+  const [presentationStatus, setPresentationStatus] = useState<'idle' | 'generating' | 'done' | 'error'>('idle');
+  const [presentationUrl, setPresentationUrl] = useState<string | null>(null);
+  const [presentationExportUrl, setPresentationExportUrl] = useState<string | null>(null);
 
   // Pipeline event handler — updates UI in real-time
   const handlePipelineEvent = useCallback((event: PipelineEvent) => {
@@ -91,6 +95,45 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
     savePipeline(updated);
   }, [activeProject, brand, handlePipelineEvent]);
 
+  // Generate presentation via Gamma API
+  const handleGeneratePresentation = useCallback(async (action: MasterAction) => {
+    if (!action.presentationContent) {
+      console.error('[StudioLayout] No presentation content provided');
+      return;
+    }
+    if (!hasGammaApiKey()) {
+      alert('Gamma API key not configured. Go to Settings → Presentation Generation to add it.');
+      return;
+    }
+
+    setPresentationStatus('generating');
+    setPresentationUrl(null);
+    setPresentationExportUrl(null);
+
+    try {
+      const result = await generateAndWait({
+        inputText: action.presentationContent,
+        format: (action.presentationFormat as 'presentation' | 'document') || 'presentation',
+        textMode: 'generate',
+        numCards: action.presentationNumCards || 10,
+        themeId: action.presentationTheme || 'consultant',
+        exportAs: 'pptx',
+        textOptions: { audience: 'executives', tone: 'professional', amount: 'medium', language: 'en-gb' },
+        imageOptions: { source: 'aiGenerated', stylePreset: 'photorealistic' },
+      }, (status, attempt) => {
+        console.log(`[Gamma] Polling attempt ${attempt}: ${status}`);
+      });
+
+      setPresentationStatus('done');
+      setPresentationUrl(result.gammaUrl || null);
+      setPresentationExportUrl(result.exportUrl || null);
+      console.log('[Gamma] Presentation ready:', result.gammaUrl);
+    } catch (err) {
+      console.error('[Gamma] Generation failed:', err);
+      setPresentationStatus('error');
+    }
+  }, []);
+
   // Handle Mo's actions
   const handleAction = useCallback((action: MasterAction) => {
     switch (action.type) {
@@ -108,10 +151,13 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
       case 'navigate':
         if (action.screen) onNavigate(action.screen);
         break;
+      case 'generate_presentation':
+        handleGeneratePresentation(action);
+        break;
       default:
         onAction(action);
     }
-  }, [launchPipeline, onStartTemplate, onNavigate, onAction]);
+  }, [launchPipeline, onStartTemplate, onNavigate, onAction, handleGeneratePresentation]);
 
   // Handle Mo's freeform pipeline plans
   const handleRunPipeline = useCallback(async (plan: PipelinePlan) => {
@@ -163,6 +209,40 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
 
   return (
     <div className="flex-1 flex min-h-0">
+      {/* Presentation generation status banner */}
+      {presentationStatus !== 'idle' && (
+        <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
+          presentationStatus === 'generating' ? 'bg-purple-100 text-purple-800' :
+          presentationStatus === 'done' ? 'bg-green-100 text-green-800' :
+          'bg-red-100 text-red-800'
+        }`}>
+          {presentationStatus === 'generating' && (
+            <>
+              <i className="fa-solid fa-spinner fa-spin" />
+              Generating presentation...
+            </>
+          )}
+          {presentationStatus === 'done' && presentationUrl && (
+            <>
+              <i className="fa-solid fa-presentation-screen" />
+              Presentation ready!
+              <a href={presentationUrl} target="_blank" rel="noopener noreferrer" className="underline font-bold ml-1">Open in Gamma</a>
+              {presentationExportUrl && (
+                <a href={presentationExportUrl} target="_blank" rel="noopener noreferrer" className="underline ml-2">Download PPTX</a>
+              )}
+              <button onClick={() => setPresentationStatus('idle')} className="ml-2 text-gray-500 hover:text-gray-700">✕</button>
+            </>
+          )}
+          {presentationStatus === 'error' && (
+            <>
+              <i className="fa-solid fa-triangle-exclamation" />
+              Presentation generation failed
+              <button onClick={() => setPresentationStatus('idle')} className="ml-2 text-gray-500 hover:text-gray-700">✕</button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Main: Master Orchestrator Chat */}
       <MasterOrchestrator
         projectContext={projectContext}

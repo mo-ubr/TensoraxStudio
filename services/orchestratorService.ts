@@ -21,7 +21,8 @@ export type MasterActionType =
   | 'set_field'
   | 'navigate'
   | 'upload_request'
-  | 'cancel_pipeline';
+  | 'cancel_pipeline'
+  | 'generate_presentation';
 
 export interface MasterAction {
   type: MasterActionType;
@@ -33,6 +34,10 @@ export interface MasterAction {
   value?: string;
   screen?: string;
   description?: string;
+  presentationContent?: string;
+  presentationFormat?: string;
+  presentationTheme?: string;
+  presentationNumCards?: number;
 }
 
 export interface PipelinePlanStep {
@@ -354,6 +359,11 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
       }
       case 'CANCEL_PIPELINE': {
         actions.push({ type: 'cancel_pipeline' });
+        break;
+      }
+      case 'GENERATE_PRESENTATION': {
+        // payload format: content (the full slide text to send to Gamma)
+        actions.push({ type: 'generate_presentation', presentationContent: payload?.trim() });
         break;
       }
     }

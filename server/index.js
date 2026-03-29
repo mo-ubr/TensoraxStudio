@@ -30,6 +30,7 @@ import dbRouter from "./dbService.js";
 import videoAnalysisRouter from "./videoAnalysis.js";
 import templateRouter from "./templateRoutes.js";
 import pipelineRouter from "./pipelineRoutes.js";
+import gammaRouter from "./gammaApi.js";
 
 const app = express();
 const PORT = process.env.PORT || 5182;
@@ -50,6 +51,7 @@ app.use("/api/db", dbRouter);
 app.use("/api/video", videoAnalysisRouter);
 app.use("/api/templates", templateRouter);
 app.use("/api/pipeline", pipelineRouter);
+app.use("/api/gamma", gammaRouter);
 
 import { writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join } from "path";

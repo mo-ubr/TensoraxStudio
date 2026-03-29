@@ -283,12 +283,19 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_video_key', modelKey: 'tensorax_video_model', model: 'wan-v2.2-a14b' },
     { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
   ]},
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GAMMA — Presentation & Document Generation  (Gamma API key: sk-gamma-...)
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'gamma-v1',            provider: 'gamma', providerName: 'Gamma — Presentations & Docs', keyPlaceholder: 'sk-gamma-... API key', capabilities: ['Presentation Gen', 'Document Gen'], slotSync: [
+    { baseKey: 'tensorax_gamma_key', modelKey: 'tensorax_gamma_model', model: 'gamma-v1' },
+  ]},
 ];
 
 // ─── Task slot definitions ──────────────────────────────────────────────────
 // Each task has a specific purpose and only shows models suited for it.
 
-type TaskTag = 'copy' | 'analysis' | 'video_analysis' | 'image_gen' | 'video_gen' | 'reasoning';
+type TaskTag = 'copy' | 'analysis' | 'video_analysis' | 'image_gen' | 'video_gen' | 'reasoning' | 'presentation';
 
 interface TaskSlot {
   id: TaskTag;
@@ -352,6 +359,14 @@ const TASK_SLOTS: TaskSlot[] = [
     fallbackModelKey: 'tensorax_reasoning_fallback_model', fallbackApiKeyKey: 'tensorax_reasoning_fallback_key',
     capabilityFilter: ['Reasoning', 'Research', 'Deep Reasoning'],
     recommended: 'o3', recommendedFallback: 'claude-opus-4-6',
+  },
+  {
+    id: 'presentation',   label: 'Presentation Generation', icon: 'fa-presentation-screen',
+    description: 'AI-generated presentations, documents and decks',
+    modelKey: 'tensorax_gamma_model', apiKeyKey: 'tensorax_gamma_key',
+    fallbackModelKey: 'tensorax_gamma_fallback_model', fallbackApiKeyKey: 'tensorax_gamma_fallback_key',
+    capabilityFilter: ['Presentation Gen', 'Document Gen'],
+    recommended: 'gamma-v1', recommendedFallback: 'gamma-v1',
   },
 ];
 
