@@ -5,7 +5,7 @@
 
 set -e
 
-APP_DIR="/var/www/tensorax"
+APP_DIR="$HOME/tensorax"
 
 echo "==> Pulling latest code..."
 cd "$APP_DIR"

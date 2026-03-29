@@ -5,7 +5,7 @@ module.exports = {
       script: "server/index.js",
       interpreter: "node",
       interpreter_args: "--experimental-vm-modules",
-      cwd: "/var/www/tensorax",
+      cwd: "/home/mo/tensorax",
       instances: 1,
       autorestart: true,
       watch: false,
