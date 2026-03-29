@@ -10,6 +10,7 @@
 
 import type { TemplateConfig, TeamId, AgentId, DomainId, ToolId, ToolRequirement } from '../templates/templateConfig';
 import { BUILT_IN_TEMPLATES } from '../templates/builtInTemplates';
+import { CLAUDE_SKILL_TEMPLATES } from '../templates/claudeSkills';
 
 const STORAGE_KEY = 'tensorax_custom_templates';
 
@@ -87,7 +88,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'text-analysis',
-    name: 'Text & Document Analysis',
+    name: 'Text & Document Analysis Team',
     domain: 'analyse',
     description: 'Summarise, classify, extract, and analyse text and documents',
     icon: 'fa-file-lines',
@@ -105,7 +106,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'data-analysis',
-    name: 'Data Analysis',
+    name: 'Data Analysis Team',
     domain: 'analyse',
     description: 'Database auditing, data quality, spreadsheet analysis, statistics',
     icon: 'fa-chart-simple',
@@ -121,7 +122,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'code-analysis',
-    name: 'Code Analysis',
+    name: 'Code Analysis Team',
     domain: 'analyse',
     description: 'Bug detection, architecture review, security scanning, code quality',
     icon: 'fa-code',
@@ -136,7 +137,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'media-analysis',
-    name: 'Media Analysis',
+    name: 'Media Analysis Team',
     domain: 'analyse',
     description: 'Image, video, and sound analysis — encoding, style, mood, content',
     icon: 'fa-photo-film',
@@ -299,7 +300,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'email-organisation',
-    name: 'Email Organisation',
+    name: 'Email Organisation Team',
     domain: 'organise',
     description: 'Classify, forward, organise, and create reminders for email',
     icon: 'fa-inbox',
@@ -313,7 +314,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'file-organisation',
-    name: 'File & Directory Management',
+    name: 'File & Directory Management Team',
     domain: 'organise',
     description: 'Structure analysis, monitoring, reorganisation, gap detection',
     icon: 'fa-folder-tree',
@@ -327,7 +328,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'calendar-organisation',
-    name: 'Calendar & Meeting Management',
+    name: 'Calendar & Meeting Management Team',
     domain: 'organise',
     description: 'Calendar management, meeting notes, briefing preparation',
     icon: 'fa-calendar-days',
@@ -339,7 +340,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'data-organisation',
-    name: 'Data Organisation',
+    name: 'Data Organisation Team',
     domain: 'organise',
     description: 'Database normalisation, deduplication, static data maintenance, migration',
     icon: 'fa-database',
@@ -356,7 +357,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'email-comms',
-    name: 'Email Communications',
+    name: 'Email Communications Team',
     domain: 'communicate',
     description: 'Reply drafting, response ideas, sending, tracking correspondence',
     icon: 'fa-envelope',
@@ -369,7 +370,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'messaging-comms',
-    name: 'Messaging Communications',
+    name: 'Messaging Communications Team',
     domain: 'communicate',
     description: 'WhatsApp, Viber, Discord, Facebook Messenger, SMS — reply and send',
     icon: 'fa-message',
@@ -382,7 +383,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'presentation-comms',
-    name: 'Presentations & Reporting',
+    name: 'Presentations & Reporting Team',
     domain: 'communicate',
     description: 'Data summaries, dashboards, branded decks, interactive presentations',
     icon: 'fa-chart-column',
@@ -395,7 +396,7 @@ export const TEAM_CATALOGUE: TeamMeta[] = [
   },
   {
     id: 'bot-comms',
-    name: 'Bot Interactions',
+    name: 'Bot Interactions Team',
     domain: 'communicate',
     description: 'Staff and customer support bots — chat, voice, and talking head',
     icon: 'fa-robot',
@@ -448,7 +449,7 @@ function saveCustomTemplates(templates: TemplateConfig[]): void {
 
 /** Get all templates (built-in + custom) */
 export function getAllTemplates(): TemplateConfig[] {
-  return [...BUILT_IN_TEMPLATES, ...loadCustomTemplates()];
+  return [...BUILT_IN_TEMPLATES, ...CLAUDE_SKILL_TEMPLATES, ...loadCustomTemplates()];
 }
 
 /** Get a single template by ID */

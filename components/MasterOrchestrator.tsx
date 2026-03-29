@@ -499,7 +499,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-[9px] text-[#aaa] font-bold uppercase tracking-wider">
                         {loadingElapsed < 5 ? 'Initialising...' :
-                         loadingElapsed < 15 ? 'Agents processing...' :
+                         loadingElapsed < 15 ? 'Teams processing...' :
                          loadingElapsed < 30 ? 'Complex request — still working...' :
                          'Almost there — finalising...'}
                       </span>
@@ -575,7 +575,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe what you want to create, or ask me to run a template..."
+            placeholder="Describe what you want to create, or ask me to run a skill..."
             rows={1}
             className="flex-1 resize-none text-sm px-4 py-2.5 border border-[#e0d6e3] rounded-xl focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20 min-h-[40px] max-h-[120px]"
             style={{ height: 'auto', overflow: 'hidden' }}
@@ -600,7 +600,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
         </p>
       </div>
 
-      {/* Agent Teams Modal */}
+      {/* Teams Modal */}
       {showCatalogue && (
         <AgentCataloguePanel
           onClose={() => setShowCatalogue(false)}

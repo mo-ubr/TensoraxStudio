@@ -83,10 +83,19 @@ Then, output a highly optimized, comma-separated text prompt designed for a stat
 
 // ─── Native video analysis via Gemini File API ──────────────────────────────
 
+/** Video/image analysis models — best-of-breed, best first */
+const ANALYSIS_MODELS = [
+  "gemini-3.1-pro-preview",        // Best: native video understanding, longest context
+  "gemini-3-pro-preview",          // Strong multimodal reasoning
+  "gemini-2.5-pro",                // Reliable pro-tier fallback
+  "gemini-2.5-flash",              // Fast, good quality fallback
+  "gemini-2.0-flash",              // Lightweight last-resort
+];
+
 async function analyseVideoNative(videoPath, videoName, apiKey, model, customPrompt) {
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
-  const useModel = model || "gemini-3.1-pro-preview";
+  const modelsToTry = model ? [model, ...ANALYSIS_MODELS] : ANALYSIS_MODELS;
 
   console.log(`[Analysis] Uploading video to Gemini File API...`);
   let videoFile = await ai.files.upload({
@@ -106,17 +115,29 @@ async function analyseVideoNative(videoPath, videoName, apiKey, model, customPro
   console.log("");
 
   if (videoFile.state === "FAILED") throw new Error("Video processing failed on Google's servers");
-  console.log(`[Analysis] Video processed, analysing with ${useModel}...`);
 
   const filePart = { fileData: { fileUri: videoFile.uri, mimeType: videoFile.mimeType } };
-  const response = await ai.models.generateContent({
-    model: useModel,
-    contents: [{ role: "user", parts: [filePart, { text: customPrompt || VIDEO_PROMPT }] }],
-  });
+  let lastError;
+  for (const m of modelsToTry) {
+    try {
+      console.log(`[Analysis] Trying model ${m}...`);
+      const response = await ai.models.generateContent({
+        model: m,
+        contents: [{ role: "user", parts: [filePart, { text: customPrompt || VIDEO_PROMPT }] }],
+      });
+      const text = typeof response.text === "string" ? response.text : "";
+      if (text.trim()) {
+        try { await ai.files.delete({ name: videoFile.name }); } catch { /* ignore */ }
+        return text;
+      }
+    } catch (err) {
+      console.warn(`[Analysis] Model ${m} failed: ${err.message}`);
+      lastError = err;
+    }
+  }
 
   try { await ai.files.delete({ name: videoFile.name }); } catch { /* ignore */ }
-
-  return typeof response.text === "string" ? response.text : "";
+  throw lastError || new Error("All analysis models failed");
 }
 
 // ─── Image analysis (inline, no File API needed) ────────────────────────────
@@ -124,7 +145,7 @@ async function analyseVideoNative(videoPath, videoName, apiKey, model, customPro
 async function analyseImages(imagePaths, apiKey, model) {
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
-  const useModel = model || "gemini-3.1-pro-preview";
+  const modelsToTry = model ? [model, ...ANALYSIS_MODELS] : ANALYSIS_MODELS;
 
   const imageParts = [];
   for (const fp of imagePaths) {
@@ -134,13 +155,22 @@ async function analyseImages(imagePaths, apiKey, model) {
     imageParts.push({ inlineData: { mimeType: mimeMap[ext] || "image/jpeg", data: data.toString("base64") } });
   }
 
-  console.log(`[Analysis] Analysing ${imagePaths.length} images with ${useModel}...`);
-  const response = await ai.models.generateContent({
-    model: useModel,
-    contents: [{ role: "user", parts: [{ text: IMAGE_PROMPT_FN(imagePaths.length) }, ...imageParts] }],
-  });
-
-  return typeof response.text === "string" ? response.text : "";
+  let lastError;
+  for (const m of modelsToTry) {
+    try {
+      console.log(`[Analysis] Analysing ${imagePaths.length} images with ${m}...`);
+      const response = await ai.models.generateContent({
+        model: m,
+        contents: [{ role: "user", parts: [{ text: IMAGE_PROMPT_FN(imagePaths.length) }, ...imageParts] }],
+      });
+      const text = typeof response.text === "string" ? response.text : "";
+      if (text.trim()) return text;
+    } catch (err) {
+      console.warn(`[Analysis] Model ${m} failed: ${err.message}`);
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("All image analysis models failed");
 }
 
 // ─── Save analysis to Word doc ──────────────────────────────────────────────

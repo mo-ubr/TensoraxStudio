@@ -23,3 +23,6 @@ export {
   productMarketingCampaign,
   liveShoppingChannel,
 } from './builtInTemplates';
+
+// Claude desktop platform skills
+export { CLAUDE_SKILL_TEMPLATES } from './claudeSkills';

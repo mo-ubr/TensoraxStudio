@@ -515,8 +515,8 @@ Execute ONLY this step. Deliver the specific output described above, using the u
       <div className="flex-1 flex items-center justify-center bg-[#edecec]">
         <div className="text-center">
           <i className="fa-solid fa-triangle-exclamation text-3xl text-red-400 mb-3" />
-          <p className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">Template not found</p>
-          <p className="text-[11px] text-[#888] mt-1">The template "{templateId}" does not exist</p>
+          <p className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">Skill not found</p>
+          <p className="text-[11px] text-[#888] mt-1">The skill "{templateId}" does not exist</p>
           <button
             onClick={onCancel}
             className="mt-4 px-5 py-2 rounded-lg bg-[#91569c] hover:bg-[#7a4685] text-white text-[10px] font-black uppercase tracking-wider transition-colors"

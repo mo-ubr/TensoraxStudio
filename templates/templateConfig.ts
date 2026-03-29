@@ -254,10 +254,11 @@ export type ToolId =
   | 'dall-e'                 // DALL-E image generation
   | 'fal-ai'                 // fal.ai (Seedance, Kling, Flux)
   | 'elevenlabs'             // ElevenLabs voice synthesis
-  // Design tools
+  // Design & Presentation tools
   | 'canva-create'           // Create Canva designs
   | 'canva-edit'             // Edit Canva designs
   | 'figma-read'             // Read Figma designs
+  | 'gamma-generate'         // Gamma AI presentations (gamma.app API)
   // Automation tools
   | 'n8n-trigger'            // Trigger n8n workflows
   | 'n8n-webhook'            // Receive n8n webhook data
@@ -388,6 +389,7 @@ export interface TemplateConfig {
     | 'communication'       // Communicate domain templates
     | 'finance'             // Finance & admin automation
     | 'legal'               // Legal review & contract analysis
+    | 'claude'              // Claude desktop platform skills
     | 'custom';             // User-created templates
   /** Which domain this template belongs to */
   domain?: DomainId;

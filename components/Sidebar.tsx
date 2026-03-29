@@ -53,8 +53,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'studio',    label: 'Studio',    icon: '',               screen: 'studio' },
-  { id: 'templates', label: 'Templates', icon: 'fa-shapes',      screen: 'templates' },
-  { id: 'agents',    label: 'Agents',    icon: 'fa-users-gear',  screen: 'agents' },
+  { id: 'templates', label: 'Skills',     icon: 'fa-wand-magic-sparkles', screen: 'templates' },
+  { id: 'agents',    label: 'Teams',      icon: 'fa-users-gear',  screen: 'agents' },
   { id: 'projects',  label: 'Projects',  icon: 'fa-folder-open', screen: 'projects' },
   { id: 'assets',    label: 'Assets',    icon: 'fa-images',      screen: 'assets' },
   { id: 'settings',  label: 'Settings',  icon: 'fa-gear',        screen: 'settings' },

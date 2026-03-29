@@ -121,7 +121,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
 
   const handleEditTemplate = (t: TemplateConfig) => {
     if (t.builtIn) {
-      showMessage('error', 'Built-in templates cannot be edited directly. Duplicate it first.');
+      showMessage('error', 'Built-in skills cannot be edited directly. Duplicate it first.');
       return;
     }
     setEditingTemplate(JSON.parse(JSON.stringify(t)));
@@ -155,7 +155,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
   const handleExport = (t: TemplateConfig) => {
     const json = exportTemplate(t.id);
     navigator.clipboard.writeText(json);
-    showMessage('success', 'Template JSON copied to clipboard');
+    showMessage('success', 'Skill JSON copied to clipboard');
   };
 
   const handleImport = () => {
@@ -179,7 +179,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
     }
 
     if (!editingTemplate.id || !editingTemplate.name) {
-      showMessage('error', 'Template must have a name');
+      showMessage('error', 'Skill must have a name');
       return;
     }
 
@@ -285,7 +285,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
           <button onClick={onClose} className="text-[#888] hover:text-[#5c3a62] transition-colors">
             <i className="fa-solid fa-arrow-left text-lg"></i>
           </button>
-          <h1 className="text-lg font-black text-[#5c3a62] uppercase tracking-wide">Template Configuration</h1>
+          <h1 className="text-lg font-black text-[#5c3a62] uppercase tracking-wide">Skill Configuration</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -298,7 +298,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
             onClick={() => setView('agent-browser')}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all ${view === 'agent-browser' ? 'bg-[#91569c] text-white' : 'text-[#888] hover:text-[#5c3a62] hover:bg-[#f6f0f8]'}`}
           >
-            <i className="fa-solid fa-people-group mr-1.5"></i>Agent Browser
+            <i className="fa-solid fa-people-group mr-1.5"></i>Team Browser
           </button>
         </div>
       </div>
@@ -319,7 +319,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
             {/* Actions bar */}
             <div className="flex items-center gap-3">
               <button onClick={handleNewTemplate} className="px-4 py-2 rounded-lg bg-[#91569c] text-white text-xs font-bold uppercase tracking-wide hover:bg-[#7a4785] transition-colors shadow-sm">
-                <i className="fa-solid fa-plus mr-1.5"></i>New Template
+                <i className="fa-solid fa-plus mr-1.5"></i>New Skill
               </button>
               <button onClick={() => setShowImport(!showImport)} className="px-4 py-2 rounded-lg border border-[#e0d6e3] bg-white text-[#5c3a62] text-xs font-bold uppercase tracking-wide hover:border-[#91569c]/40 transition-colors">
                 <i className="fa-solid fa-file-import mr-1.5"></i>Import
@@ -329,12 +329,12 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
             {/* Import panel */}
             {showImport && (
               <div className="p-4 rounded-xl border border-[#e0d6e3] bg-white space-y-3">
-                <label className="text-[10px] font-bold uppercase tracking-wide text-[#5c3a62]">Paste template JSON:</label>
+                <label className="text-[10px] font-bold uppercase tracking-wide text-[#5c3a62]">Paste skill JSON:</label>
                 <textarea
                   value={importJson}
                   onChange={e => setImportJson(e.target.value)}
                   className="w-full h-32 px-3 py-2 rounded-lg border border-[#e0d6e3] text-xs font-mono focus:outline-none focus:border-[#91569c]"
-                  placeholder='{"id": "my-template", "name": "My Template", ...}'
+                  placeholder='{"id": "my-skill", "name": "My Skill", ...}'
                 />
                 <div className="flex gap-2">
                   <button onClick={handleImport} className="px-3 py-1.5 rounded-lg bg-[#91569c] text-white text-[10px] font-bold uppercase">Import</button>
@@ -346,7 +346,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
             {/* Built-in templates */}
             <div>
               <h3 className="text-xs font-black text-[#5c3a62] uppercase tracking-wide mb-3">
-                <i className="fa-solid fa-cube mr-1.5 text-[#91569c]"></i>Built-in Templates ({builtIn.length})
+                <i className="fa-solid fa-cube mr-1.5 text-[#91569c]"></i>Built-in Skills ({builtIn.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {builtIn.map(t => (
@@ -358,11 +358,11 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
             {/* Custom templates */}
             <div>
               <h3 className="text-xs font-black text-[#5c3a62] uppercase tracking-wide mb-3">
-                <i className="fa-solid fa-pen-ruler mr-1.5 text-[#91569c]"></i>Custom Templates ({custom.length})
+                <i className="fa-solid fa-pen-ruler mr-1.5 text-[#91569c]"></i>Custom Skills ({custom.length})
               </h3>
               {custom.length === 0 ? (
                 <div className="text-center py-8 text-[#aaa] text-xs">
-                  No custom templates yet. Create one or duplicate a built-in template.
+                  No custom skills yet. Create one or duplicate a built-in skill.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -380,7 +380,7 @@ export function TemplateConfigFacility({ onClose, onUseTemplate }: TemplateConfi
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-[#5c3a62] uppercase tracking-wide">
-                {isNew ? 'Create Template' : `Edit: ${editingTemplate.name}`}
+                {isNew ? 'Create Skill' : `Edit: ${editingTemplate.name}`}
               </h3>
               <div className="flex gap-2">
                 <button onClick={() => { setView('library'); setEditingTemplate(null); }} className="px-3 py-1.5 rounded-lg border border-[#e0d6e3] text-[10px] font-bold uppercase text-[#888] hover:text-[#5c3a62]">Cancel</button>

@@ -39,8 +39,8 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
       <div className="flex flex-col h-full bg-[#edecec]">
         {/* Header */}
         <div className="px-6 py-4 bg-white border-b border-[#e0d6e3] flex-shrink-0">
-          <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Teams</h2>
-          <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} agents</p>
+          <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Teams</h2>
+          <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} members</p>
         </div>
 
         {/* Search */}
@@ -51,7 +51,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search agents by name, description, or ID..."
+              placeholder="Search teams by name, description, or ID..."
               className="w-full pl-9 pr-3 py-2 text-xs border border-[#e0d6e3] rounded-lg focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20"
               autoFocus
             />
@@ -102,7 +102,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
           {filteredTeams.length === 0 && (
             <div className="py-8 text-center">
               <i className="fa-solid fa-robot text-3xl text-[#e0d6e3] mb-2" />
-              <p className="text-[10px] text-[#aaa]">No agents match "{search}"</p>
+              <p className="text-[10px] text-[#aaa]">No teams match "{search}"</p>
             </div>
           )}
         </div>
@@ -119,8 +119,8 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#e0d6e3] flex items-center justify-between flex-shrink-0">
           <div>
-            <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Agent Teams</h2>
-            <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} agents</p>
+            <h2 className="text-sm font-black uppercase tracking-wider text-[#5c3a62]">Teams</h2>
+            <p className="text-[10px] text-[#aaa] mt-0.5">{TEAM_CATALOGUE.length} teams, {totalAgents} members</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-[#f0f0f0] flex items-center justify-center text-[#888]">
             <i className="fa-solid fa-xmark" />
@@ -135,7 +135,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search agents by name, description, or ID..."
+              placeholder="Search teams by name, description, or ID..."
               className="w-full pl-9 pr-3 py-2 text-xs border border-[#e0d6e3] rounded-lg focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20"
               autoFocus
             />
@@ -190,7 +190,7 @@ export const AgentCataloguePanel: React.FC<AgentCataloguePanelProps> = ({ onClos
           {filteredTeams.length === 0 && (
             <div className="py-8 text-center">
               <i className="fa-solid fa-robot text-3xl text-[#e0d6e3] mb-2" />
-              <p className="text-[10px] text-[#aaa]">No agents match "{search}"</p>
+              <p className="text-[10px] text-[#aaa]">No teams match "{search}"</p>
             </div>
           )}
         </div>

@@ -261,8 +261,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
         <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
           <div className="w-full max-w-lg space-y-5 animate-fade-in">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Choose a Template</h2>
-              <p className="text-sm text-[#888] mt-1">Select a template to start your new project</p>
+              <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Choose a Skill</h2>
+              <p className="text-sm text-[#888] mt-1">Select a skill to start your new project</p>
             </div>
 
             <div className="space-y-3">
@@ -300,7 +300,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
                 onClick={() => setShowTemplateConfig(true)}
                 className="px-4 py-2 rounded-lg border border-[#e0d6e3] text-xs font-bold uppercase text-[#888] hover:text-[#91569c] hover:border-[#91569c]/40 transition-colors"
               >
-                <i className="fa-solid fa-gear mr-1.5"></i> Configure Templates
+                <i className="fa-solid fa-gear mr-1.5"></i> Configure Skills
               </button>
             </div>
           </div>
@@ -360,7 +360,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
                 <i className="fa-solid fa-plus text-2xl text-[#91569c]"></i>
               </div>
               <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">New Project</span>
-              <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} template{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
+              <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} skill{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
             </button>
           </div>
 
@@ -392,14 +392,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               <i className={`fa-solid ${activeTemplate.icon} text-3xl text-[#91569c]`}></i>
             </div>
             <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</h2>
-            <p className="text-sm text-[#888] mt-1">Template: {activeTemplate.name}</p>
+            <p className="text-sm text-[#888] mt-1">Skill: {activeTemplate.name}</p>
           </div>
 
           {/* Template steps overview */}
           <div className="bg-white border border-[#e0d6e3] rounded-xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <i className="fa-solid fa-list-check text-[#91569c]"></i>
-              <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">Template Steps</span>
+              <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">Skill Steps</span>
             </div>
             <div className="space-y-2">
               {activeTemplate.steps.map((step, i) => (
@@ -424,7 +424,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
               className="flex-[2] py-3 rounded-xl bg-[#91569c] hover:bg-[#7a4685] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               <i className={`fa-solid ${activeTemplate.icon} text-sm`}></i>
-              Continue Template
+              Continue Skill
             </button>
           </div>
 
@@ -1344,8 +1344,8 @@ const App: React.FC = () => {
               <div className="flex items-center gap-3">
                 <i className={`fa-solid ${tpl?.icon || 'fa-shapes'} text-[#91569c]`}></i>
                 <div>
-                  <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">{tpl?.name || 'Template'}</span>
-                  <p className="text-[9px] text-[#888] mt-0.5">Configure your API keys below, then return to the template</p>
+                  <span className="font-bold text-xs text-[#5c3a62] uppercase tracking-wide">{tpl?.name || 'Skill'}</span>
+                  <p className="text-[9px] text-[#888] mt-0.5">Configure your API keys below, then return to the skill</p>
                 </div>
               </div>
               <button
@@ -1353,7 +1353,7 @@ const App: React.FC = () => {
                 className="px-5 py-2 rounded-lg bg-[#91569c] hover:bg-[#7a4685] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm flex items-center gap-2"
               >
                 <i className="fa-solid fa-arrow-left text-[10px]"></i>
-                Back to Template
+                Back to Skill
               </button>
             </div>
           );
@@ -1514,7 +1514,7 @@ const App: React.FC = () => {
                     Name Your Project
                   </h3>
                   <p className="text-[10px] text-[#888] mt-1">
-                    Using template: {PROJECT_TEMPLATES.find(t => t.id === pendingTemplateId)?.name}
+                    Using skill: {PROJECT_TEMPLATES.find(t => t.id === pendingTemplateId)?.name}
                   </p>
                 </div>
                 <input

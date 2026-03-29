@@ -9,6 +9,14 @@ const GEMINI_IMAGE_MODELS = ["gemini-3-pro-image-preview", "gemini-3.1-flash-ima
 const IMAGE_MODELS = ["imagen-4.0-ultra-generate-001", "imagen-4.0-standard-generate-001", "imagen-3.0-capability"];
 const VIDEO_MODELS = ["veo-3.1-generate-preview", "veo-2.0-generate-001"];
 const PROMPT_MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.0-flash"];
+/** Video/image analysis models – best-of-breed, best first. */
+const ANALYSIS_MODELS = [
+  "gemini-3.1-pro-preview",        // Best: native video understanding, longest context
+  "gemini-3-pro-preview",          // Strong multimodal reasoning
+  "gemini-2.5-pro",                // Reliable pro-tier fallback
+  "gemini-2.5-flash",              // Fast, good quality fallback
+  "gemini-2.0-flash",              // Lightweight last-resort
+];
 const API_KEY_STORAGE_KEY = "gemini_api_key";
 const API_KEY_COOKIE_KEY = "gemini_api_key";
 
@@ -487,7 +495,7 @@ Reply with only the single description.`;
     });
 
     const ai = createClientWithKey(apiKey);
-    const modelsToTry = model ? [model, ...PROMPT_MODELS] : PROMPT_MODELS;
+    const modelsToTry = model ? [model, ...ANALYSIS_MODELS] : ANALYSIS_MODELS;
     let lastError: unknown;
     for (const m of modelsToTry) {
       try {
