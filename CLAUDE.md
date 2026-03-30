@@ -1,33 +1,41 @@
-# CLAUDE.md
+# CLAUDE.md — TensoraxStudio
 
-This file provides guidance to Claude Code when working with code in this repository.
+Project instructions for all team members using Claude Code. Personal preferences (working style, commit habits, response format) belong in each contributor's own `~/.claude/CLAUDE.md`.
 
-## Owner & Working Style
+## Project Overview
 
-Mariella Ostend, owner of UBR Retail (mariella.ostend@ubr-retail.com). Non-coder business owner with a Physics degree and a decade of retail operations experience. Early AI adopter.
+Tensorax Studio is an AI-powered creative production platform for branded video campaigns — the core product of UBR Retail's pivot from physical retail to a B2B AI services company for other retailers.
 
-- I am NOT a coder. Explain changes in plain English.
-- Never ask me clarifying questions. If you need to plan, just plan and execute.
-- Always use deep thinking for better results.
-- I prefer to see results in an external browser at http://localhost:5180
-- Test changes before committing.
-- Every response should end with either **DONE** (task complete) or **MARIELLA TO DO** (lists only tasks requiring external access like GCP console, app store, etc.). The agent handles everything accessible from code/terminal.
-- Mariella is an expert-level n8n user — respond accordingly in relevant conversations.
+It guides users through a pipeline: **Copy** (concept/screenplay) → **Images** (character/key visual generation) → **Frames** (9-shot storyboard grid) → **Video** (AI video generation).
 
-## Git Safety — Automatic Commits
+## Team Setup
 
-Claude Code must run git commits automatically at these three moments. Do not ask Mariella — just do it.
+### Getting Started (New Contributor)
 
-1. **Start of every session**: Before any work begins, commit and push everything that's currently uncommitted. Then start the dev server (`npm run dev`) and open http://localhost:5180 in Chrome.
-2. **Before any major change**: Before starting risky work (database changes, major refactors, deleting files, rewriting modules), commit and push first so there's a safe rollback point.
-3. **End of every session**: After the final task is done, commit and push all work.
+1. Clone the repo: `git clone https://github.com/mo-ubr/TensoraxStudio.git`
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env` and add your own API keys (see API Keys section below)
+4. Start the dev server: `npm run dev` (opens at http://localhost:5180)
+5. For full backend features: `npm run dev:full`
 
-The commands to run each time:
-```bash
-git add -A && git commit -m "checkpoint: <brief description of what's about to happen or what was done>" && git push
-```
+### Branch Strategy
 
-If there's nothing to commit, that's fine — just move on. Never skip these checkpoints.
+- `master` — stable/production branch
+- Feature branches: `feature/<description>` (e.g. `feature/new-video-pipeline`)
+- Bug fixes: `fix/<description>` (e.g. `fix/brand-upload-crash`)
+- Always create a branch from `master` for new work
+- Merge to `master` when ready (squash merge preferred for clean history)
+
+### API Keys — Each Contributor Needs Their Own
+
+Each team member needs their own keys. These are stored in localStorage (frontend) or `.env` (backend) and are **never committed to the repo**.
+
+Required keys depending on what you're working on:
+- **Gemini API key** — core AI features (analysis, chat, image gen, video)
+- **Anthropic API key** — Claude-based prompt generation
+- **OpenAI API key** — DALL-E 3 image fallback
+- **fal.ai API key** — Seedance/Kling video generation
+- **GCP service account** — Vertex AI Imagen 3 (backend only)
 
 ## Commands
 
@@ -42,12 +50,6 @@ npm run preview       # Preview production build locally
 No test runner or linter is configured.
 
 Production deploy (DigitalOcean/PM2): `bash deploy.sh` runs git pull → npm ci → build → pm2 reload.
-
-## What This Project Is
-
-Tensorax Studio is an AI-powered creative production platform for branded video campaigns — the core product of UBR Retail's pivot from physical retail to a B2B AI services company for other retailers.
-
-It guides users through a pipeline: **Copy** (concept/screenplay) → **Images** (character/key visual generation) → **Frames** (9-shot storyboard grid) → **Video** (AI video generation).
 
 ## The Bigger Picture — UBR Retail's B2B Pivot
 
@@ -147,9 +149,4 @@ NEXT brand identity rules (logotype, typography, colours, CTAs) are defined in `
 
 - Dev ports: frontend 5180, backend 5182.
 - UK/US (ISO/ANSI) keyboard layouts preferred.
-
-## Other Projects (for reference, not part of this codebase)
-
-- za_horata YouTube channel — civic content encouraging Bulgarian voter participation
-- UBR Greek Comms & Compliance GPT (planned)
-- Economic think tank work in Bulgaria/EU focusing on entrepreneurial culture and European federalisation
+- Test changes before committing.

@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 .env.*
+!.env.example
 tensorax-key.json
 Tensorax-Key.json
 *-key.json
