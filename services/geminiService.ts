@@ -155,11 +155,16 @@ export function getApiKeyForType(type: "analysis" | "copy" | "image"): string | 
     try {
       const model = localStorage.getItem(modelKey)?.trim();
       if (model) {
+        // 1. Per-model key
         const perModel = normalizeApiKey(localStorage.getItem(`${baseKey}__${model}`));
         if (perModel) return perModel;
       }
+      // 2. Base slot key (written by legacy sync)
       const base = normalizeApiKey(localStorage.getItem(baseKey));
       if (base) return base;
+      // 3. Provider key (centralised)
+      const providerKey = normalizeApiKey(localStorage.getItem('tensorax_provider_key__gemini'));
+      if (providerKey) return providerKey;
     } catch { /* ignore */ }
   }
   const envKey = normalizeApiKey(ENV_KEYS[type]);

@@ -18,6 +18,52 @@ const LS = {
   fallbackProvider:   'tensorax_fallback_provider',
 } as const;
 
+// ─── Provider Registry ─────────────────────────────────────────────────────
+// One API key per provider. All models from the same provider share the key.
+
+interface ProviderDef {
+  id: string;
+  name: string;
+  keyPlaceholder: string;
+  icon: string;
+  storageKey: string;       // localStorage key for this provider's API key
+  legacyKeys: string[];     // legacy per-slot keys to sync into for backward-compat
+}
+
+const PROVIDERS: ProviderDef[] = [
+  { id: 'gemini',    name: 'Google (Gemini / Imagen / Veo)',   keyPlaceholder: 'AIza... Gemini API key',     icon: 'fa-google',       storageKey: 'tensorax_provider_key__gemini',    legacyKeys: ['tensorax_analysis_key', 'tensorax_video_analysis_key', 'tensorax_copy_key', 'tensorax_image_key', 'tensorax_video_key'] },
+  { id: 'claude',    name: 'Anthropic Claude',                 keyPlaceholder: 'sk-ant-... Claude API key',   icon: 'fa-robot',        storageKey: 'tensorax_provider_key__claude',    legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key'] },
+  { id: 'openai',    name: 'OpenAI (GPT / DALL-E / Sora)',     keyPlaceholder: 'sk-... OpenAI API key',       icon: 'fa-circle-nodes', storageKey: 'tensorax_provider_key__openai',    legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key', 'tensorax_image_key', 'tensorax_video_key'] },
+  { id: 'dashscope', name: 'Alibaba DashScope (all Qwen)',     keyPlaceholder: 'DashScope API key',           icon: 'fa-cloud',        storageKey: 'tensorax_provider_key__dashscope', legacyKeys: ['tensorax_analysis_key', 'tensorax_video_analysis_key', 'tensorax_copy_key', 'tensorax_image_key'] },
+  { id: 'openrouter',name: 'OpenRouter',                       keyPlaceholder: 'sk-or-... OpenRouter key',    icon: 'fa-route',        storageKey: 'tensorax_provider_key__openrouter',legacyKeys: ['tensorax_analysis_key', 'tensorax_video_analysis_key', 'tensorax_copy_key'] },
+  { id: 'fal',       name: 'fal.ai (Flux / Seedance / Kling)', keyPlaceholder: 'fal.ai API key',              icon: 'fa-bolt',         storageKey: 'tensorax_provider_key__fal',       legacyKeys: ['tensorax_image_key', 'tensorax_video_key', 'tensorax_fal_key'] },
+  { id: 'stability', name: 'Stability AI',                     keyPlaceholder: 'sk-... Stability API key',    icon: 'fa-mountain',     storageKey: 'tensorax_provider_key__stability', legacyKeys: ['tensorax_image_key'] },
+  { id: 'mistral',   name: 'Mistral',                          keyPlaceholder: 'Mistral API key',             icon: 'fa-wind',         storageKey: 'tensorax_provider_key__mistral',   legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key'] },
+  { id: 'deepseek',  name: 'DeepSeek',                         keyPlaceholder: 'sk-... DeepSeek API key',     icon: 'fa-water',        storageKey: 'tensorax_provider_key__deepseek',  legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key'] },
+  { id: 'shotstack', name: 'Shotstack',                        keyPlaceholder: 'Shotstack API key',           icon: 'fa-clapperboard', storageKey: 'tensorax_provider_key__shotstack', legacyKeys: ['tensorax_shotstack_key'] },
+];
+
+/** Get the provider API key from localStorage */
+function getProviderKey(providerId: string): string {
+  const provider = PROVIDERS.find(p => p.id === providerId);
+  if (!provider) return '';
+  try { return localStorage.getItem(provider.storageKey)?.trim() || ''; } catch { return ''; }
+}
+
+/** Save a provider key and sync to all legacy per-slot keys */
+function saveProviderKey(providerId: string, key: string) {
+  const provider = PROVIDERS.find(p => p.id === providerId);
+  if (!provider) return;
+  const trimmed = key.trim();
+  try {
+    localStorage.setItem(provider.storageKey, trimmed);
+    // Sync to legacy keys so existing services keep working
+    for (const legacyKey of provider.legacyKeys) {
+      localStorage.setItem(legacyKey, trimmed);
+    }
+  } catch { /* ignore */ }
+}
+
 // ─── Model catalogue ────────────────────────────────────────────────────────
 
 interface ModelDef {
@@ -197,64 +243,70 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'meta-llama/llama-4-scout' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'meta-llama/llama-4-scout' },
   ]},
-  { id: 'qwen/qwen3-235b-a22b',                       provider: 'openrouter', providerName: 'OpenRouter — Qwen Flagship', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Vision', 'Reasoning', 'Research', 'Creative Writing'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-235b-a22b' },
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-235b-a22b' },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALIBABA DASHSCOPE — All Qwen Models  (single DashScope API key)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Text models
+  { id: 'qwen3-235b-a22b',             provider: 'dashscope', providerName: 'Qwen — Flagship', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Reasoning', 'Research', 'Creative Writing'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-235b-a22b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen3-235b-a22b' },
   ]},
-  { id: 'qwen/qwen3-32b',                            provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-32b' },
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-32b' },
+  { id: 'qwen3-32b',                   provider: 'dashscope', providerName: 'Qwen — Text', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-32b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen3-32b' },
   ]},
-  { id: 'qwen/qwen3-30b-a3b',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-30b-a3b' },
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-30b-a3b' },
+  { id: 'qwen3-30b-a3b',               provider: 'dashscope', providerName: 'Qwen — Text', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-30b-a3b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen3-30b-a3b' },
   ]},
-  { id: 'qwen/qwen3-14b',                            provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis — Budget'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-14b' },
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-14b' },
+  { id: 'qwen3-14b',                   provider: 'dashscope', providerName: 'Qwen — Text', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis — Budget'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-14b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen3-14b' },
   ]},
-  { id: 'qwen/qwen3-vl-plus',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+  // Reasoning
+  { id: 'qwq-32b',                     provider: 'dashscope', providerName: 'Qwen — Reasoning', keyPlaceholder: 'DashScope API key', capabilities: ['Reasoning', 'Deep Reasoning', 'Research'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwq-32b' },
+  ]},
+  // Vision / Multimodal
+  { id: 'qwen-vl-max',                 provider: 'dashscope', providerName: 'Qwen — Vision', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-vl-max' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen-vl-max' },
+  ]},
+  { id: 'qwen2.5-vl-32b-instruct',     provider: 'dashscope', providerName: 'Qwen — Vision', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen2.5-vl-32b-instruct' },
+  ]},
+  { id: 'qwen2.5-omni-7b',             provider: 'dashscope', providerName: 'Qwen — Omni', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Video Analysis', 'Analysis', 'Copy'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen2.5-omni-7b' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen2.5-omni-7b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen2.5-omni-7b' },
+  ]},
+  // Image gen / edit
+  { id: 'qwen-image-plus',             provider: 'dashscope', providerName: 'Qwen — Image Gen', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Text Rendering'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-plus' },
+  ]},
+  { id: 'qwen-image-edit-plus',        provider: 'dashscope', providerName: 'Qwen — Image Gen', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Edit'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-edit-plus' },
+  ]},
+  // OCR
+  { id: 'qwen-ocr',                    provider: 'dashscope', providerName: 'Qwen — OCR', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-ocr' },
+  ]},
+  // Translation
+  { id: 'qwen-mt-turbo',               provider: 'dashscope', providerName: 'Qwen — Translation', keyPlaceholder: 'DashScope API key', capabilities: ['Copy'], slotSync: [
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen-mt-turbo' },
+  ]},
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // OPENROUTER — Open-Weight Models (non-Qwen)  (key: sk-or-...)
+  // Qwen-Plus aliases still available via OpenRouter for those who prefer it
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'qwen/qwen3-vl-plus',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-vl-plus' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen3-vl-plus' },
   ]},
   { id: 'qwen/qwen3.5-plus',                         provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Reasoning'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3.5-plus' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3.5-plus' },
-  ]},
-  { id: 'qwen/qwen3-vl-235b-a22b',                    provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-vl-235b-a22b' },
-    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen3-vl-235b-a22b' },
-  ]},
-  { id: 'qwen/qwen2.5-vl-32b',                       provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen2.5-vl-32b' },
-  ]},
-  { id: 'qwen/qwen2.5-omni-7b',                      provider: 'openrouter', providerName: 'OpenRouter — Qwen Omni', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis', 'Copy'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen2.5-omni-7b' },
-    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen2.5-omni-7b' },
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen2.5-omni-7b' },
-  ]},
-  { id: 'qwen/qwq-32b',                              provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Reasoning', 'Deep Reasoning', 'Research'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwq-32b' },
-  ]},
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ALIBABA DASHSCOPE — Qwen Specialist Models  (DashScope API key)
-  // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'qwen-vl-max',           provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen VL', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-vl-max' },
-    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen-vl-max' },
-  ]},
-  { id: 'qwen-image-plus',       provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Image', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Text Rendering'], slotSync: [
-    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-plus' },
-  ]},
-  { id: 'qwen-image-edit',       provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Image', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Edit'], slotSync: [
-    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-edit' },
-  ]},
-  { id: 'qwen-ocr',              provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen OCR', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Analysis'], slotSync: [
-    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-ocr' },
-  ]},
-  { id: 'qwen-mt-turbo',         provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Translation', keyPlaceholder: 'DashScope API key', capabilities: ['Copy'], slotSync: [
-    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen-mt-turbo' },
   ]},
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -384,7 +436,7 @@ const TASK_SLOTS: TaskSlot[] = [
     modelKey: 'tensorax_video_analysis_model', apiKeyKey: 'tensorax_video_analysis_key',
     fallbackModelKey: 'tensorax_video_analysis_fallback_model', fallbackApiKeyKey: 'tensorax_video_analysis_fallback_key',
     capabilityFilter: ['Video Analysis'],
-    recommended: 'gemini-3.1-pro-preview', recommendedFallback: 'qwen/qwen3-vl-plus',
+    recommended: 'gemini-3.1-pro-preview', recommendedFallback: 'qwen-vl-max',
   },
   {
     id: 'image_gen',      label: 'Image Generation', icon: 'fa-image',
@@ -444,24 +496,21 @@ const SectionCard: React.FC<{ icon: string; title: string; children: React.React
   </div>
 );
 
-// ─── Single model+key line ──────────────────────────────────────────────────
+// ─── Single model line (no API key — keys are per-provider now) ─────────────
 
 interface ModelLineProps {
   role: 'primary' | 'fallback';
   slot: TaskSlot;
   modelId: string;
-  apiKey: string;
   onModelChange: (id: string) => void;
-  onApiKeyChange: (key: string) => void;
-  onSave: () => void;
-  saved: boolean;
 }
 
-const ModelLine: React.FC<ModelLineProps> = ({ role, slot, modelId, apiKey, onModelChange, onApiKeyChange, onSave, saved }) => {
+const ModelLine: React.FC<ModelLineProps> = ({ role, slot, modelId, onModelChange }) => {
   const model = MODELS.find(m => m.id === modelId);
   const available = getModelsForTask(slot);
   const groups = getGroupedModels(available);
   const rec = role === 'primary' ? slot.recommended : slot.recommendedFallback;
+  const hasKey = model ? !!getProviderKey(model.provider) : false;
 
   return (
     <div className="flex gap-2 items-center">
@@ -472,8 +521,14 @@ const ModelLine: React.FC<ModelLineProps> = ({ role, slot, modelId, apiKey, onMo
       </span>
       <select
         value={modelId}
-        onChange={(e) => onModelChange(e.target.value)}
-        className="w-56 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[11px] text-[#3a3a3a] outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer font-medium"
+        onChange={(e) => {
+          const newId = e.target.value;
+          onModelChange(newId);
+          // Auto-save model selection to localStorage
+          const mKey = role === 'primary' ? slot.modelKey : slot.fallbackModelKey;
+          if (newId) localStorage.setItem(mKey, newId);
+        }}
+        className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[11px] text-[#3a3a3a] outline-none focus:ring-2 focus:ring-[#91569c]/30 cursor-pointer font-medium"
       >
         <option value="">Select model...</option>
         {groups.map(g => (
@@ -486,24 +541,13 @@ const ModelLine: React.FC<ModelLineProps> = ({ role, slot, modelId, apiKey, onMo
           </optgroup>
         ))}
       </select>
-      <input
-        type="password"
-        value={apiKey}
-        onChange={(e) => onApiKeyChange(e.target.value)}
-        placeholder={model?.keyPlaceholder ?? 'API key...'}
-        className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[11px] text-[#3a3a3a] placeholder:text-[#aaa] outline-none focus:ring-2 focus:ring-[#91569c]/30"
-      />
-      <button
-        onClick={onSave}
-        disabled={!modelId || !apiKey.trim()}
-        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all min-w-[56px]
-          ${saved
-            ? 'bg-green-500 text-white'
-            : 'bg-[#91569c] text-white hover:bg-[#5c3a62] disabled:opacity-30 disabled:cursor-not-allowed'
-          }`}
-      >
-        {saved ? <><i className="fa-solid fa-check mr-0.5" />OK</> : 'Save'}
-      </button>
+      {model && (
+        <span className={`text-[8px] font-bold px-2 py-1 rounded-full whitespace-nowrap ${
+          hasKey ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+        }`}>
+          {hasKey ? <><i className="fa-solid fa-check text-[7px] mr-0.5" />{model.provider}</> : <><i className="fa-solid fa-key text-[7px] mr-0.5" />{model.provider} — no key</>}
+        </span>
+      )}
     </div>
   );
 };
@@ -512,42 +556,25 @@ const ModelLine: React.FC<ModelLineProps> = ({ role, slot, modelId, apiKey, onMo
 
 interface TaskRowProps {
   slot: TaskSlot;
-  primary: { model: string; key: string };
-  fallback: { model: string; key: string };
+  primaryModel: string;
+  fallbackModel: string;
   onPrimaryModelChange: (id: string) => void;
-  onPrimaryKeyChange: (key: string) => void;
-  onPrimarySave: () => void;
-  primarySaved: boolean;
   onFallbackModelChange: (id: string) => void;
-  onFallbackKeyChange: (key: string) => void;
-  onFallbackSave: () => void;
-  fallbackSaved: boolean;
 }
 
-const TaskRow: React.FC<TaskRowProps> = (props) => {
-  const { slot } = props;
-  return (
-    <div className="py-3 first:pt-0 last:pb-0">
-      <div className="flex items-center gap-2 mb-1.5">
-        <i className={`fa-solid ${slot.icon} text-[#91569c] text-xs w-4 text-center`} />
-        <span className="text-[11px] font-black text-[#5c3a62] uppercase tracking-wide">{slot.label}</span>
-        <span className="text-[9px] text-[#aaa]">— {slot.description}</span>
-      </div>
-      <div className="space-y-1.5 ml-6">
-        <ModelLine role="primary" slot={slot}
-          modelId={props.primary.model} apiKey={props.primary.key}
-          onModelChange={props.onPrimaryModelChange} onApiKeyChange={props.onPrimaryKeyChange}
-          onSave={props.onPrimarySave} saved={props.primarySaved}
-        />
-        <ModelLine role="fallback" slot={slot}
-          modelId={props.fallback.model} apiKey={props.fallback.key}
-          onModelChange={props.onFallbackModelChange} onApiKeyChange={props.onFallbackKeyChange}
-          onSave={props.onFallbackSave} saved={props.fallbackSaved}
-        />
-      </div>
+const TaskRow: React.FC<TaskRowProps> = ({ slot, primaryModel, fallbackModel, onPrimaryModelChange, onFallbackModelChange }) => (
+  <div className="py-3 first:pt-0 last:pb-0">
+    <div className="flex items-center gap-2 mb-1.5">
+      <i className={`fa-solid ${slot.icon} text-[#91569c] text-xs w-4 text-center`} />
+      <span className="text-[11px] font-black text-[#5c3a62] uppercase tracking-wide">{slot.label}</span>
+      <span className="text-[9px] text-[#aaa]">— {slot.description}</span>
     </div>
-  );
-};
+    <div className="space-y-1.5 ml-6">
+      <ModelLine role="primary" slot={slot} modelId={primaryModel} onModelChange={onPrimaryModelChange} />
+      <ModelLine role="fallback" slot={slot} modelId={fallbackModel} onModelChange={onFallbackModelChange} />
+    </div>
+  </div>
+);
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -558,19 +585,25 @@ export const GlobalSettings: React.FC = () => {
   const [outputType, setOutputType] = useState(() => localStorage.getItem(LS.defaultOutputType) ?? 'video');
   const [assetDir, setAssetDir] = useState(() => localStorage.getItem(LS.defaultAssetDir) ?? '');
 
-  // Per-task primary + fallback state
-  type SlotPair = { model: string; key: string };
-  const [primary, setPrimary] = useState<Record<string, SlotPair>>(() => {
-    const s: Record<string, SlotPair> = {};
-    for (const slot of TASK_SLOTS) s[slot.id] = { model: localStorage.getItem(slot.modelKey) ?? '', key: localStorage.getItem(slot.apiKeyKey) ?? '' };
+  // Provider keys state
+  const [providerKeys, setProviderKeys] = useState<Record<string, string>>(() => {
+    const keys: Record<string, string> = {};
+    for (const p of PROVIDERS) keys[p.id] = getProviderKey(p.id);
+    return keys;
+  });
+  const [savedProviders, setSavedProviders] = useState<Record<string, boolean>>({});
+
+  // Per-task model selections (no keys — those come from providers now)
+  const [primaryModels, setPrimaryModels] = useState<Record<string, string>>(() => {
+    const s: Record<string, string> = {};
+    for (const slot of TASK_SLOTS) s[slot.id] = localStorage.getItem(slot.modelKey) ?? '';
     return s;
   });
-  const [fallback, setFallback] = useState<Record<string, SlotPair>>(() => {
-    const s: Record<string, SlotPair> = {};
-    for (const slot of TASK_SLOTS) s[slot.id] = { model: localStorage.getItem(slot.fallbackModelKey) ?? '', key: localStorage.getItem(slot.fallbackApiKeyKey) ?? '' };
+  const [fallbackModels, setFallbackModels] = useState<Record<string, string>>(() => {
+    const s: Record<string, string> = {};
+    for (const slot of TASK_SLOTS) s[slot.id] = localStorage.getItem(slot.fallbackModelKey) ?? '';
     return s;
   });
-  const [savedSlots, setSavedSlots] = useState<Record<string, boolean>>({});
 
   useEffect(() => { localStorage.setItem(LS.defaultAspectRatio, aspectRatio); }, [aspectRatio]);
   useEffect(() => { localStorage.setItem(LS.defaultOutputType, outputType); }, [outputType]);
@@ -580,34 +613,15 @@ export const GlobalSettings: React.FC = () => {
   }, [assetDir]);
   useEffect(() => { persistBrandId(activeBrand); }, [activeBrand]);
 
-  const updateSlot = (which: 'primary' | 'fallback', slotId: string, field: 'model' | 'key', value: string) => {
-    const setter = which === 'primary' ? setPrimary : setFallback;
-    setter(prev => ({ ...prev, [slotId]: { ...prev[slotId], [field]: value } }));
+  const handleSaveProviderKey = (providerId: string) => {
+    const key = providerKeys[providerId];
+    if (!key?.trim()) return;
+    saveProviderKey(providerId, key);
+    setSavedProviders(prev => ({ ...prev, [providerId]: true }));
+    setTimeout(() => setSavedProviders(prev => ({ ...prev, [providerId]: false })), 2000);
   };
 
-  const saveSlot = (slot: TaskSlot, which: 'primary' | 'fallback') => {
-    const data = which === 'primary' ? primary[slot.id] : fallback[slot.id];
-    if (!data.model || !data.key.trim()) return;
-    const model = MODELS.find(m => m.id === data.model);
-    if (!model) return;
-
-    const mKey = which === 'primary' ? slot.modelKey : slot.fallbackModelKey;
-    const aKey = which === 'primary' ? slot.apiKeyKey : slot.fallbackApiKeyKey;
-
-    localStorage.setItem(mKey, data.model);
-    localStorage.setItem(aKey, data.key.trim());
-    localStorage.setItem(`${aKey}__${data.model}`, data.key.trim());
-
-    if (which === 'primary' && !localStorage.getItem(LS.defaultProvider)) {
-      localStorage.setItem(LS.defaultProvider, model.provider);
-    }
-
-    const tag = `${slot.id}_${which}`;
-    setSavedSlots(prev => ({ ...prev, [tag]: true }));
-    setTimeout(() => setSavedSlots(prev => ({ ...prev, [tag]: false })), 2000);
-  };
-
-  const anyConfigured = TASK_SLOTS.some(s => primary[s.id].model && primary[s.id].key);
+  const anyKeysConfigured = PROVIDERS.some(p => !!providerKeys[p.id]?.trim());
 
   const [browseError, setBrowseError] = useState('');
   const browseDirectory = async () => {
@@ -633,32 +647,58 @@ export const GlobalSettings: React.FC = () => {
           <p className="text-sm text-[#888] mt-1">Pick the best model for each task — each dropdown only shows models suited for that job</p>
         </div>
 
-        {/* ── Per-Task AI Models ── */}
-        <SectionCard icon="fa-key" title="AI Models — Best of Breed" accent>
-          {!anyConfigured && (
+        {/* ── API Keys (one per provider) ── */}
+        <SectionCard icon="fa-key" title="API Keys" accent>
+          {!anyKeysConfigured && (
             <div className="mb-4 p-3 rounded-lg bg-[#f6f0f8] border border-[#ceadd4] flex items-start gap-2">
               <i className="fa-solid fa-circle-info text-[#91569c] mt-0.5" />
               <p className="text-xs text-[#5c3a62]">
-                Choose the <strong>best model for each task</strong>. Stars (★) mark recommended picks. Models sharing the same provider can reuse the same API key.
+                Enter your API key for each provider you want to use. <strong>One key per provider</strong> — it works for all that provider's models across every task.
               </p>
             </div>
           )}
+          <div className="space-y-2">
+            {PROVIDERS.map(p => (
+              <div key={p.id} className="flex gap-2 items-center">
+                <i className={`fa-solid ${p.icon} text-[#91569c] text-xs w-5 text-center`} />
+                <span className="text-[10px] font-bold text-[#5c3a62] w-44 truncate" title={p.name}>{p.name}</span>
+                <input
+                  type="password"
+                  value={providerKeys[p.id] || ''}
+                  onChange={(e) => setProviderKeys(prev => ({ ...prev, [p.id]: e.target.value }))}
+                  placeholder={p.keyPlaceholder}
+                  className="flex-1 bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-2.5 py-1.5 text-[11px] text-[#3a3a3a] placeholder:text-[#aaa] outline-none focus:ring-2 focus:ring-[#91569c]/30"
+                />
+                <button
+                  onClick={() => handleSaveProviderKey(p.id)}
+                  disabled={!providerKeys[p.id]?.trim()}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all min-w-[56px]
+                    ${savedProviders[p.id]
+                      ? 'bg-green-500 text-white'
+                      : providerKeys[p.id]?.trim()
+                        ? 'bg-[#91569c] text-white hover:bg-[#5c3a62]'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  {savedProviders[p.id] ? <><i className="fa-solid fa-check mr-0.5" />OK</> : 'Save'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
 
+        {/* ── Best of Breed (model selection per task — no keys here) ── */}
+        <SectionCard icon="fa-trophy" title="Best of Breed — Model Selection">
+          <p className="text-[9px] text-[#888] mb-3">Pick the best model for each task. The green/red badge shows whether you have an API key for that model's provider.</p>
           <div className="divide-y divide-[#e0d6e3]">
             {TASK_SLOTS.map(slot => (
               <TaskRow
                 key={slot.id}
                 slot={slot}
-                primary={primary[slot.id]}
-                fallback={fallback[slot.id]}
-                onPrimaryModelChange={(id) => updateSlot('primary', slot.id, 'model', id)}
-                onPrimaryKeyChange={(k) => updateSlot('primary', slot.id, 'key', k)}
-                onPrimarySave={() => saveSlot(slot, 'primary')}
-                primarySaved={!!savedSlots[`${slot.id}_primary`]}
-                onFallbackModelChange={(id) => updateSlot('fallback', slot.id, 'model', id)}
-                onFallbackKeyChange={(k) => updateSlot('fallback', slot.id, 'key', k)}
-                onFallbackSave={() => saveSlot(slot, 'fallback')}
-                fallbackSaved={!!savedSlots[`${slot.id}_fallback`]}
+                primaryModel={primaryModels[slot.id]}
+                fallbackModel={fallbackModels[slot.id]}
+                onPrimaryModelChange={(id) => setPrimaryModels(prev => ({ ...prev, [slot.id]: id }))}
+                onFallbackModelChange={(id) => setFallbackModels(prev => ({ ...prev, [slot.id]: id }))}
               />
             ))}
           </div>
