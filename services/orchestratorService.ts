@@ -18,6 +18,7 @@ export type MasterActionType =
   | 'run_single_agent'
   | 'show_pipeline'
   | 'build_template'
+  | 'run_pm'
   | 'set_field'
   | 'navigate'
   | 'upload_request'
@@ -29,6 +30,7 @@ export interface MasterAction {
   agentId?: string;
   agentInput?: string;
   pipelinePlan?: PipelinePlan;
+  pmBrief?: string;           // User brief text for Project Manager delegation
   field?: string;
   value?: string;
   screen?: string;
@@ -195,6 +197,9 @@ Embed these tags in your responses. They are parsed and executed automatically �
 [ACTION:BUILD_TEMPLATE:brief description of what to build]
   Trigger the Dev Agent pipeline (Backend Dev → Frontend Dev → QA) to generate a new custom template from scratch. Use this when the user's request doesn't match any existing template and needs a completely new pipeline design. Example: [ACTION:BUILD_TEMPLATE:A social media campaign that generates product photos, writes platform-specific captions, and schedules posts across Instagram and TikTok]
 
+[ACTION:RUN_PM:user brief text]
+  Delegate a complex, multi-team request to the Project Manager agent. The PM decomposes the brief into a structured execution plan with team assignments, dependencies, and quality gates — then presents the plan for user approval before any production starts. Use this for requests that span 3+ teams or require creative problem decomposition (full campaigns, multi-language content, cross-domain workflows). Example: [ACTION:RUN_PM:Launch our new eco water bottle. Target health-conscious millennials. Social, email, and video in English, Bulgarian, and Greek.]
+
 [ACTION:SET_FIELD:fieldName:value]
   Set a project field. Valid fields: aim, cta, targetAudience, videoType, format, duration, tone`);
 
@@ -204,9 +209,10 @@ Embed these tags in your responses. They are parsed and executed automatically �
 2. When a user describes a workflow, ALWAYS propose a pipeline plan first (SHOW_PIPELINE). Never execute without showing the plan.
 3. If the request matches a built-in template, suggest it with RUN_TEMPLATE.
 4. If it's close but needs changes, describe what you'd modify and propose a SHOW_PIPELINE with the adjusted steps.
-5. For simple single-agent tasks, use RUN_AGENT directly — no pipeline overhead.
-6. When the user drops files, acknowledge them and suggest what to do with them.
-7. If unsure, ask a clarifying question — don't guess.
+5. For complex multi-team requests (3+ teams, multi-language, full campaigns), use RUN_PM to delegate to the Project Manager for creative decomposition.
+6. For simple single-agent tasks, use RUN_AGENT directly — no pipeline overhead.
+7. When the user drops files, acknowledge them and suggest what to do with them.
+8. If unsure, ask a clarifying question — don't guess.
 8. After a successful custom pipeline, offer to save it as a reusable template.
 9. IMAGE ROUTING — Critical: When a user wants to REPRODUCE an existing image with different text (e.g. "make this identical but change the headline"), use [ACTION:RUN_AGENT:faithful-image-reproduction:instruction]. Do NOT use the 9-shot storyboard pipeline for this. The 9-shot grid is ONLY for creating storyboard frames for video production. Text replacement on existing images goes to the faithful-image-reproduction agent.
 10. CREATIVITY CONTROL — Every request has two freedom axes: TEXT (0=Verbatim, 1=Minor edits, 2=Adapt, 3=Rewrite) and VISUAL (0=Clone, 1=Match, 2=Inspired, 3=Freeform). DEFAULT RULE: When the user provides text/copy, TEXT FREEDOM IS ALWAYS 0 (VERBATIM) unless they explicitly ask you to rewrite it. This means you pass their text through character-for-character — no paraphrasing, no "improvements", no rewording. When you detect text was provided, mention it in your response: "I'll use your text exactly as provided." Watch for signals: "use this text", "replace with", "here is the text" all mean VERBATIM.`);
@@ -335,6 +341,10 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
       }
       case 'BUILD_TEMPLATE': {
         actions.push({ type: 'build_template', description: payload?.trim() });
+        break;
+      }
+      case 'RUN_PM': {
+        actions.push({ type: 'run_pm', pmBrief: payload?.trim() });
         break;
       }
       case 'SET_FIELD': {

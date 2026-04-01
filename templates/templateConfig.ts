@@ -343,6 +343,14 @@ export interface StepInput {
 
 // ─── Pipeline step definition ────────────────────────────────────────────────
 
+// ─── Step execution modes (Three-Layer Architecture) ───────────────────────
+
+/** How a step routes through the agent layers */
+export type StepExecutionMode = 'direct' | 'team-leader';
+
+/** Team Leader identifier — one per team */
+export type TeamLeaderId = `${TeamId}-leader`;
+
 export interface TemplateStep {
   /** Step number (display order) */
   order: number;
@@ -362,6 +370,17 @@ export interface TemplateStep {
   moGuidance?: MoGuidance;
   /** Structured inputs the user provides in this step */
   stepInputs?: StepInput[];
+
+  // ── Three-Layer Orchestration (optional — backward-compatible) ──
+
+  /** Execution mode: 'direct' = specialist only (default), 'team-leader' = TL QA gate */
+  executionMode?: StepExecutionMode;
+  /** Which Team Leader oversees this step (auto-derived from teamId if not set) */
+  teamLeaderId?: TeamLeaderId;
+  /** Minimum TL quality score to pass (1-10, default: 7) */
+  qualityThreshold?: number;
+  /** Max TL retry attempts before escalating to PM (default: 2) */
+  maxTlRetries?: number;
 }
 
 // ─── Full template configuration ─────────────────────────────────────────────

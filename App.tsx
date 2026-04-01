@@ -588,7 +588,7 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('studio');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
   const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);

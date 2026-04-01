@@ -59,6 +59,9 @@ export const whatIfTransformation: TemplateConfig = {
       agents: ['general-analysis'],
       requiresReview: true,
       description: 'AI analyses the reference video and extracts transformation stages',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -67,6 +70,9 @@ export const whatIfTransformation: TemplateConfig = {
       agents: ['image-producer'],
       requiresReview: true,
       description: 'Generate keyframe images for each transformation stage',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -75,6 +81,9 @@ export const whatIfTransformation: TemplateConfig = {
       agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
       description: 'Generate video segments between keyframes, then stitch into one video',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -83,6 +92,9 @@ export const whatIfTransformation: TemplateConfig = {
       agents: ['composition', 'shotstack-render'],
       requiresReview: true,
       description: 'Final composition with overlays, music, and branding via Shotstack',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -147,6 +159,9 @@ export const videoFromKeyframes: TemplateConfig = {
       agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
       description: 'Generate video segments between keyframes, then stitch into one continuous video',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -155,6 +170,9 @@ export const videoFromKeyframes: TemplateConfig = {
       agents: ['text-overlay', 'music-direction', 'caption', 'composition', 'shotstack-render'],
       requiresReview: true,
       description: 'Add overlays, music, captions, and render via Shotstack',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -229,6 +247,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['audience-research'],
       requiresReview: true,
       description: 'Define training topic, upload reference docs, research internal audience profile',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 2,
@@ -237,6 +258,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter'],
       requiresReview: true,
       description: 'AI generates training script, narration, and visual concept from the brief',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -245,6 +269,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['image-producer'],
       requiresReview: true,
       description: 'Generate keyframe images illustrating each training step',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -253,6 +280,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['video-producer', 'video-from-keyframes'],
       requiresReview: true,
       description: 'Generate video segments from keyframe images',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -261,6 +291,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: true,
       description: 'QA agent checks all assets against brand guidelines and training accuracy',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -269,6 +302,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['voiceover', 'translator', 'cultural-reviewer', 'subtitles-hooks', 'text-overlay', 'composition', 'shotstack-render'],
       requiresReview: true,
       description: 'Add voiceover, translate for target markets, cultural review, add subtitles, compose via Shotstack',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 7,
@@ -277,6 +313,9 @@ export const staffTrainingVideo: TemplateConfig = {
       agents: ['video-assembly-reviewer'],
       requiresReview: true,
       description: 'Final quality gate — review complete assembled video',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -386,6 +425,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['audience-research', 'brand-voice-research', 'competitive-trend-research', 'social-media-trend-research', 'deep-research'],
       requiresReview: true,
       description: 'Full competitive + audience intelligence. 4 agents run in parallel, then deep-research synthesises.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 2,
@@ -394,6 +436,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['creative-director', 'concept-creation', 'screenplay', 'copywriter', 'tagline', 'social-copy'],
       requiresReview: true,
       description: 'Creative concept, screenplay, taglines, and platform-specific copy',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -402,6 +447,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['image-producer', 'character-builder', 'character-frames'],
       requiresReview: true,
       description: 'Character design, keyframes, product shots, and lifestyle imagery',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -410,6 +458,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['video-producer', 'video-from-keyframes', 'video-stitching', 'music-generation'],
       requiresReview: true,
       description: 'Generate video segments from keyframes, produce background music',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -418,6 +469,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: true,
       description: 'QA checks all assets against brand guidelines and creative brief',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 1,
     },
     {
       order: 6,
@@ -426,6 +480,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['voiceover', 'video-editing', 'subtitles-hooks', 'text-overlay', 'music-direction', 'caption', 'sound-sync', 'composition', 'shotstack-render', 'thumbnail'],
       requiresReview: true,
       description: 'Post-production: edit, localise, subtitle, compose via Shotstack',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 7,
@@ -434,6 +491,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['image-frame-adjustments', 'image-copy-research', 'image-assembly', 'image-assembly-reviewer'],
       requiresReview: true,
       description: 'Platform-ready images, carousels, social graphics, display ads',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 8,
@@ -442,6 +502,9 @@ export const productMarketingCampaign: TemplateConfig = {
       agents: ['posting', 'scheduling'],
       requiresReview: true,
       description: 'Schedule and publish across all target platforms',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -533,6 +596,9 @@ export const liveShoppingChannel: TemplateConfig = {
       agents: ['audience-research', 'social-media-trend-research'],
       requiresReview: true,
       description: 'Define products, research audience and current trends for the stream',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 2,
@@ -541,6 +607,9 @@ export const liveShoppingChannel: TemplateConfig = {
       agents: ['creative-director', 'concept-creation', 'copywriter'],
       requiresReview: true,
       description: 'Generate shopping script and presenter dialogue',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -549,6 +618,9 @@ export const liveShoppingChannel: TemplateConfig = {
       agents: ['video-producer'],
       requiresReview: true,
       description: 'Generate virtual presenter video with lip sync',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -557,6 +629,9 @@ export const liveShoppingChannel: TemplateConfig = {
       agents: ['subtitles-hooks', 'sound-sync', 'composition', 'shotstack-render'],
       requiresReview: true,
       description: 'Add product overlays, hooks, compose via Shotstack',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -565,6 +640,9 @@ export const liveShoppingChannel: TemplateConfig = {
       agents: ['posting', 'scheduling'],
       requiresReview: true,
       description: 'Set up stream on target platform and schedule go-live',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -780,6 +858,9 @@ export const nineCameraAngleFrames: TemplateConfig = {
       agents: ['general-analysis'],
       requiresReview: true,
       description: 'AI analyses all uploaded references — character traits, outfit details, location descriptions — into structured profiles',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
       moGuidance: {
         instructions: 'I\'m studying all your reference images now. I\'ll build a detailed profile of:\n\n👤 Character — face shape, skin tone, build, hair, distinctive features\n👗 Each outfit — garment type, colours, fabric, styling details\n🏠 Each location — space type, lighting, mood, key elements\n\nThis takes a moment...',
         validationPrompt: 'Review the AI analysis output. Check: (1) Does the character description match the uploaded images? (2) Are all outfits described accurately? (3) Are all locations described? (4) Are there any obvious errors or missing details? Suggest corrections if needed.',
@@ -800,6 +881,9 @@ export const nineCameraAngleFrames: TemplateConfig = {
       agents: ['character-frames', 'character-variations'],
       requiresReview: true,
       description: 'Generate image prompts: 9 camera angles × outfits × locations, plus optional outfit-only standalone shots',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
       moGuidance: {
         instructions: 'I\'m creating the image generation prompts now. For each combination of outfit + location, I\'ll write 9 camera angle prompts:\n\n📐 ELS → ECU (Extreme Long Shot to Extreme Close-Up)\n📸 Low Angle + High Angle\n\nIf you enabled outfit standalone, I\'ll also create flat-lay and styled product prompts for each outfit.',
         validationPrompt: 'Review the generated prompts. Check: (1) Do all 9 camera angles follow the correct cinematic conventions (ELS, LS, MLS, MS, MCU, CU, ECU, Low Angle, High Angle)? (2) Is the character description consistent across all prompts? (3) Are outfit details accurate per prompt set? (4) Are location details accurate per prompt set? (5) If outfit standalone prompts exist, are they well-suited for product photography?',
@@ -820,6 +904,9 @@ export const nineCameraAngleFrames: TemplateConfig = {
       agents: ['image-producer'],
       requiresReview: true,
       description: 'Generate all camera angle images from the approved prompts',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
       moGuidance: {
         instructions: 'Generating all frames now. This may take a while depending on how many outfit×location combinations you have.\n\nI\'ll show each frame as it completes so you can spot issues early.',
         validationPrompt: 'Review the generated frames. For each frame check: (1) Does the character match the reference? (2) Is the outfit correct for this set? (3) Is the background/location correct? (4) Is the camera angle correct (ELS, LS, etc.)? (5) Overall image quality — any artifacts, distortions, or inconsistencies? Flag specific frames that need regeneration.',
@@ -841,6 +928,9 @@ export const nineCameraAngleFrames: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: true,
       description: 'QA reviews all frames for character, outfit, and location consistency across the entire set',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 1,
       moGuidance: {
         instructions: 'Running the final quality check. I\'m comparing all frames to ensure:\n\n✅ Same character across every frame\n✅ Correct outfit in each set\n✅ Consistent lighting and colour palette per location\n✅ No jarring inconsistencies between camera angles',
         validationPrompt: 'Perform a comprehensive consistency review across ALL generated frames. Check: (1) Character consistency — does the same person appear in every frame? (2) Outfit consistency — is each outfit set internally consistent? (3) Location consistency — does each location set feel like the same space? (4) Cross-set coherence — do all frames feel like they belong to the same production? Score overall consistency 1-10 and list specific issues.',
@@ -1158,6 +1248,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['youtube-channel-analyser'],
       requiresReview: true,
       description: 'Deep analysis of your channel — content performance, audience, SEO, what works and what doesn\'t',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -1166,6 +1259,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['social-media-trend-research', 'competitive-trend-research', 'audience-research'],
       requiresReview: true,
       description: 'Research current social media trends, competitor strategies, and audience behaviour across platforms',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
       parallel: true,
     },
     {
@@ -1175,6 +1271,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['content-calendar'],
       requiresReview: true,
       description: 'Generate a structured content calendar with topics, formats, platforms, and dates based on all research',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -1183,6 +1282,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['creative-director', 'concept-creation', 'screenplay', 'social-copy'],
       requiresReview: true,
       description: 'Write scripts, captions, and platform-specific copy for each content piece in the calendar',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -1191,6 +1293,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['image-producer'],
       requiresReview: true,
       description: 'Generate thumbnail concepts and visual assets for each piece of content',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 7,
@@ -1199,6 +1304,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['posting'],
       requiresReview: true,
       description: 'Prepare platform-specific posting packages with optimised copy, hashtags, SEO metadata, and specs',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 8,
@@ -1207,6 +1315,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['scheduling'],
       requiresReview: true,
       description: 'Generate optimal publishing schedule across platforms, accounting for time zones and algorithm behaviour',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
     {
       order: 9,
@@ -1215,6 +1326,9 @@ export const socialMediaContentAutomation: TemplateConfig = {
       agents: ['performance-report'],
       requiresReview: false,
       description: 'After content is published, analyse performance and generate recommendations for the next cycle',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
   ],
 
@@ -1503,6 +1617,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['audience-research', 'competitive-trend-research', 'social-media-trend-research'],
       requiresReview: true,
       description: 'Input campaign brief. Research audience, competitors, and trends to inform creative direction.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
       parallel: true,
     },
     {
@@ -1512,6 +1629,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['creative-director', 'concept-creation', 'screenplay'],
       requiresReview: true,
       description: 'Develop campaign concept, creative direction, and full screenplay with shot descriptions.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -1520,6 +1640,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['character-builder', 'character-variations', 'image-producer'],
       requiresReview: true,
       description: 'Design characters (or use existing references), create wardrobe/expression variations, generate keyframe images for each scene.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -1528,6 +1651,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['video-from-keyframes', 'video-stitching'],
       requiresReview: true,
       description: 'Generate video segments between keyframes and stitch into one continuous video.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -1536,6 +1662,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['voiceover', 'music-direction', 'subtitles-hooks', 'text-overlay', 'caption', 'composition'],
       requiresReview: true,
       description: 'Add voiceover, music, subtitles, text overlays, and captions. Compose the final edit.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -1544,6 +1673,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['shotstack-render', 'thumbnail', 'video-assembly-reviewer'],
       requiresReview: true,
       description: 'Render final video via Shotstack, generate thumbnails, run QA review on the assembled video.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 7,
@@ -1552,6 +1684,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['tagline', 'social-copy'],
       requiresReview: true,
       description: 'Generate taglines, social media copy, and platform-specific posting packages.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
     },
     {
       order: 8,
@@ -1560,6 +1695,9 @@ export const campaignVideoProducer: TemplateConfig = {
       agents: ['posting', 'scheduling'],
       requiresReview: true,
       description: 'Prepare per-platform posting packages and generate optimal publishing schedule.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
   ],
 
@@ -1630,6 +1768,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['character-builder', 'image-producer'],
       requiresReview: true,
       description: 'Generate the base character in a neutral pose — this becomes the canonical reference for all variations.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -1638,6 +1779,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['character-variations'],
       requiresReview: true,
       description: 'Generate expression variations: happy, serious, surprised, confident, thoughtful, laughing — maintaining character identity.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -1646,6 +1790,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['character-variations'],
       requiresReview: true,
       description: 'Generate wardrobe variations: casual, professional, formal, seasonal, branded — same character, different outfits.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -1654,6 +1801,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['character-frames'],
       requiresReview: true,
       description: 'Generate the character in various scene contexts: office, outdoor, studio, retail, lifestyle — different angles and poses.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -1662,6 +1812,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['style-transfer'],
       requiresReview: true,
       description: 'Apply different visual styles to the character: photorealistic, illustration, anime, watercolour — for different campaign needs.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 7,
@@ -1670,6 +1823,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['creative-director', 'copywriter'],
       requiresReview: true,
       description: 'Write the character bio, personality profile, brand voice guidelines, and usage rules for campaign consistency.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 8,
@@ -1678,6 +1834,9 @@ export const characterDesignStudio: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: false,
       description: 'QA review across all generated images — verify facial consistency, proportions, and brand alignment.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
   ],
 
@@ -1855,6 +2014,9 @@ export const emailCampaignBuilder: TemplateConfig = {
       agents: ['audience-research', 'brand-voice-research'],
       requiresReview: true,
       description: 'Research target audience pain points, motivations, and preferred communication style. Establish brand voice for the sequence.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
       parallel: true,
     },
     {
@@ -1864,6 +2026,9 @@ export const emailCampaignBuilder: TemplateConfig = {
       agents: ['creative-director'],
       requiresReview: true,
       description: 'Design the sequence arc: email count, theme per email, CTA progression, branching logic, and exit conditions.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -1872,6 +2037,9 @@ export const emailCampaignBuilder: TemplateConfig = {
       agents: ['email-sequence-writer', 'copywriter', 'tagline'],
       requiresReview: true,
       description: 'Write each email: subject line (3 A/B variants), preview text, body copy, CTA buttons. Generate A/B variants for top-of-funnel emails.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -1880,6 +2048,9 @@ export const emailCampaignBuilder: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: false,
       description: 'Verify tone, messaging, and CTA progression are coherent across the entire sequence.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -1888,6 +2059,9 @@ export const emailCampaignBuilder: TemplateConfig = {
       agents: ['scheduling'],
       requiresReview: true,
       description: 'Generate optimal send times, day-of-week recommendations, and delay intervals between emails.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
   ],
 
@@ -2061,6 +2235,9 @@ export const brandAudit: TemplateConfig = {
       agents: ['brand-voice-research'],
       requiresReview: true,
       description: 'Analyse brand guidelines to establish the voice, tone, colour palette, typography, and messaging pillars to audit against.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 3,
@@ -2069,6 +2246,9 @@ export const brandAudit: TemplateConfig = {
       agents: ['brand-consistency-checker', 'style-identifier', 'mood-identifier'],
       requiresReview: true,
       description: 'Analyse each visual asset: colour usage, typography, logo placement, imagery style, and mood alignment vs brand guidelines.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
     {
       order: 4,
@@ -2077,6 +2257,9 @@ export const brandAudit: TemplateConfig = {
       agents: ['sentiment-analyser'],
       requiresReview: true,
       description: 'Analyse written content: tone of voice, vocabulary, messaging alignment, CTA consistency, and sentiment match.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 5,
@@ -2085,6 +2268,9 @@ export const brandAudit: TemplateConfig = {
       agents: ['qa-consistency'],
       requiresReview: false,
       description: 'Check for consistency across all content pieces — are they recognisably the same brand?',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 2,
     },
     {
       order: 6,
@@ -2093,6 +2279,9 @@ export const brandAudit: TemplateConfig = {
       agents: ['report-generator'],
       requiresReview: true,
       description: 'Compile findings: overall brand health score, per-asset audit results, specific deviations with before/after fix suggestions, priority actions.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
     },
   ],
 

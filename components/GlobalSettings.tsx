@@ -41,6 +41,8 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'mistral',   name: 'Mistral',                          keyPlaceholder: 'Mistral API key',             icon: 'fa-wind',         storageKey: 'tensorax_provider_key__mistral',   legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key'] },
   { id: 'deepseek',  name: 'DeepSeek',                         keyPlaceholder: 'sk-... DeepSeek API key',     icon: 'fa-water',        storageKey: 'tensorax_provider_key__deepseek',  legacyKeys: ['tensorax_analysis_key', 'tensorax_copy_key'] },
   { id: 'shotstack', name: 'Shotstack',                        keyPlaceholder: 'Shotstack API key',           icon: 'fa-clapperboard', storageKey: 'tensorax_provider_key__shotstack', legacyKeys: ['tensorax_shotstack_key'] },
+  { id: 'elevenlabs',name: 'ElevenLabs (TTS / Voice)',         keyPlaceholder: 'ElevenLabs API key',          icon: 'fa-microphone',   storageKey: 'tensorax_provider_key__elevenlabs',legacyKeys: ['tensorax_audio_key'] },
+  { id: 'runway',    name: 'Runway',                           keyPlaceholder: 'Runway API key',              icon: 'fa-film',         storageKey: 'tensorax_provider_key__runway',    legacyKeys: ['tensorax_video_key'] },
 ];
 
 /** Get the provider API key from localStorage */
@@ -80,7 +82,7 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // GOOGLE — Text / Analysis / Vision  (Gemini API key: AIza...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
+  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis', 'Translation'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3.1-pro-preview' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-3.1-pro-preview' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.1-pro-preview' },
@@ -164,7 +166,7 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // OPENAI — Text & Reasoning  (key: sk-...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'gpt-5.4',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Reasoning', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
+  { id: 'gpt-5.4',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Reasoning', 'Analysis', 'Vision', 'Video Analysis', 'Translation'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gpt-5.4' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gpt-5.4' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gpt-5.4' },
@@ -204,6 +206,8 @@ const MODELS: ModelDef[] = [
   { id: 'gpt-image-1-mini', provider: 'openai', providerName: 'OpenAI — Image Gen', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Image Gen — Fast & Cheap'], slotSync: [
     { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'gpt-image-1-mini' },
   ]},
+  // ASR
+  { id: 'whisper-v3',         provider: 'openai', providerName: 'OpenAI — ASR (Whisper)', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['ASR'], slotSync: [] },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DEEPSEEK  (key: sk-...)
@@ -292,8 +296,20 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-ocr' },
   ]},
   // Translation
-  { id: 'qwen-mt-turbo',               provider: 'dashscope', providerName: 'Qwen — Translation', keyPlaceholder: 'DashScope API key', capabilities: ['Copy'], slotSync: [
+  { id: 'qwen-mt-turbo',               provider: 'dashscope', providerName: 'Qwen — Translation', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Translation'], slotSync: [
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen-mt-turbo' },
+  ]},
+  // Coding
+  { id: 'qwen3-coder-plus',            provider: 'dashscope', providerName: 'Qwen — Coding', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Reasoning'], slotSync: [] },
+  { id: 'qwen3-coder-next',            provider: 'dashscope', providerName: 'Qwen — Coding', keyPlaceholder: 'DashScope API key', capabilities: ['Copy'], slotSync: [] },
+  // Safety
+  { id: 'qwen3-guard',                 provider: 'dashscope', providerName: 'Qwen — Safety', keyPlaceholder: 'DashScope API key', capabilities: ['Analysis'], slotSync: [] },
+  // ASR
+  { id: 'qwen3-asr-flash',             provider: 'dashscope', providerName: 'Qwen — ASR', keyPlaceholder: 'DashScope API key', capabilities: ['ASR'], slotSync: [] },
+  // Vision — Flagship
+  { id: 'qwen3-vl-235b',               provider: 'dashscope', providerName: 'Qwen — Vision', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-vl-235b' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen3-vl-235b' },
   ]},
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -318,6 +334,26 @@ const MODELS: ModelDef[] = [
   ]},
   { id: 'flux-1-schnell',     provider: 'fal', providerName: 'Flux — Image Gen (via fal.ai)', keyPlaceholder: 'fal.ai API key', capabilities: ['Image Gen — Ultra Fast'], slotSync: [
     { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'flux-1-schnell' },
+    { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
+  ]},
+  { id: 'flux-2-pro',         provider: 'fal', providerName: 'Flux 2 — Image Gen (via fal.ai)', keyPlaceholder: 'fal.ai API key', capabilities: ['Image Gen — Best Quality'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'flux-2-pro' },
+    { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
+  ]},
+  { id: 'flux-2-dev',         provider: 'fal', providerName: 'Flux 2 — Image Gen (via fal.ai)', keyPlaceholder: 'fal.ai API key', capabilities: ['Image Gen'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'flux-2-dev' },
+    { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
+  ]},
+  { id: 'flux-kontext-pro',   provider: 'fal', providerName: 'Flux Kontext — Image Edit (via fal.ai)', keyPlaceholder: 'fal.ai API key', capabilities: ['Image Gen + Edit'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'flux-kontext-pro' },
+    { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
+  ]},
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // IDEOGRAM — Image Gen (Text Rendering)  via fal.ai
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'ideogram-3.0',       provider: 'fal', providerName: 'Ideogram — Image Gen (via fal.ai)', keyPlaceholder: 'fal.ai API key', capabilities: ['Image Gen — Text Rendering'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'ideogram-3.0' },
     { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
   ]},
 
@@ -392,12 +428,24 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_video_key', modelKey: 'tensorax_video_model', model: 'wan-v2.2-a14b' },
     { baseKey: 'tensorax_fal_key', modelKey: '', model: '' },
   ]},
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ELEVENLABS — Text-to-Speech / Voice Cloning
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'elevenlabs-tts',     provider: 'elevenlabs', providerName: 'ElevenLabs — TTS', keyPlaceholder: 'ElevenLabs API key', capabilities: ['TTS'], slotSync: [] },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RUNWAY — Video Generation
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'runway-gen-4.5',     provider: 'runway', providerName: 'Runway — Video Gen', keyPlaceholder: 'Runway API key', capabilities: ['Video Gen — Cinematic'], slotSync: [
+    { baseKey: 'tensorax_video_key', modelKey: 'tensorax_video_model', model: 'runway-gen-4.5' },
+  ]},
 ];
 
 // ─── Task slot definitions ──────────────────────────────────────────────────
 // Each task has a specific purpose and only shows models suited for it.
 
-type TaskTag = 'copy' | 'analysis' | 'video_analysis' | 'image_gen' | 'video_gen' | 'reasoning';
+type TaskTag = 'copy' | 'analysis' | 'video_analysis' | 'image_gen' | 'video_gen' | 'reasoning' | 'translation' | 'audio';
 
 interface TaskSlot {
   id: TaskTag;
@@ -461,6 +509,22 @@ const TASK_SLOTS: TaskSlot[] = [
     fallbackModelKey: 'tensorax_reasoning_fallback_model', fallbackApiKeyKey: 'tensorax_reasoning_fallback_key',
     capabilityFilter: ['Reasoning', 'Research', 'Deep Reasoning'],
     recommended: 'o3', recommendedFallback: 'claude-opus-4-6',
+  },
+  {
+    id: 'translation',   label: 'Translation & Localisation', icon: 'fa-language',
+    description: 'Content translation across BG/GR/EN and 119+ languages',
+    modelKey: 'tensorax_translation_model', apiKeyKey: 'tensorax_translation_key',
+    fallbackModelKey: 'tensorax_translation_fallback_model', fallbackApiKeyKey: 'tensorax_translation_fallback_key',
+    capabilityFilter: ['Translation'],
+    recommended: 'qwen-mt-turbo', recommendedFallback: 'gemini-3.1-pro-preview',
+  },
+  {
+    id: 'audio',          label: 'Audio (TTS & ASR)', icon: 'fa-headphones',
+    description: 'Voiceover, speech recognition, audio generation',
+    modelKey: 'tensorax_audio_model', apiKeyKey: 'tensorax_audio_key',
+    fallbackModelKey: 'tensorax_audio_fallback_model', fallbackApiKeyKey: 'tensorax_audio_fallback_key',
+    capabilityFilter: ['TTS', 'ASR'],
+    recommended: 'elevenlabs-tts', recommendedFallback: 'whisper-v3',
   },
 ];
 
