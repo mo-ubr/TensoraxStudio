@@ -39,26 +39,28 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-3.1-pro-preview' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.1-pro-preview' },
   ]},
-  { id: 'gemini-3.0-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision'], slotSync: [
+  { id: 'gemini-3.0-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3.0-pro' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-3.0-pro' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.0-pro' },
   ]},
-  { id: 'gemini-3-flash-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision'], slotSync: [
+  { id: 'gemini-3-flash-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3-flash-preview' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-3-flash-preview' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3-flash-preview' },
   ]},
-  { id: 'gemini-3.1-flash-lite',    provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis — Budget'], slotSync: [
+  { id: 'gemini-3.1-flash-lite',    provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis — Budget', 'Vision'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3.1-flash-lite' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.1-flash-lite' },
   ]},
-  { id: 'gemini-2.5-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision'], slotSync: [
+  { id: 'gemini-2.5-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-2.5-pro' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-2.5-pro' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-2.5-pro' },
   ]},
-  { id: 'gemini-2.5-flash',         provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis — Fast'], slotSync: [
+  { id: 'gemini-2.5-flash',         provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis — Fast', 'Vision', 'Video Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-2.5-flash' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-2.5-flash' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-2.5-flash' },
   ]},
 
@@ -100,15 +102,15 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // ANTHROPIC CLAUDE  (key: sk-ant-...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'claude-opus-4-6',          provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Creative Writing', 'Reasoning'], slotSync: [
+  { id: 'claude-opus-4-6',          provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing', 'Reasoning'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'claude-opus-4-6' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'claude-opus-4-6' },
   ]},
-  { id: 'claude-sonnet-4-6',        provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Creative Writing'], slotSync: [
+  { id: 'claude-sonnet-4-6',        provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'claude-sonnet-4-6' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'claude-sonnet-4-6' },
   ]},
-  { id: 'claude-haiku-4-5',         provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Analysis — Fast', 'Copy — Budget'], slotSync: [
+  { id: 'claude-haiku-4-5',         provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Analysis — Fast', 'Vision', 'Copy — Budget'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'claude-haiku-4-5' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'claude-haiku-4-5' },
   ]},
@@ -116,28 +118,30 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // OPENAI — Text & Reasoning  (key: sk-...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'gpt-5.4',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Reasoning', 'Analysis'], slotSync: [
+  { id: 'gpt-5.4',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Reasoning', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gpt-5.4' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gpt-5.4' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gpt-5.4' },
   ]},
-  { id: 'gpt-5.4-mini',     provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Analysis — Balanced'], slotSync: [
+  { id: 'gpt-5.4-mini',     provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Analysis — Balanced', 'Vision'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gpt-5.4-mini' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gpt-5.4-mini' },
   ]},
-  { id: 'o3',               provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Deep Reasoning', 'Research'], slotSync: [
+  { id: 'o3',               provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Deep Reasoning', 'Research', 'Vision'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'o3' },
   ]},
-  { id: 'o3-pro',           provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Max Reasoning', 'Research'], slotSync: [
+  { id: 'o3-pro',           provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Max Reasoning', 'Research', 'Vision'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'o3-pro' },
   ]},
-  { id: 'o4-mini',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Reasoning — Fast & Cheap'], slotSync: [
+  { id: 'o4-mini',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Reasoning — Fast & Cheap', 'Vision'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'o4-mini' },
   ]},
-  { id: 'gpt-4.1',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Analysis', '1M Context'], slotSync: [
+  { id: 'gpt-4.1',          provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis', '1M Context'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gpt-4.1' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gpt-4.1' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gpt-4.1' },
   ]},
-  { id: 'gpt-4.1-mini',     provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy — Fast', '1M Context'], slotSync: [
+  { id: 'gpt-4.1-mini',     provider: 'openai', providerName: 'OpenAI — Text & Reasoning', keyPlaceholder: 'sk-... OpenAI API key', capabilities: ['Copy — Fast', 'Vision', '1M Context'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gpt-4.1-mini' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gpt-4.1-mini' },
   ]},
@@ -184,20 +188,73 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // OPENROUTER — Open-Weight Models  (key: sk-or-...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'meta-llama/llama-4-maverick',               provider: 'openrouter', providerName: 'OpenRouter — Meta Llama', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis', 'Copy'], slotSync: [
+  { id: 'meta-llama/llama-4-maverick',               provider: 'openrouter', providerName: 'OpenRouter — Meta Llama', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis', 'Video Analysis', 'Copy'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'meta-llama/llama-4-maverick' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'meta-llama/llama-4-maverick' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'meta-llama/llama-4-maverick' },
   ]},
-  { id: 'meta-llama/llama-4-scout',                  provider: 'openrouter', providerName: 'OpenRouter — Meta Llama', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis', '10M Context'], slotSync: [
+  { id: 'meta-llama/llama-4-scout',                  provider: 'openrouter', providerName: 'OpenRouter — Meta Llama', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis', 'Video Analysis', '10M Context'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'meta-llama/llama-4-scout' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'meta-llama/llama-4-scout' },
   ]},
-  { id: 'qwen/qwen3-vl-plus',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+  { id: 'qwen/qwen3-235b-a22b',                       provider: 'openrouter', providerName: 'OpenRouter — Qwen Flagship', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Vision', 'Reasoning', 'Research', 'Creative Writing'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-235b-a22b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-235b-a22b' },
+  ]},
+  { id: 'qwen/qwen3-32b',                            provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-32b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-32b' },
+  ]},
+  { id: 'qwen/qwen3-30b-a3b',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-30b-a3b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-30b-a3b' },
+  ]},
+  { id: 'qwen/qwen3-14b',                            provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis — Budget'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-14b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3-14b' },
+  ]},
+  { id: 'qwen/qwen3-vl-plus',                        provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-vl-plus' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen3-vl-plus' },
   ]},
   { id: 'qwen/qwen3.5-plus',                         provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Copy', 'Analysis', 'Reasoning'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3.5-plus' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen3.5-plus' },
+  ]},
+  { id: 'qwen/qwen3-vl-235b-a22b',                    provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen3-vl-235b-a22b' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen3-vl-235b-a22b' },
+  ]},
+  { id: 'qwen/qwen2.5-vl-32b',                       provider: 'openrouter', providerName: 'OpenRouter — Qwen VL', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen2.5-vl-32b' },
+  ]},
+  { id: 'qwen/qwen2.5-omni-7b',                      provider: 'openrouter', providerName: 'OpenRouter — Qwen Omni', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Vision', 'Video Analysis', 'Analysis', 'Copy'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwen2.5-omni-7b' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen/qwen2.5-omni-7b' },
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen/qwen2.5-omni-7b' },
+  ]},
+  { id: 'qwen/qwq-32b',                              provider: 'openrouter', providerName: 'OpenRouter — Qwen', keyPlaceholder: 'sk-or-... OpenRouter key', capabilities: ['Reasoning', 'Deep Reasoning', 'Research'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen/qwq-32b' },
+  ]},
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALIBABA DASHSCOPE — Qwen Specialist Models  (DashScope API key)
+  // ═══════════════════════════════════════════════════════════════════════════
+  { id: 'qwen-vl-max',           provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen VL', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Video Analysis', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-vl-max' },
+    { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'qwen-vl-max' },
+  ]},
+  { id: 'qwen-image-plus',       provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Image', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Text Rendering'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-plus' },
+  ]},
+  { id: 'qwen-image-edit',       provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Image', keyPlaceholder: 'DashScope API key', capabilities: ['Image Gen — Edit'], slotSync: [
+    { baseKey: 'tensorax_image_key', modelKey: 'tensorax_image_model', model: 'qwen-image-edit' },
+  ]},
+  { id: 'qwen-ocr',              provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen OCR', keyPlaceholder: 'DashScope API key', capabilities: ['Vision', 'Analysis'], slotSync: [
+    { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen-ocr' },
+  ]},
+  { id: 'qwen-mt-turbo',         provider: 'dashscope', providerName: 'Alibaba DashScope — Qwen Translation', keyPlaceholder: 'DashScope API key', capabilities: ['Copy'], slotSync: [
+    { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen-mt-turbo' },
   ]},
 
   // ═══════════════════════════════════════════════════════════════════════════
