@@ -15,9 +15,10 @@
  */
 
 import { runAgent, runAgentsParallel, type AgentRunOptions, type AgentRunResult } from './agentRunner';
-import type { TemplateConfig, TemplateStep, AgentId, TeamId, ToolId } from '../templates/templateConfig';
+import type { TemplateConfig, TemplateStep, AgentId, TeamId, ToolId, TeamLeaderId } from '../templates/templateConfig';
 import { checkTools, type ToolAvailability } from './toolRegistry';
 import { TEAM_CATALOGUE, type AgentMeta } from './templateService';
+import { getTeamLeaderPrompt } from '../prompts/orchestration/teamLeaderTemplate';
 
 // ─── Pipeline State Types ───────────────────────────────────────────────────
 
@@ -32,6 +33,15 @@ export interface StepOutput {
   summary: string;
   /** Timestamp when step completed */
   completedAt: string;
+}
+
+/** Team Leader QA review result */
+export interface TlReview {
+  qualityScore: number;
+  status: 'approved' | 'revision_needed' | 'rejected';
+  issues: { severity: string; description: string; suggestion: string }[];
+  recommendation: string;
+  attempt: number;
 }
 
 export interface PipelineStepState {
@@ -49,6 +59,8 @@ export interface PipelineStepState {
   retries: number;
   /** Timestamp when step started running */
   startedAt?: string;
+  /** Team Leader QA reviews (one per attempt, most recent last) */
+  tlReviews?: TlReview[];
 }
 
 export interface PipelineState {
@@ -84,7 +96,10 @@ export type PipelineEventType =
   | 'step_skipped'
   | 'pipeline_completed'
   | 'pipeline_failed'
-  | 'pipeline_paused';
+  | 'pipeline_paused'
+  | 'tl_review_started'
+  | 'tl_review_passed'
+  | 'tl_review_failed_retrying';
 
 export interface PipelineEvent {
   type: PipelineEventType;
@@ -229,8 +244,10 @@ export async function executeNextStep(
   stepState.input = buildStepInput(pipeline, stepIndex);
 
   try {
-    // Run all agents for this step
-    const agentResults = await runStepAgents(stepState.step, stepState.input);
+    // Run agents — with Team Leader QA gate if step.executionMode === 'team-leader'
+    const agentResults = stepState.step.executionMode === 'team-leader'
+      ? await runWithTeamLeaderGate(stepState.step, stepState.input, stepState, onEvent, pipeline.id, stepIndex)
+      : await runStepAgents(stepState.step, stepState.input);
 
     // Build step output
     stepState.output = {
@@ -376,6 +393,122 @@ export async function runPipeline(
   }
 
   return pipeline;
+}
+
+// ─── Team Leader QA Gate ──────────────────────────────────────────────────
+
+/**
+ * Run specialist output through a Team Leader for quality review.
+ * If the TL rejects, retry the specialist with TL feedback (up to maxTlRetries).
+ * Returns the final specialist results (approved or best-effort after max retries).
+ */
+async function runWithTeamLeaderGate(
+  step: TemplateStep,
+  input: Record<string, unknown>,
+  stepState: PipelineStepState,
+  onEvent?: PipelineEventHandler,
+  pipelineId?: string,
+  stepIndex?: number,
+): Promise<AgentRunResult[]> {
+  const maxRetries = step.maxTlRetries ?? 2;
+  const threshold = step.qualityThreshold ?? 7;
+  const teamId = step.teamLeaderId?.replace('-leader', '') || step.teamId;
+  const tlPrompt = getTeamLeaderPrompt(teamId);
+
+  let specialistResults = await runStepAgents(step, input);
+  if (!stepState.tlReviews) stepState.tlReviews = [];
+
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    // Fire TL review event
+    onEvent?.({
+      type: 'tl_review_started',
+      pipelineId: pipelineId || '',
+      stepIndex,
+      stepName: step.name,
+      data: { attempt, teamId },
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run Team Leader review
+    const tlInput = {
+      originalBrief: input,
+      specialistOutput: specialistResults.map(r => r.data ?? r.rawText),
+      qualityThreshold: threshold,
+      attempt,
+    };
+
+    try {
+      const tlResult = await runAgent({
+        agentPrompt: tlPrompt,
+        userMessage: JSON.stringify(tlInput, null, 2),
+      });
+
+      // Parse TL verdict
+      let verdict: TlReview;
+      try {
+        const parsed = typeof tlResult.data === 'object' ? tlResult.data : JSON.parse(tlResult.rawText || '{}');
+        verdict = {
+          qualityScore: (parsed as any).qualityScore ?? 5,
+          status: (parsed as any).status ?? ((parsed as any).qualityScore >= threshold ? 'approved' : 'revision_needed'),
+          issues: (parsed as any).issues ?? [],
+          recommendation: (parsed as any).recommendation ?? '',
+          attempt,
+        };
+      } catch {
+        // TL response wasn't valid JSON — treat as passed with warning
+        verdict = { qualityScore: 7, status: 'approved', issues: [], recommendation: 'TL response unparseable — auto-approved', attempt };
+      }
+
+      stepState.tlReviews.push(verdict);
+
+      // If approved or this is the last attempt, return
+      if (verdict.qualityScore >= threshold || attempt > maxRetries) {
+        onEvent?.({
+          type: 'tl_review_passed',
+          pipelineId: pipelineId || '',
+          stepIndex,
+          stepName: step.name,
+          data: { qualityScore: verdict.qualityScore, attempt, status: verdict.status },
+          timestamp: new Date().toISOString(),
+        });
+        return specialistResults;
+      }
+
+      // TL rejected — retry specialist with feedback
+      onEvent?.({
+        type: 'tl_review_failed_retrying',
+        pipelineId: pipelineId || '',
+        stepIndex,
+        stepName: step.name,
+        data: { qualityScore: verdict.qualityScore, issues: verdict.issues, attempt },
+        timestamp: new Date().toISOString(),
+      });
+
+      // Augment input with TL feedback for the retry
+      const retryInput = {
+        ...input,
+        _tlFeedback: {
+          qualityScore: verdict.qualityScore,
+          issues: verdict.issues,
+          recommendation: verdict.recommendation,
+          instruction: 'The Team Leader reviewed your previous output and found issues. Please address the feedback below and produce an improved version.',
+        },
+      };
+
+      specialistResults = await runStepAgents(step, retryInput);
+    } catch (tlError) {
+      // TL agent itself failed — skip QA and return specialist output as-is
+      const fallbackReview: TlReview = {
+        qualityScore: -1, status: 'approved', issues: [],
+        recommendation: `TL review failed: ${tlError instanceof Error ? tlError.message : String(tlError)}. Auto-approved.`,
+        attempt,
+      };
+      stepState.tlReviews.push(fallbackReview);
+      return specialistResults;
+    }
+  }
+
+  return specialistResults;
 }
 
 // ─── Internal: Step Agent Execution ─────────────────────────────────────────

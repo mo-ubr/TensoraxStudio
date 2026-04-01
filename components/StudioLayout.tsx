@@ -16,6 +16,7 @@ import { MasterOrchestrator } from './MasterOrchestrator';
 import type { MasterAction, PipelinePlan } from '../services/orchestratorService';
 import { composeTemplateFromPlan } from '../services/orchestratorService';
 import { createTemplate, getTemplate } from '../services/templateService';
+import { generatePlan, planToTemplate, type PmPlan } from '../services/projectManagerService';
 import {
   createPipeline,
   runPipeline,
@@ -105,13 +106,29 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
           }
         }
         break;
+      case 'run_pm':
+        if (action.pmBrief) {
+          // Delegate to Project Manager for creative decomposition
+          (async () => {
+            try {
+              const { plan } = await generatePlan(action.pmBrief!, activeProject ? { projectId: activeProject.id, projectName: activeProject.name } : undefined);
+              // Convert PM plan to a TemplateConfig with TL-gated steps
+              const templateConfig = planToTemplate(plan);
+              try { createTemplate(templateConfig); } catch { /* may already exist */ }
+              launchPipeline(templateConfig.id);
+            } catch (err) {
+              console.error('PM plan generation failed:', err);
+            }
+          })();
+        }
+        break;
       case 'navigate':
         if (action.screen) onNavigate(action.screen);
         break;
       default:
         onAction(action);
     }
-  }, [launchPipeline, onStartTemplate, onNavigate, onAction]);
+  }, [launchPipeline, onStartTemplate, onNavigate, onAction, activeProject]);
 
   // Handle Mo's freeform pipeline plans
   const handleRunPipeline = useCallback(async (plan: PipelinePlan) => {
