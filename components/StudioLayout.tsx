@@ -239,7 +239,27 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
                   {stepState.status === 'completed' && <span className="ml-auto text-green-500">&#10003;</span>}
                   {stepState.status === 'running' && <span className="ml-auto text-blue-500 animate-pulse">&#9679;</span>}
                   {stepState.status === 'failed' && <span className="ml-auto text-red-500">&#10007;</span>}
+                  {/* TL Quality Score Badge */}
+                  {stepState.tlReviews && stepState.tlReviews.length > 0 && (() => {
+                    const lastReview = stepState.tlReviews[stepState.tlReviews.length - 1];
+                    const score = lastReview.qualityScore;
+                    const color = score >= 8 ? 'bg-green-100 text-green-700 border-green-300' :
+                                  score >= 6 ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                                  'bg-red-100 text-red-700 border-red-300';
+                    return (
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold border ${color}`} title={lastReview.recommendation}>
+                        TL {score}/10
+                        {stepState.tlReviews.length > 1 && <span className="opacity-60 ml-0.5">(×{stepState.tlReviews.length})</span>}
+                      </span>
+                    );
+                  })()}
                 </div>
+                {/* TL reviewing indicator */}
+                {stepState.status === 'running' && stepState.step.executionMode === 'team-leader' && (
+                  <p className="text-purple-500 mt-1 text-[10px] leading-tight animate-pulse">
+                    <i className="fa-solid fa-user-shield mr-1"></i>Team Leader reviewing...
+                  </p>
+                )}
                 {stepState.output?.summary && (
                   <p className="text-gray-500 mt-1 text-[10px] leading-tight">{stepState.output.summary}</p>
                 )}
