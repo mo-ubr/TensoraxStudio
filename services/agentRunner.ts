@@ -2,22 +2,23 @@
  * AgentRunner — the execution layer for TensoraxStudio's agent architecture.
  *
  * Takes an agent prompt + input data + model preference, calls the right
- * AI provider (Gemini or Claude), parses the JSON response, and returns
- * typed output.
+ * AI provider (Gemini, Claude, OpenAI, Qwen/DashScope, DeepSeek, Mistral),
+ * parses the JSON response, and returns typed output.
  *
  * This is the single point where all agent prompts meet AI providers.
- * Components and orchestrators never call Gemini/Claude directly — they
+ * Components and orchestrators never call providers directly — they
  * go through here.
  */
 
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { type CreativityLevels, buildCreativityPreamble } from './creativityControl';
 import { verificationAgentPrompt } from '../prompts/qa/verificationAgent';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type AIProvider = 'gemini' | 'claude';
+export type AIProvider = 'gemini' | 'claude' | 'openai' | 'dashscope' | 'deepseek' | 'mistral' | 'openrouter';
 
 export interface AgentRunOptions {
   /** The agent's system prompt (from prompts/*.ts) */
@@ -86,47 +87,105 @@ export interface AgentRunResult<T = unknown> {
 
 // ─── Key resolution ─────────────────────────────────────────────────────────
 
+// ─── Provider base URLs (OpenAI-compatible providers) ──────────────────────
+
+const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
+  openai: 'https://api.openai.com/v1',
+  dashscope: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+  deepseek: 'https://api.deepseek.com',
+  mistral: 'https://api.mistral.ai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+};
+
 function resolveApiKey(provider: AIProvider, explicitKey?: string): string {
   if (explicitKey) return explicitKey;
 
-  // Try localStorage (browser context)
+  // Try provider-level key first (new centralised format)
   if (typeof window !== 'undefined') {
-    const storageKeys = provider === 'gemini'
-      ? ['gemini_api_key', 'tensorax_analysis_key', 'tensorax_image_gen_key']
-      : ['claude_api_key', 'anthropic_api_key'];
+    const providerKey = localStorage.getItem(`tensorax_provider_key__${provider}`);
+    if (providerKey?.trim() && !/placeholder/i.test(providerKey)) return providerKey.trim();
+  }
 
-    for (const key of storageKeys) {
+  // Legacy fallback for gemini/claude
+  if (typeof window !== 'undefined') {
+    const legacyKeys: Record<string, string[]> = {
+      gemini: ['gemini_api_key', 'tensorax_analysis_key', 'tensorax_image_gen_key', 'tensorax_main_api_key'],
+      claude: ['claude_api_key', 'anthropic_api_key'],
+      openai: ['openai_api_key'],
+      dashscope: ['dashscope_api_key'],
+      deepseek: ['deepseek_api_key'],
+      mistral: ['mistral_api_key'],
+      openrouter: ['openrouter_api_key'],
+    };
+    for (const key of (legacyKeys[provider] ?? [])) {
       const val = localStorage.getItem(key);
-      if (val && val.trim() && !/placeholder/i.test(val)) return val.trim();
+      if (val?.trim() && !/placeholder/i.test(val)) return val.trim();
     }
   }
 
   // Try env vars (build-time or server context)
-  const envKeys = provider === 'gemini'
-    ? ['VITE_GEMINI_API_KEY', 'TENSORAX_ANALYSIS_KEY']
-    : ['VITE_CLAUDE_API_KEY', 'ANTHROPIC_API_KEY'];
+  const envMap: Record<string, string[]> = {
+    gemini: ['VITE_GEMINI_API_KEY', 'TENSORAX_ANALYSIS_KEY'],
+    claude: ['VITE_CLAUDE_API_KEY', 'ANTHROPIC_API_KEY'],
+    openai: ['VITE_OPENAI_API_KEY', 'OPENAI_API_KEY'],
+    dashscope: ['VITE_DASHSCOPE_API_KEY', 'DASHSCOPE_API_KEY'],
+    deepseek: ['VITE_DEEPSEEK_API_KEY', 'DEEPSEEK_API_KEY'],
+    mistral: ['VITE_MISTRAL_API_KEY', 'MISTRAL_API_KEY'],
+    openrouter: ['VITE_OPENROUTER_API_KEY', 'OPENROUTER_API_KEY'],
+  };
 
-  for (const key of envKeys) {
+  for (const key of (envMap[provider] ?? [])) {
     const val = (import.meta as any)?.env?.[key] || (typeof process !== 'undefined' ? process.env[key] : undefined);
-    if (val && val.trim()) return val.trim();
+    if (val?.trim()) return val.trim();
   }
 
-  throw new Error(`No API key found for ${provider}. Set one in Project Settings.`);
+  throw new Error(`No API key found for ${provider}. Set one in Settings → API Keys.`);
 }
 
 // ─── Provider defaults ──────────────────────────────────────────────────────
+
+const DEFAULT_MODELS: Record<AIProvider, string> = {
+  gemini: 'gemini-2.5-flash',
+  claude: 'claude-sonnet-4-6',
+  openai: 'gpt-5.4',
+  dashscope: 'qwen3-235b-a22b',
+  deepseek: 'deepseek-chat',
+  mistral: 'mistral-large-2512',
+  openrouter: 'qwen/qwen3.5-plus',
+};
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
 const CLAUDE_MODELS = ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6'];
 
 function resolveModel(provider: AIProvider, explicit?: string): string {
   if (explicit) return explicit;
-  return provider === 'gemini' ? GEMINI_MODELS[0] : CLAUDE_MODELS[0];
+  return DEFAULT_MODELS[provider] ?? GEMINI_MODELS[0];
 }
 
+/** Model prefix → provider mapping */
+const MODEL_PREFIXES: Array<[string, AIProvider]> = [
+  ['claude', 'claude'],
+  ['anthropic', 'claude'],
+  ['gpt-', 'openai'],
+  ['o3', 'openai'],
+  ['o4', 'openai'],
+  ['gpt-image', 'openai'],
+  ['whisper', 'openai'],
+  ['sora', 'openai'],
+  ['qwen', 'dashscope'],
+  ['qwq', 'dashscope'],
+  ['deepseek', 'deepseek'],
+  ['mistral', 'mistral'],
+  ['pixtral', 'mistral'],
+  ['meta-llama', 'openrouter'],
+];
+
 function detectProvider(model?: string): AIProvider {
-  if (!model) return 'gemini'; // default
-  if (model.startsWith('claude') || model.startsWith('anthropic')) return 'claude';
+  if (!model) return 'gemini';
+  const lower = model.toLowerCase();
+  for (const [prefix, provider] of MODEL_PREFIXES) {
+    if (lower.startsWith(prefix)) return provider;
+  }
   return 'gemini';
 }
 
@@ -283,6 +342,60 @@ async function runClaude(opts: AgentRunOptions & { resolvedKey: string; resolved
   };
 }
 
+// ─── OpenAI-compatible execution (OpenAI, Qwen, DeepSeek, Mistral, OpenRouter) ─
+
+async function runOpenAICompat(opts: AgentRunOptions & { resolvedKey: string; resolvedModel: string; resolvedProvider: AIProvider }): Promise<AgentRunResult> {
+  const baseURL = OPENAI_COMPAT_BASE_URLS[opts.resolvedProvider];
+  if (!baseURL) throw new Error(`No base URL for provider: ${opts.resolvedProvider}`);
+
+  const client = new OpenAI({
+    apiKey: opts.resolvedKey,
+    baseURL,
+    dangerouslyAllowBrowser: true,
+  });
+
+  // Build messages
+  const messages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: 'system', content: opts.agentPrompt },
+  ];
+
+  if (opts.images?.length) {
+    const contentParts: OpenAI.ChatCompletionContentPart[] = [];
+    for (const img of opts.images) {
+      if (isDataUri(img)) {
+        contentParts.push({ type: 'image_url', image_url: { url: img } });
+      } else {
+        contentParts.push({ type: 'image_url', image_url: { url: img } });
+      }
+    }
+    contentParts.push({ type: 'text', text: opts.userMessage });
+    messages.push({ role: 'user', content: contentParts });
+  } else {
+    messages.push({ role: 'user', content: opts.userMessage });
+  }
+
+  const response = await client.chat.completions.create({
+    model: opts.resolvedModel,
+    messages,
+    temperature: opts.temperature ?? 1,
+    max_tokens: opts.maxTokens ?? 8192,
+    response_format: { type: 'json_object' },
+  });
+
+  const rawText = response.choices[0]?.message?.content ?? '';
+
+  return {
+    data: JSON.parse(extractJSON(rawText)),
+    rawText,
+    provider: opts.resolvedProvider,
+    model: opts.resolvedModel,
+    usage: response.usage ? {
+      inputTokens: response.usage.prompt_tokens,
+      outputTokens: response.usage.completion_tokens,
+    } : undefined,
+  };
+}
+
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
@@ -323,9 +436,13 @@ export async function runAgent<T = unknown>(opts: AgentRunOptions): Promise<Agen
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const fullOpts = { ...opts, agentPrompt, userMessage: currentUserMessage, resolvedKey, resolvedModel };
 
-    lastResult = provider === 'gemini'
-      ? await runGemini(fullOpts)
-      : await runClaude(fullOpts);
+    if (provider === 'gemini') {
+      lastResult = await runGemini(fullOpts);
+    } else if (provider === 'claude') {
+      lastResult = await runClaude(fullOpts);
+    } else {
+      lastResult = await runOpenAICompat({ ...fullOpts, resolvedProvider: provider });
+    }
 
     // Skip verification if not configured or no provided text
     if (!opts.verification?.providedText) break;

@@ -82,7 +82,7 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // GOOGLE — Text / Analysis / Vision  (Gemini API key: AIza...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis', 'Translation'], slotSync: [
+  { id: 'gemini-3.1-pro-preview',   provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis', 'Translation', 'Reasoning', 'Research', 'Deep Reasoning', 'Encoding', 'Embeddings'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3.1-pro-preview' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-3.1-pro-preview' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.1-pro-preview' },
@@ -101,7 +101,7 @@ const MODELS: ModelDef[] = [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-3.1-flash-lite' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-3.1-flash-lite' },
   ]},
-  { id: 'gemini-2.5-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis'], slotSync: [
+  { id: 'gemini-2.5-pro',           provider: 'gemini', providerName: 'Google — Text & Analysis', keyPlaceholder: 'AIza... Gemini API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Video Analysis', 'Encoding', 'Embeddings'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'gemini-2.5-pro' },
     { baseKey: 'tensorax_video_analysis_key', modelKey: 'tensorax_video_analysis_model', model: 'gemini-2.5-pro' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'gemini-2.5-pro' },
@@ -150,7 +150,7 @@ const MODELS: ModelDef[] = [
   // ═══════════════════════════════════════════════════════════════════════════
   // ANTHROPIC CLAUDE  (key: sk-ant-...)
   // ═══════════════════════════════════════════════════════════════════════════
-  { id: 'claude-opus-4-6',          provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing', 'Reasoning'], slotSync: [
+  { id: 'claude-opus-4-6',          provider: 'claude', providerName: 'Anthropic Claude', keyPlaceholder: 'sk-ant-... Claude API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Creative Writing', 'Reasoning', 'Research'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'claude-opus-4-6' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'claude-opus-4-6' },
   ]},
@@ -251,7 +251,7 @@ const MODELS: ModelDef[] = [
   // ALIBABA DASHSCOPE — All Qwen Models  (single DashScope API key)
   // ═══════════════════════════════════════════════════════════════════════════
   // Text models
-  { id: 'qwen3-235b-a22b',             provider: 'dashscope', providerName: 'Qwen — Flagship', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Reasoning', 'Research', 'Creative Writing'], slotSync: [
+  { id: 'qwen3-235b-a22b',             provider: 'dashscope', providerName: 'Qwen — Flagship', keyPlaceholder: 'DashScope API key', capabilities: ['Copy', 'Analysis', 'Vision', 'Reasoning', 'Research', 'Creative Writing', 'Encoding', 'Embeddings'], slotSync: [
     { baseKey: 'tensorax_analysis_key', modelKey: 'tensorax_analysis_model', model: 'qwen3-235b-a22b' },
     { baseKey: 'tensorax_copy_key', modelKey: 'tensorax_copy_model', model: 'qwen3-235b-a22b' },
   ]},
@@ -525,6 +525,14 @@ const TASK_SLOTS: TaskSlot[] = [
     fallbackModelKey: 'tensorax_audio_fallback_model', fallbackApiKeyKey: 'tensorax_audio_fallback_key',
     capabilityFilter: ['TTS', 'ASR'],
     recommended: 'elevenlabs-tts', recommendedFallback: 'whisper-v3',
+  },
+  {
+    id: 'encoding',       label: 'Encoding & Embeddings', icon: 'fa-microchip',
+    description: 'Text/image embeddings for consistency, similarity search, and encoding',
+    modelKey: 'tensorax_encoding_model', apiKeyKey: 'tensorax_encoding_key',
+    fallbackModelKey: 'tensorax_encoding_fallback_model', fallbackApiKeyKey: 'tensorax_encoding_fallback_key',
+    capabilityFilter: ['Encoding', 'Embeddings'],
+    recommended: 'gemini-3.1-pro-preview', recommendedFallback: 'qwen3-235b-a22b',
   },
 ];
 
