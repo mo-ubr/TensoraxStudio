@@ -2979,6 +2979,175 @@ export const databaseMigrationPlanner: TemplateConfig = {
   },
 };
 
+// ─── 24. Marketing Analytics Research Workflow ─────────────────────────────
+
+export const marketingAnalyticsResearch: TemplateConfig = {
+  id: 'marketing-analytics-research',
+  name: 'Marketing Analytics Research',
+  description: 'Daily competitive intelligence pipeline: monitor competitor social activity (FB, IG, YT, TT, SEO), track trending/viral content, audit own channel performance, generate action plans with improvement recommendations and boosting strategy. Reports emailed and saved daily.',
+  icon: 'fa-chart-line',
+  category: 'research',
+  version: '1.0.0',
+  builtIn: true,
+  tags: ['research', 'competitor', 'social-media', 'analytics', 'daily', 'tiktok', 'monitoring', 'boosting'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['competitor-monitor', 'social-media-monitor', 'social-media-trend-research', 'competitive-trend-research', 'youtube-channel-analyser', 'web-scraper', 'deep-research', 'audience-research'],
+      notes: 'Full competitive + trend research stack across all social platforms and SEO',
+    },
+    {
+      teamId: 'media-analysis',
+      agents: ['video-analysis', 'style-identifier', 'mood-identifier'],
+      notes: 'Analyse own channel videos for style, mood, engagement patterns',
+    },
+    {
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser', 'document-summariser'],
+      notes: 'Sentiment analysis on competitor content + summarise findings',
+    },
+    {
+      teamId: 'copy-production',
+      agents: ['creative-director', 'social-copy'],
+      notes: 'Generate action plan recommendations and content improvement suggestions',
+    },
+    {
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      notes: 'Daily standardised intelligence report with charts and KPIs',
+    },
+    {
+      teamId: 'email-comms',
+      agents: ['reply-drafter'],
+      notes: 'Format and deliver daily report via email',
+    },
+  ],
+
+  steps: [
+    // ── Section 1: External Research ──
+    {
+      order: 1,
+      name: 'Define Monitoring Scope',
+      teamId: 'research',
+      agents: ['audience-research'],
+      requiresReview: false,
+      description: 'Define competitor list, social handles, hashtags, and keywords to track. Configure platforms (FB, IG, YT, TT, SEO) and monitoring parameters.',
+      params: {
+        platforms: ['facebook', 'instagram', 'youtube', 'tiktok', 'seo'],
+        competitors: [],
+        ownChannelUrl: '',
+      },
+    },
+    {
+      order: 2,
+      name: 'Competitor Activity Scan',
+      teamId: 'research',
+      agents: ['competitor-monitor', 'social-media-monitor', 'web-scraper'],
+      requiresReview: false,
+      description: 'Scan all competitor accounts across FB, IG, YT, TT for new posts, engagement metrics, content themes, and posting frequency. Check SEO rankings for target keywords.',
+      parallel: true,
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
+    },
+    {
+      order: 3,
+      name: 'Trending & Viral Content Research',
+      teamId: 'research',
+      agents: ['social-media-trend-research', 'competitive-trend-research', 'youtube-channel-analyser'],
+      requiresReview: false,
+      description: 'Identify trending and viral satirical/political content across platforms — both in Bulgaria and internationally. Find successful formats, hooks, and techniques we can adapt.',
+      parallel: true,
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
+    },
+
+    // ── Section 2: Own Channel Analysis ──
+    {
+      order: 4,
+      name: 'Own Channel Audit',
+      teamId: 'media-analysis',
+      agents: ['video-analysis', 'style-identifier', 'mood-identifier'],
+      requiresReview: true,
+      description: 'Analyse own posted videos: view counts, engagement rates, drop-off points, visual style consistency, audio quality, thumbnail effectiveness, caption/hashtag performance.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
+    },
+    {
+      order: 5,
+      name: 'Competitive Comparison',
+      teamId: 'text-analysis',
+      agents: ['sentiment-analyser', 'document-summariser'],
+      requiresReview: false,
+      description: 'Compare own channel metrics and content approach against competitor data from Step 2. Identify gaps, strengths, and opportunities. Analyse sentiment around all channels.',
+      executionMode: 'team-leader',
+      qualityThreshold: 7,
+      maxTlRetries: 1,
+    },
+
+    // ── Section 3: Action Plan & Delivery ──
+    {
+      order: 6,
+      name: 'Action Plan & Recommendations',
+      teamId: 'copy-production',
+      agents: ['creative-director'],
+      requiresReview: true,
+      description: 'Generate detailed action plan: content improvements per video, new content ideas inspired by trending formats, hashtag/caption optimisations, posting schedule recommendations, and boosting strategy with budget allocation.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
+    },
+    {
+      order: 7,
+      name: 'Generate Daily Report',
+      teamId: 'document-production',
+      agents: ['report-generator', 'chart-creator'],
+      requiresReview: true,
+      description: 'Compile all findings into a standardised daily intelligence report: competitor activity summary, trending content digest, own channel performance, competitive comparison, action plan, and boosting recommendations.',
+      executionMode: 'team-leader',
+      qualityThreshold: 8,
+      maxTlRetries: 2,
+    },
+    {
+      order: 8,
+      name: 'Save & Email Report',
+      teamId: 'email-comms',
+      agents: ['reply-drafter'],
+      requiresReview: false,
+      description: 'Save the report to the configured research folder and email it to the specified recipients.',
+      params: {
+        emailTo: '',
+        saveFolder: '',
+        reportFormat: 'md',
+      },
+    },
+  ],
+
+  defaults: {
+    monitoringPeriod: '1d',
+    maxCompetitors: 5,
+    reportFrequency: 'daily',
+  },
+
+  inputs: {
+    requiresSourceImages: false,
+    requiresBrand: false,
+    requiresCompetitorList: true,
+    requiresOwnChannelUrl: true,
+  },
+
+  outputs: {
+    primary: 'document',
+    formats: ['md', 'json'],
+    includesCompetitorProfiles: true,
+    includesActionPlan: true,
+    includesBoostingStrategy: true,
+  },
+};
+
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
@@ -3005,4 +3174,5 @@ export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
   dashboardBuilder,
   supportBotBuilder,
   databaseMigrationPlanner,
+  marketingAnalyticsResearch,
 ];

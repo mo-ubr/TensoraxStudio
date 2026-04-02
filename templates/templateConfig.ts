@@ -451,6 +451,10 @@ export interface TemplateConfig {
     requiresBrief?: boolean;
     /** Does the user select a brand? */
     requiresBrand?: boolean;
+    /** Does the user provide a list of competitors? */
+    requiresCompetitorList?: boolean;
+    /** Does the user provide their own channel URL? */
+    requiresOwnChannelUrl?: boolean;
     /** Custom input fields */
     customFields?: Array<{
       id: string;
@@ -472,6 +476,8 @@ export interface TemplateConfig {
     usesShotstack?: boolean;
     /** Where to save output (project folder, Drive, email, etc.) */
     destination?: 'project' | 'gdrive' | 'email' | 'download' | 'clipboard';
+    /** Additional output metadata flags */
+    [key: string]: any;
   };
 
   /** Tools this template requires (checked at runtime) */
