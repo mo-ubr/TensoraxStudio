@@ -308,70 +308,48 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate, activeProject, al
       );
     }
 
-    /* ── Home: two-card dashboard ── */
+    /* ── Home: chat as main content ── */
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#edecec] p-6">
-        <div className="w-full max-w-lg space-y-6 animate-fade-in">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-[#5c3a62] uppercase tracking-wide">Welcome</h2>
-            <p className="text-sm text-[#888] mt-1">What would you like to do?</p>
-          </div>
-
-          {/* API status warning */}
+      <div className="flex-1 flex flex-col bg-[#edecec] overflow-hidden">
+        {/* Top bar — compact quick actions */}
+        <div className="flex items-center gap-3 px-6 py-3 border-b border-[#e0d6e3]">
           {(() => {
             const hasMainKey = !!(localStorage.getItem('tensorax_main_api_key')?.trim());
             if (!hasMainKey) return (
-              <div className="p-3 rounded-xl bg-[#f6f0f8] border border-[#ceadd4] flex items-center gap-3 cursor-pointer hover:bg-[#eadcef] transition-colors" onClick={() => onNavigate('settings')}>
-                <i className="fa-solid fa-circle-info text-[#91569c]" />
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-[#5c3a62]">No API configured</p>
-                  <p className="text-[10px] text-[#888]">Click here to set up your AI model in Settings</p>
-                </div>
-                <i className="fa-solid fa-arrow-right text-[#ceadd4]" />
-              </div>
+              <button onClick={() => onNavigate('settings')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#f6f0f8] border border-[#ceadd4] hover:bg-[#eadcef] transition-colors text-xs">
+                <i className="fa-solid fa-circle-info text-[#91569c] text-[10px]" />
+                <span className="font-bold text-[#5c3a62]">Set up API</span>
+              </button>
             );
             return null;
           })()}
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Open Existing Project */}
-            <button
-              onClick={() => setDashboardView('projects')}
-              disabled={allProjects.length === 0}
-              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-[#e0d6e3]"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors group-disabled:group-hover:bg-[#f6f0f8]">
-                <i className="fa-solid fa-folder-open text-2xl text-[#91569c]"></i>
-              </div>
-              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">Open Project</span>
-              <span className="text-[10px] text-[#888]">
-                {allProjects.length > 0
-                  ? `${allProjects.length} project${allProjects.length !== 1 ? 's' : ''}`
-                  : 'No projects yet'}
-              </span>
-            </button>
-
-            {/* Create New Project */}
-            <button
-              onClick={() => setDashboardView('templates')}
-              className="flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all shadow-sm group"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#f6f0f8] group-hover:bg-[#eadcef] flex items-center justify-center transition-colors">
-                <i className="fa-solid fa-plus text-2xl text-[#91569c]"></i>
-              </div>
-              <span className="font-black text-sm text-[#5c3a62] uppercase tracking-wide group-hover:text-[#91569c] transition-colors">New Project</span>
-              <span className="text-[10px] text-[#888]">{PROJECT_TEMPLATES.length} skill{PROJECT_TEMPLATES.length !== 1 ? 's' : ''} available</span>
-            </button>
-          </div>
-
-          {/* Settings shortcut */}
+          <button
+            onClick={() => setDashboardView('projects')}
+            disabled={allProjects.length === 0}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <i className="fa-solid fa-folder-open text-[#91569c] text-[10px]"></i>
+            <span className="font-bold text-[#5c3a62] uppercase tracking-wider">Open Project</span>
+          </button>
+          <button
+            onClick={() => setDashboardView('templates')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-xs"
+          >
+            <i className="fa-solid fa-plus text-[#91569c] text-[10px]"></i>
+            <span className="font-bold text-[#5c3a62] uppercase tracking-wider">New Project</span>
+          </button>
           <button
             onClick={() => onNavigate('settings')}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[#e0d6e3] bg-white/60 hover:border-[#91569c]/40 hover:bg-[#f6f0f8] transition-all text-[#888] hover:text-[#91569c]"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e0d6e3] bg-white hover:border-[#91569c]/50 hover:bg-[#f6f0f8] transition-all text-xs"
           >
-            <i className="fa-solid fa-gear text-sm" />
-            <span className="text-xs font-bold uppercase tracking-wide">Settings &amp; API Keys</span>
+            <i className="fa-solid fa-gear text-[#91569c] text-[10px]"></i>
+            <span className="font-bold text-[#5c3a62] uppercase tracking-wider">Settings</span>
           </button>
+        </div>
+
+        {/* Main — full-width chat */}
+        <div className="flex-1 min-h-0 p-4">
+          <ChatBotBoundary><ChatBot projectContext={assistantContext ?? 'No project is currently active. Help the user get started — they can open an existing project or create a new one from a skill template.'} onAction={onAssistantAction} chatHistoryRef={chatHistoryRef} /></ChatBotBoundary>
         </div>
       </div>
     );
@@ -588,7 +566,7 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('studio');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
   const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
@@ -1283,7 +1261,7 @@ const App: React.FC = () => {
   // ─── Shared top header ─────────────────────────────────────────────────────
   const TopHeader = (
     <header className="h-14 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-      <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
+      <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('studio'); }} />
       {activeProject && (
         <div className="mx-auto flex items-center gap-3">
           <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
