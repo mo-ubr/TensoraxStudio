@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TikTok Research Results — Za Horata</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Sora:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sora', system-ui, sans-serif; background: #f8f6fa; color: #2d2d3a; padding: 20px; max-width: 1200px; margin: 0 auto; font-size: 13px; }
+    h1 { color: #91569c; font-family: 'Poppins', sans-serif; font-weight: 400; font-size: 22px; margin-bottom: 4px; }
+    h2 { color: #91569c; font-family: 'Poppins', sans-serif; font-weight: 400; font-size: 16px; margin: 20px 0 10px; }
+    h3 { color: #7b3f8a; font-family: 'Poppins', sans-serif; font-weight: 400; font-size: 14px; margin: 14px 0 6px; }
+    .subtitle { color: #888; margin-bottom: 16px; font-size: 12px; }
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .stat { background: white; border: 1px solid #e0d4e8; border-radius: 8px; padding: 10px 16px; text-align: center; box-shadow: 0 1px 4px rgba(145,86,156,0.06); }
+    .stat .num { font-size: 22px; font-weight: 500; color: #91569c; font-family: 'Poppins', sans-serif; }
+    .stat .label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card { background: white; border: 1px solid #e0d4e8; border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(145,86,156,0.04); }
+    table { border-collapse: collapse; width: 100%; font-size: 11px; table-layout: fixed; }
+    th, td { border: 1px solid #e8dced; padding: 6px 8px; text-align: left; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
+    th { background: #91569c; color: white; font-weight: 500; font-family: 'Sora', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; position: sticky; top: 0; white-space: nowrap; }
+    td { background: white; }
+    tr:hover td { background: #faf5fc; }
+    .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 4px; cursor: pointer; }
+    .thumb:hover { transform: scale(2.5); position: relative; z-index: 10; }
+    a { color: #91569c; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .highlight { background: #f0e6f4 !important; }
+    .highlight td { background: #f0e6f4 !important; }
+    .engagement { color: #2e7d32; font-weight: 500; }
+    .low { color: #c62828; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+    .tab { padding: 6px 14px; border-radius: 6px; cursor: pointer; background: white; border: 1px solid #e0d4e8; color: #888; font-size: 12px; font-family: 'Sora', sans-serif; }
+    .tab:hover { border-color: #91569c; color: #91569c; }
+    .tab.active { background: #91569c; color: white; border-color: #91569c; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .filter { background: white; border: 1px solid #e0d4e8; border-radius: 6px; padding: 6px 10px; color: #2d2d3a; font-size: 12px; margin-bottom: 10px; width: 260px; font-family: 'Sora', sans-serif; }
+    .btn { background: #91569c; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Sora', sans-serif; }
+    .btn:hover { background: #a366ad; }
+    .btn-outline { background: white; color: #91569c; border: 1px solid #91569c; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Sora', sans-serif; }
+    .btn-outline:hover { background: #f8f2fa; }
+    .caption-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .caption-cell:hover { white-space: normal; max-width: none; }
+  </style>
+</head>
+<body>
+
+<h1>Za Horata TikTok Research</h1>
+<p class="subtitle">Bulgarian Political Satire | Scraped 2026-04-02 | 11 hashtags, 4 profiles | Bulgaria proxy</p>
+
+<div class="toolbar">
+  <div class="stats-bar" id="stats-bar"></div>
+  <button class="btn-outline" onclick="exportExcel()">&#x1f4e5; Download Excel</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">Overview</div>
+  <div class="tab" onclick="showTab('zahorata')">Za Horata</div>
+  <div class="tab" onclick="showTab('competitors')">Competitors</div>
+  <div class="tab" onclick="showTab('viral')">Top 10 Viral</div>
+  <div class="tab" onclick="showTab('allvideos')">All Videos</div>
+  <div class="tab" onclick="showTab('hashtags')">Hashtags</div>
+</div>
+
+<div class="section active" id="sec-overview"></div>
+<div class="section" id="sec-zahorata"></div>
+<div class="section" id="sec-competitors"></div>
+<div class="section" id="sec-viral"></div>
+<div class="section" id="sec-allvideos"></div>
+<div class="section" id="sec-hashtags"></div>
+
+<script>
+  let allData = [];
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('sec-' + name).classList.add('active');
+  }
+
+  function fmt(n) {
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return n?.toString() || '0';
+  }
+
+  function engRate(v) {
+    if (!v.playCount) return '0%';
+    return ((v.diggCount + v.shareCount + v.commentCount + (v.collectCount||0)) / v.playCount * 100).toFixed(1) + '%';
+  }
+
+  function renderStats(data) {
+    const authors = new Set(data.map(v => v.authorMeta?.name));
+    const totalPlays = data.reduce((s,v) => s + (v.playCount||0), 0);
+    const totalLikes = data.reduce((s,v) => s + (v.diggCount||0), 0);
+    document.getElementById('stats-bar').innerHTML = `
+      <div class="stat"><div class="num">${data.length}</div><div class="label">Videos</div></div>
+      <div class="stat"><div class="num">${authors.size}</div><div class="label">Unique Authors</div></div>
+      <div class="stat"><div class="num">${fmt(totalPlays)}</div><div class="label">Total Plays</div></div>
+      <div class="stat"><div class="num">${fmt(totalLikes)}</div><div class="label">Total Likes</div></div>
+    `;
+  }
+
+  function renderOverview(data) {
+    // Top authors by total plays
+    const authors = {};
+    data.forEach(v => {
+      const a = v.authorMeta?.name || 'unknown';
+      if (!authors[a]) authors[a] = { count: 0, followers: v.authorMeta?.fans||0, totalPlays: 0, totalLikes: 0, profileUrl: v.authorMeta?.profileUrl };
+      authors[a].count++;
+      authors[a].totalPlays += v.playCount||0;
+      authors[a].totalLikes += v.diggCount||0;
+    });
+    const sorted = Object.entries(authors).sort((a,b) => b[1].totalPlays - a[1].totalPlays);
+
+    let html = '<h2>Top 25 Accounts by Total Plays</h2>';
+    html += '<table><tr><th>#</th><th>Account</th><th>Followers</th><th>Videos</th><th>Total Plays</th><th>Total Likes</th><th>Avg Plays/Video</th></tr>';
+    sorted.slice(0,25).forEach(([name, d], i) => {
+      const isZH = name === 'zahoratabg';
+      html += `<tr class="${isZH ? 'highlight' : ''}">
+        <td>${i+1}</td>
+        <td><a href="${d.profileUrl}" target="_blank">@${name}</a>${isZH ? ' ⭐' : ''}</td>
+        <td>${fmt(d.followers)}</td>
+        <td>${d.count}</td>
+        <td>${fmt(d.totalPlays)}</td>
+        <td>${fmt(d.totalLikes)}</td>
+        <td>${fmt(Math.round(d.totalPlays/d.count))}</td>
+      </tr>`;
+    });
+    html += '</table>';
+
+    document.getElementById('sec-overview').innerHTML = html;
+  }
+
+  function renderViral(data) {
+    const topVideos = [...data].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0,10);
+    let html = '<h2>Top 10 Most Viral Videos</h2>';
+    html += '<table><tr><th>Thumb</th><th>Author</th><th>Caption</th><th>Plays</th><th>Likes</th><th>Shares</th><th>Comments</th><th>Saves</th><th>Eng Rate</th><th>Date</th><th>Link</th></tr>';
+    topVideos.forEach(v => {
+      html += `<tr>
+        <td>${v.videoMeta?.coverUrl ? `<img class="thumb" src="${v.videoMeta.coverUrl}" onerror="this.style.display='none'">` : '-'}</td>
+        <td>@${v.authorMeta?.name}</td>
+        <td class="caption-cell">${(v.text||'').substring(0,80)}</td>
+        <td>${fmt(v.playCount)}</td>
+        <td>${fmt(v.diggCount)}</td>
+        <td>${fmt(v.shareCount)}</td>
+        <td>${fmt(v.commentCount)}</td>
+        <td>${fmt(v.collectCount)}</td>
+        <td class="engagement">${engRate(v)}</td>
+        <td>${(v.createTimeISO||'').substring(0,10)}</td>
+        <td><a href="${v.webVideoUrl}" target="_blank">View</a></td>
+      </tr>`;
+    });
+    html += '</table>';
+    document.getElementById('sec-viral').innerHTML = html;
+  }
+
+  function renderZaHorata(data) {
+    const zh = data.filter(v => v.authorMeta?.name === 'zahoratabg');
+    if (!zh.length) { document.getElementById('sec-zahorata').innerHTML = '<p>No Za Horata videos found.</p>'; return; }
+
+    const profile = zh[0].authorMeta;
+    let html = `<div class="card">
+      <h2>@zahoratabg — За Хората</h2>
+      <p>Followers: <strong>${fmt(profile?.fans)}</strong> | Total likes: <strong>${fmt(profile?.heart)}</strong> | Videos: <strong>${profile?.video || zh.length}</strong></p>
+    </div>`;
+
+    html += '<h3>All Videos (sorted by plays)</h3>';
+    html += '<table><tr><th>Thumbnail</th><th>Caption</th><th>Plays</th><th>Likes</th><th>Shares</th><th>Comments</th><th>Saves</th><th>Eng Rate</th><th>Duration</th><th>Link</th></tr>';
+    zh.sort((a,b) => (b.playCount||0) - (a.playCount||0)).forEach(v => {
+      const isViral = v.playCount > 10000;
+      html += `<tr class="${isViral ? 'highlight' : ''}">
+        <td>${v.videoMeta?.coverUrl ? `<img class="thumb" src="${v.videoMeta.coverUrl}" onerror="this.style.display='none'">` : '-'}</td>
+        <td class="caption-cell">${(v.text||'').substring(0,80)}</td>
+        <td class="${isViral ? 'engagement' : 'low'}">${fmt(v.playCount)}</td>
+        <td>${fmt(v.diggCount)}</td>
+        <td>${fmt(v.shareCount)}</td>
+        <td>${fmt(v.commentCount)}</td>
+        <td>${fmt(v.collectCount)}</td>
+        <td class="engagement">${engRate(v)}</td>
+        <td>${v.videoMeta?.duration || '?'}s</td>
+        <td><a href="${v.webVideoUrl}" target="_blank">View</a></td>
+      </tr>`;
+    });
+    html += '</table>';
+
+    // Key insight
+    html += `<div class="card" style="margin-top:16px; border-color:#91569c;">
+      <h3>Key Insight</h3>
+      <p>One video (#боратино) has <strong>147K plays</strong> (99.4% of all plays). The other 5 videos average <strong>321 plays</strong>.
+      This suggests the viral video hit the algorithm — the others didn't. Visual analysis of the thumbnails and first-3-second hooks will reveal why.</p>
+    </div>`;
+
+    document.getElementById('sec-zahorata').innerHTML = html;
+  }
+
+  function renderCompetitors(data) {
+    const competitors = ['aipoliticibg', 'bg_politics', 'suprotivata_bg', 'nakata_bg07', 'otvetnareakciq', 'bg.vqturutnapromqnata', 'satyrtt', 'bulgarianpolitics', 'budna_bulgaria', 'tribunata_bg'];
+    let html = '<h2>Direct Competitors — Political Content Accounts</h2>';
+
+    competitors.forEach(comp => {
+      const vids = data.filter(v => v.authorMeta?.name === comp);
+      if (!vids.length) return;
+      const profile = vids[0].authorMeta;
+      const totalPlays = vids.reduce((s,v) => s + (v.playCount||0), 0);
+      const avgPlays = Math.round(totalPlays / vids.length);
+
+      html += `<div class="card">
+        <h3><a href="${profile?.profileUrl}" target="_blank">@${comp}</a> — ${fmt(profile?.fans)} followers</h3>
+        <p>${vids.length} videos scraped | Total plays: ${fmt(totalPlays)} | Avg: ${fmt(avgPlays)}/video</p>
+      </div>`;
+
+      html += '<table><tr><th>Thumb</th><th>Caption</th><th>Plays</th><th>Likes</th><th>Shares</th><th>Eng Rate</th><th>Link</th></tr>';
+      vids.sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0,5).forEach(v => {
+        html += `<tr>
+          <td>${v.videoMeta?.coverUrl ? `<img class="thumb" src="${v.videoMeta.coverUrl}" onerror="this.style.display='none'">` : '-'}</td>
+          <td class="caption-cell">${(v.text||'').substring(0,80)}</td>
+          <td>${fmt(v.playCount)}</td>
+          <td>${fmt(v.diggCount)}</td>
+          <td>${fmt(v.shareCount)}</td>
+          <td class="engagement">${engRate(v)}</td>
+          <td><a href="${v.webVideoUrl}" target="_blank">View</a></td>
+        </tr>`;
+      });
+      html += '</table>';
+    });
+
+    document.getElementById('sec-competitors').innerHTML = html;
+  }
+
+  function renderAllVideos(data) {
+    let html = '<input class="filter" id="video-filter" placeholder="Filter by author, caption, hashtag..." oninput="filterVideos()">';
+    html += '<div id="all-videos-table"></div>';
+    document.getElementById('sec-allvideos').innerHTML = html;
+    renderVideoTable(data);
+  }
+
+  function renderVideoTable(data) {
+    const sorted = [...data].sort((a,b) => (b.playCount||0) - (a.playCount||0));
+    let html = '<table><tr><th>Thumb</th><th>Author</th><th>Caption</th><th>Plays</th><th>Likes</th><th>Shares</th><th>Comments</th><th>Eng Rate</th><th>Hashtags</th><th>Link</th></tr>';
+    sorted.slice(0,100).forEach(v => {
+      const tags = (v.hashtags||[]).map(h => '#'+h.name).join(' ');
+      html += `<tr>
+        <td>${v.videoMeta?.coverUrl ? `<img class="thumb" src="${v.videoMeta.coverUrl}" onerror="this.style.display='none'">` : '-'}</td>
+        <td>@${v.authorMeta?.name}</td>
+        <td class="caption-cell">${(v.text||'').substring(0,80)}</td>
+        <td>${fmt(v.playCount)}</td>
+        <td>${fmt(v.diggCount)}</td>
+        <td>${fmt(v.shareCount)}</td>
+        <td>${fmt(v.commentCount)}</td>
+        <td class="engagement">${engRate(v)}</td>
+        <td style="font-size:10px">${tags.substring(0,60)}</td>
+        <td><a href="${v.webVideoUrl}" target="_blank">View</a></td>
+      </tr>`;
+    });
+    html += '</table>';
+    if (sorted.length > 100) html += `<p style="color:#888;margin-top:8px">Showing top 100 of ${sorted.length} videos</p>`;
+    document.getElementById('all-videos-table').innerHTML = html;
+  }
+
+  window.filterVideos = function() {
+    const q = document.getElementById('video-filter').value.toLowerCase();
+    const filtered = allData.filter(v => {
+      const searchable = (v.authorMeta?.name||'') + ' ' + (v.text||'') + ' ' + (v.hashtags||[]).map(h=>h.name).join(' ');
+      return searchable.toLowerCase().includes(q);
+    });
+    renderVideoTable(filtered);
+  };
+
+  function renderHashtags(data) {
+    const tags = {};
+    data.forEach(v => {
+      (v.hashtags||[]).forEach(h => {
+        if (!h.name) return;
+        if (!tags[h.name]) tags[h.name] = { count: 0, totalPlays: 0, views: h.views || v.searchHashtag?.views };
+        tags[h.name].count++;
+        tags[h.name].totalPlays += v.playCount||0;
+      });
+    });
+
+    const sorted = Object.entries(tags).sort((a,b) => b[1].count - a[1].count);
+    let html = '<h2>Hashtag Analysis</h2>';
+    html += '<table style="table-layout:auto;max-width:700px"><tr><th style="width:40px">#</th><th style="width:200px">Hashtag</th><th style="width:80px">Videos</th><th style="width:100px">Total Plays</th><th style="width:100px">Avg Plays</th></tr>';
+    sorted.slice(0,40).forEach(([name, d], i) => {
+      html += `<tr>
+        <td>${i+1}</td>
+        <td style="word-break:break-all">#${name}</td>
+        <td>${d.count}</td>
+        <td>${fmt(d.totalPlays)}</td>
+        <td>${fmt(Math.round(d.totalPlays/d.count))}</td>
+      </tr>`;
+    });
+    html += '</table>';
+    document.getElementById('sec-hashtags').innerHTML = html;
+  }
+
+  // ─── Excel Export ────────────────────────────────────────────────
+  window.exportExcel = function() {
+    const headers = ['Author', 'Followers', 'Caption', 'Plays', 'Likes', 'Shares', 'Comments', 'Saves', 'Eng Rate', 'Hashtags', 'Duration (s)', 'Date', 'URL'];
+    const rows = allData.sort((a,b) => (b.playCount||0) - (a.playCount||0)).map(v => [
+      '@' + (v.authorMeta?.name || ''),
+      v.authorMeta?.fans || 0,
+      (v.text || '').replace(/[\t\n\r]/g, ' ').substring(0, 200),
+      v.playCount || 0,
+      v.diggCount || 0,
+      v.shareCount || 0,
+      v.commentCount || 0,
+      v.collectCount || 0,
+      engRate(v),
+      (v.hashtags||[]).map(h => '#'+h.name).filter(h => h !== '#').join(' '),
+      v.videoMeta?.duration || '',
+      (v.createTimeISO || '').substring(0, 10),
+      v.webVideoUrl || ''
+    ]);
+
+    // Build CSV (Excel-compatible with BOM for UTF-8)
+    const bom = '\uFEFF';
+    const csv = bom + [headers.join('\t'), ...rows.map(r => r.map(c => String(c).replace(/\t/g, ' ')).join('\t'))].join('\n');
+    const blob = new Blob([csv], { type: 'text/tab-separated-values;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ZaHorata_TikTok_Research_' + new Date().toISOString().substring(0,10) + '.xls';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Load data
+  fetch('/tt_big_scrape_results.json')
+    .then(r => r.json())
+    .then(data => {
+      allData = data;
+      renderStats(data);
+      renderOverview(data);
+      renderZaHorata(data);
+      renderCompetitors(data);
+      renderViral(data);
+      renderAllVideos(data);
+      renderHashtags(data);
+    })
+    .catch(err => {
+      document.getElementById('sec-overview').innerHTML = '<p style="color:#ef5350">Error loading data: ' + err.message + '</p>';
+    });
+</script>
+</body>
+</html>
