@@ -1,0 +1,30 @@
+{
+  "runId": "Fgz9bZeWveCI4JEFf",
+  "datasetId": "ENJu8yhBjlSPFZo0Q",
+  "startedAt": "2026-04-02T13:30:36.352Z",
+  "input": {
+    "hashtags": [
+      "българскаполитика",
+      "политика",
+      "българия",
+      "сатира",
+      "пародия",
+      "смях",
+      "пеевски",
+      "борисов",
+      "костадинов",
+      "радев",
+      "корупция"
+    ],
+    "profiles": [
+      "zahoratabg",
+      "aipoliticibg",
+      "suprotivata_bg",
+      "nakata_bg07"
+    ],
+    "searchQueries": [
+      "българска политика сатира",
+      "политическа пародия българия"
+    ]
+  }
+}

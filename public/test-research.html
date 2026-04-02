@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Research Capability Tests v2 — TensoraxStudio</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sora', system-ui, sans-serif; background: #0f0f1a; color: #e0e0e0; padding: 24px; }
+    h1 { color: #91569c; margin-bottom: 4px; font-family: 'Poppins', sans-serif; }
+    .subtitle { color: #888; margin-bottom: 20px; font-size: 14px; }
+    .test-card { background: #1a1a2e; border: 1px solid #2a2a40; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .test-card h2 { color: #91569c; font-size: 16px; margin-bottom: 4px; }
+    .test-card .desc { color: #aaa; font-size: 13px; margin-bottom: 12px; }
+    .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .status.pending { background: #333; color: #888; }
+    .status.running { background: #2a1f40; color: #b388ff; animation: pulse 1.5s infinite; }
+    .status.pass { background: #1b3a1b; color: #66bb6a; }
+    .status.fail { background: #3a1b1b; color: #ef5350; }
+    .status.partial { background: #3a3a1b; color: #fdd835; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .output { background: #12121e; border: 1px solid #2a2a40; border-radius: 8px; padding: 16px; margin-top: 12px; font-size: 13px; max-height: 700px; overflow-y: auto; display: none; line-height: 1.7; }
+    .output.visible { display: block; }
+    .output table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+    .output th, .output td { border: 1px solid #333; padding: 6px 8px; text-align: left; vertical-align: top; }
+    .output th { background: #1f1f35; color: #91569c; font-weight: 600; }
+    .output td { background: #15152a; }
+    .output h1 { color: #91569c; font-size: 18px; margin: 16px 0 8px; }
+    .output h2 { color: #91569c; font-size: 16px; margin: 14px 0 6px; }
+    .output h3 { color: #b388ff; font-size: 14px; margin: 10px 0 4px; }
+    .output strong { color: #b388ff; }
+    .output a { color: #91569c; }
+    .output .step-label { background: #2a1f40; color: #b388ff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; margin: 8px 0 4px; }
+    .toggle-btn { background: none; border: 1px solid #444; color: #aaa; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 8px; }
+    .toggle-btn:hover { border-color: #91569c; color: #91569c; }
+    #run-btn { background: #91569c; color: white; border: none; padding: 12px 32px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-bottom: 24px; }
+    #run-btn:hover { background: #a366ad; }
+    #run-btn:disabled { background: #444; cursor: not-allowed; }
+    .key-status { background: #1a1a2e; border: 1px solid #2a2a40; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+    .key-status .found { color: #66bb6a; }
+    .key-status .missing { color: #ef5350; }
+    .key-status .warn { color: #fdd835; }
+    .timer { color: #888; font-size: 12px; margin-left: 8px; }
+    .phase { color: #888; font-size: 12px; margin-left: 8px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<h1>Research Capability Tests v2</h1>
+<p class="subtitle">Two-step research: Gemini (web search) + Qwen VL (visual analysis) — TikTok is video, we must SEE the content</p>
+
+<div class="key-status" id="key-status"></div>
+
+<button id="run-btn" onclick="runAllTests()">Run All 3 Tests</button>
+
+<div class="test-card" id="test1">
+  <h2>Test 1: Trending Political Satire on TikTok (Bulgaria-focused)</h2>
+  <p class="desc">Step 1: Gemini searches for real TikTok content URLs → Step 2: Qwen VL visually analyses the videos/thumbnails</p>
+  <span class="status pending" id="test1-status">Pending</span>
+  <span class="timer" id="test1-time"></span>
+  <span class="phase" id="test1-phase"></span>
+  <div class="output" id="test1-output"></div>
+  <button class="toggle-btn" onclick="toggleOutput('test1-output')" style="display:none" id="test1-toggle">Show Output</button>
+</div>
+
+<div class="test-card" id="test2">
+  <h2>Test 2: Competitor TikTok Visual Analysis — Bulgarian Parties</h2>
+  <p class="desc">Step 1: Gemini finds competitor TikTok profiles/content → Step 2: Qwen VL analyses their visual strategy</p>
+  <span class="status pending" id="test2-status">Pending</span>
+  <span class="timer" id="test2-time"></span>
+  <span class="phase" id="test2-phase"></span>
+  <div class="output" id="test2-output"></div>
+  <button class="toggle-btn" onclick="toggleOutput('test2-output')" style="display:none" id="test2-toggle">Show Output</button>
+</div>
+
+<div class="test-card" id="test3">
+  <h2>Test 3: @zahoratabg Channel Visual Analysis</h2>
+  <p class="desc">Step 1: Gemini finds channel data → Step 2: Qwen VL visually analyses the actual posted videos/thumbnails</p>
+  <span class="status pending" id="test3-status">Pending</span>
+  <span class="timer" id="test3-time"></span>
+  <span class="phase" id="test3-phase"></span>
+  <div class="output" id="test3-output"></div>
+  <button class="toggle-btn" onclick="toggleOutput('test3-output')" style="display:none" id="test3-toggle">Show Output</button>
+</div>
+
+<script type="module">
+  import { GoogleGenAI } from 'https://esm.run/@google/genai';
+  import OpenAI from 'https://esm.run/openai';
+
+  // ─── API Key Resolution ─────────────────────────────────────────────
+
+  const geminiKey = localStorage.getItem('gemini_api_key')
+    || localStorage.getItem('tensorax_analysis_key')
+    || localStorage.getItem('GEMINI_API_KEY');
+
+  const dashscopeKey = localStorage.getItem('tensorax_provider_key__dashscope')
+    || localStorage.getItem('dashscope_api_key')
+    || localStorage.getItem('DASHSCOPE_API_KEY');
+
+  const keyStatusEl = document.getElementById('key-status');
+  let keysOk = true;
+  let statusHtml = '';
+
+  if (geminiKey && geminiKey.trim() && !/placeholder/i.test(geminiKey)) {
+    statusHtml += '<span class="found">✓ Gemini API key found</span>';
+  } else {
+    statusHtml += '<span class="missing">✗ No Gemini API key — needed for web search</span>';
+    keysOk = false;
+  }
+  statusHtml += '<br>';
+  if (dashscopeKey && dashscopeKey.trim() && !/placeholder/i.test(dashscopeKey)) {
+    statusHtml += '<span class="found">✓ DashScope (Qwen VL) API key found</span>';
+  } else {
+    statusHtml += '<span class="warn">⚠ No DashScope key — visual analysis will be skipped (text-only mode). Add key in Settings → DashScope.</span>';
+  }
+  keyStatusEl.innerHTML = statusHtml;
+  if (!keysOk) document.getElementById('run-btn').disabled = true;
+
+  // ─── Helpers ────────────────────────────────────────────────────────
+
+  function setStatus(testId, status, label) {
+    document.getElementById(`${testId}-status`).className = `status ${status}`;
+    document.getElementById(`${testId}-status`).textContent = label;
+  }
+  function setPhase(testId, phase) {
+    document.getElementById(`${testId}-phase`).textContent = phase;
+  }
+  function setTime(testId, ms) {
+    document.getElementById(`${testId}-time`).textContent = `${(ms/1000).toFixed(1)}s`;
+  }
+  window.toggleOutput = function(id) {
+    document.getElementById(id).classList.toggle('visible');
+  };
+
+  function markdownToHtml(md) {
+    let html = md
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+    html = html.replace(/((?:^\|.+\|$\n?)+)/gm, (tableBlock) => {
+      const rows = tableBlock.trim().split('\n').filter(r => r.trim());
+      if (rows.length < 2) return tableBlock;
+      let table = '<table>';
+      rows.forEach((row, i) => {
+        if (/^\|[\s\-:|]+\|$/.test(row)) return;
+        const cells = row.split('|').filter((_, ci, arr) => ci > 0 && ci < arr.length - 1);
+        const tag = i === 0 ? 'th' : 'td';
+        table += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+      });
+      table += '</table>';
+      return table;
+    });
+    return html;
+  }
+
+  function setOutput(testId, text) {
+    const el = document.getElementById(`${testId}-output`);
+    const raw = typeof text === 'string' ? text : JSON.stringify(text, null, 2);
+    const escaped = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let rendered = markdownToHtml(escaped);
+    // Unescape our generated HTML tags
+    rendered = rendered
+      .replace(/&lt;table&gt;/g, '<table>').replace(/&lt;\/table&gt;/g, '</table>')
+      .replace(/&lt;tr&gt;/g, '<tr>').replace(/&lt;\/tr&gt;/g, '</tr>')
+      .replace(/&lt;th&gt;/g, '<th>').replace(/&lt;\/th&gt;/g, '</th>')
+      .replace(/&lt;td&gt;/g, '<td>').replace(/&lt;\/td&gt;/g, '</td>')
+      .replace(/&lt;h([123])&gt;/g, '<h$1>').replace(/&lt;\/h([123])&gt;/g, '</h$1>')
+      .replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>')
+      .replace(/&lt;a /g, '<a ').replace(/&lt;\/a&gt;/g, '</a>').replace(/&gt;([^<]*?)&lt;\/a/g, '>$1</a');
+    el.innerHTML = rendered;
+    el.style.whiteSpace = 'pre-line';
+    el.classList.add('visible');
+    document.getElementById(`${testId}-toggle`).style.display = 'inline-block';
+  }
+
+  // ─── API Calls ──────────────────────────────────────────────────────
+
+  async function callGemini(prompt, systemInstruction) {
+    const ai = new GoogleGenAI({ apiKey: geminiKey.trim() });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        tools: [{ googleSearch: {} }],
+      },
+    });
+    return response.text || '';
+  }
+
+  async function callQwenVL(prompt, imageUrls = []) {
+    if (!dashscopeKey || !dashscopeKey.trim()) {
+      return '[SKIPPED — No DashScope API key. Visual analysis not available. Add your DashScope key in the app Settings.]';
+    }
+
+    const client = new OpenAI({
+      apiKey: dashscopeKey.trim(),
+      baseURL: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+      dangerouslyAllowBrowser: true,
+    });
+
+    // Build content array with images + text
+    const content = [];
+    for (const url of imageUrls) {
+      content.push({ type: 'image_url', image_url: { url } });
+    }
+    content.push({ type: 'text', text: prompt });
+
+    const response = await client.chat.completions.create({
+      model: 'qwen-vl-max',
+      messages: [{ role: 'user', content }],
+      max_tokens: 8192,
+      temperature: 0.7,
+    });
+
+    return response.choices[0]?.message?.content || '';
+  }
+
+  // ─── TEST 1: Trending Political Satire ──────────────────────────────
+
+  async function runTest1() {
+    setStatus('test1', 'running', 'Running...');
+    const start = Date.now();
+
+    try {
+      // STEP 1: Gemini web search for trending content URLs + thumbnails
+      setPhase('test1', 'Step 1/2: Gemini web search...');
+      const searchResult = await callGemini(
+        `Search for trending satirical and political TikTok content focused on BULGARIA.
+
+Your job is to find REAL TikTok videos and accounts. For each, provide:
+- The TikTok URL (e.g. https://www.tiktok.com/@handle or https://www.tiktok.com/@handle/video/123456)
+- A thumbnail or preview image URL if you can find one
+- View count, like count, follower count
+
+Find:
+1. Bulgarian TikTok accounts that post political satire, parody, sarcasm about politicians (Peevski, Borisov, Kostadinov, Radev, corruption, oligarchs)
+2. Specific viral TikTok videos about Bulgarian politics — children's songs, parodies, sarcastic takes
+3. The most successful political satire TikTok formats currently trending in Bulgaria
+4. Relevant Bulgarian TikTok hashtags (#българия #политика #сатира etc.) with approximate usage counts
+
+OUTPUT FORMAT: Return as a structured list. For each item give: title, @handle, URL, thumbnail URL (if found), metrics (views/likes/followers), and a one-line description.
+
+Also list 2-3 international political satire TikTok accounts as reference points.
+
+Today is April 2, 2026. Search for current data.`,
+        'You are a web researcher. Find REAL, VERIFIABLE TikTok content URLs. Use Google Search. Never fabricate URLs or handles. If you cannot find something, say so.'
+      );
+
+      // Extract image URLs from the search results for visual analysis
+      const imageUrls = [];
+      const urlMatches = searchResult.match(/https?:\/\/[^\s"'<>\]]+\.(jpg|jpeg|png|webp|gif)/gi) || [];
+      const tiktokUrls = searchResult.match(/https?:\/\/(?:www\.)?tiktok\.com\/[^\s"'<>\]]+/gi) || [];
+      imageUrls.push(...urlMatches.slice(0, 5));
+
+      // STEP 2: Qwen VL visual analysis
+      setPhase('test1', 'Step 2/2: Qwen VL visual analysis...');
+      let visualResult = '';
+      if (imageUrls.length > 0) {
+        visualResult = await callQwenVL(
+          `You are analysing TikTok thumbnail images and screenshots of Bulgarian political satire content.
+
+For each image, analyse:
+1. VISUAL STYLE: What production techniques are used? (text overlays, filters, meme format, AI-generated, hand-drawn, photo collage?)
+2. HOOK EFFECTIVENESS: Would this thumbnail make someone stop scrolling? Why or why not?
+3. PRODUCTION QUALITY: Rate 1-10 and explain. Compare to professional political satire content.
+4. EMOTIONAL TRIGGER: What emotion does this visual provoke? (outrage, laughter, curiosity, shock?)
+5. CULTURAL CONTEXT: Any Bulgarian-specific visual references, symbols, or memes?
+6. RECOMMENDATIONS: How could this visual be improved for higher click-through?
+
+Present findings in a TABLE format:
+| Image | Visual Style | Hook Score (1-10) | Production Quality (1-10) | Emotional Trigger | Key Improvement |`,
+          imageUrls
+        );
+      } else {
+        visualResult = await callQwenVL(
+          `I could not find direct thumbnail images from TikTok search results. Instead, please analyse the following TikTok URLs and context to provide visual strategy recommendations for a Bulgarian political satire TikTok channel.
+
+Based on your knowledge of TikTok visual best practices for political satire:
+
+1. What visual styles work best for political satire TikToks? Present as a table:
+| Visual Format | Example Description | Why It Works | Engagement Level | Difficulty to Produce |
+
+2. What thumbnail/cover image strategies drive the highest click-through for satirical content?
+
+3. Specific visual production recommendations for Bulgarian political satire (considering the audience is Bulgarian, topics are local politicians and corruption):
+| Recommendation | Why | Example reference | Expected impact |
+
+Context from web search:
+${searchResult.substring(0, 3000)}`,
+          []
+        );
+      }
+
+      const elapsed = Date.now() - start;
+      setTime('test1', elapsed);
+      setPhase('test1', '');
+
+      // Combine results
+      const combined = `## STEP 1: Web Research (Gemini + Google Search)\n\n${searchResult}\n\n${'═'.repeat(60)}\n\n## STEP 2: Visual Analysis (Qwen VL)\n\n${visualResult}`;
+
+      // Quality assessment
+      const hasReferences = /(https?:\/\/|tiktok\.com)/i.test(searchResult);
+      const hasBulgarianFocus = (combined.match(/(Българ|Bulgaria|ГЕРБ|GERB|ДПС|DPS|Peevski|Борисов|Костадинов)/gi) || []).length >= 5;
+      const hasTikTokFocus = (combined.match(/tiktok/gi) || []).length >= 5;
+      const hasVisualAnalysis = /(visual|thumbnail|hook|production quality|click-through)/i.test(visualResult);
+      const hasMetricsEducation = /(engagement rate|watch time|algorithm|views|shares)/i.test(combined);
+      const isSubstantial = combined.length > 2000;
+
+      const score = [hasReferences, hasBulgarianFocus, hasTikTokFocus, hasVisualAnalysis, hasMetricsEducation, isSubstantial].filter(Boolean).length;
+
+      if (score >= 5) setStatus('test1', 'pass', `PASS — ${score}/6 criteria`);
+      else if (score >= 3) setStatus('test1', 'partial', `PARTIAL — ${score}/6 criteria`);
+      else setStatus('test1', 'fail', `FAIL — ${score}/6 criteria`);
+
+      setOutput('test1', `QUALITY CHECK:\n- References/URLs: ${hasReferences ? '✅' : '❌'}\n- Bulgaria focus: ${hasBulgarianFocus ? '✅' : '❌'}\n- TikTok focus: ${hasTikTokFocus ? '✅' : '❌'}\n- Visual analysis: ${hasVisualAnalysis ? '✅' : '❌'}\n- Metrics education: ${hasMetricsEducation ? '✅' : '❌'}\n- Substantial: ${isSubstantial ? '✅' : '❌'}\n- Images found for analysis: ${imageUrls.length}\n- TikTok URLs found: ${tiktokUrls.length}\n\n${'─'.repeat(60)}\n\n${combined}`);
+    } catch (err) {
+      setStatus('test1', 'fail', `FAIL: ${err.message}`);
+      setOutput('test1', err.stack || err.message);
+      setTime('test1', Date.now() - start);
+      setPhase('test1', '');
+    }
+  }
+
+  // ─── TEST 2: Competitor Visual Analysis ─────────────────────────────
+
+  async function runTest2() {
+    setStatus('test2', 'running', 'Running...');
+    const start = Date.now();
+
+    try {
+      // STEP 1: Gemini finds competitor TikTok profiles
+      setPhase('test2', 'Step 1/2: Finding competitor TikTok profiles...');
+      const searchResult = await callGemini(
+        `Search for the TikTok accounts of these Bulgarian political parties/figures. For EACH, I need:
+- Official TikTok @handle (if it exists)
+- TikTok profile URL
+- Follower count, video count
+- URLs of their most recent/popular TikTok videos
+- Any thumbnail or screenshot URLs you can find from their TikTok content
+- If they have NO TikTok, state that explicitly
+
+The 4 competitors:
+1. President Rumen Radev's new political party (search for the party name as of April 2026)
+2. ДПС Ново Начало (DPS New Beginning) — Delyan Peevski
+3. ГЕРБ (GERB) — Boyko Borisov
+4. Възраждане (Vazrazhdane/Revival) — Kostadin Kostadinov
+
+Also search for any unofficial/fan TikTok accounts about these parties or politicians.
+
+TODAY IS April 2, 2026. Find current, real data. Include source URLs for everything.`,
+        'You are a competitive intelligence researcher. Find REAL TikTok accounts and content. Use Google Search. Never fabricate handles or URLs. If a party has no TikTok, say so clearly with evidence.'
+      );
+
+      // Extract image URLs for visual analysis
+      const imageUrls = [];
+      const urlMatches = searchResult.match(/https?:\/\/[^\s"'<>\]]+\.(jpg|jpeg|png|webp|gif)/gi) || [];
+      imageUrls.push(...urlMatches.slice(0, 6));
+
+      // STEP 2: Qwen VL visual analysis of competitor content
+      setPhase('test2', 'Step 2/2: Qwen VL analysing competitor visuals...');
+      let visualResult = '';
+
+      const visualPrompt = `You are a TikTok competitive analyst for Bulgarian political content.
+
+${imageUrls.length > 0 ? 'Analyse these competitor TikTok screenshots/thumbnails.' : 'Based on the competitor data below, provide a visual strategy analysis.'}
+
+For each Bulgarian political party's TikTok presence, assess in TABLE format:
+
+## Visual Strategy Comparison
+| Party | Visual Style | Production Quality (1-10) | Branding Consistency | Content Format | Strengths | Weaknesses |
+
+## Content Format Analysis
+| Format Type | Which parties use it | Engagement level | Why it works/doesn't | Can @zahoratabg use this satirically? |
+
+## Visual Gaps & Opportunities for @zahoratabg
+| Competitor weakness | How @zahoratabg can exploit it | Specific visual approach | Expected impact |
+
+## Recommended Visual Counter-Strategy
+For a satirical channel mocking these parties, what visual approach would be most effective?
+| Target party | Satirical visual approach | Why this would land | Example reference | Difficulty |
+
+Competitor data from web search:
+${searchResult.substring(0, 4000)}`;
+
+      if (imageUrls.length > 0) {
+        visualResult = await callQwenVL(visualPrompt, imageUrls);
+      } else {
+        visualResult = await callQwenVL(visualPrompt, []);
+      }
+
+      const elapsed = Date.now() - start;
+      setTime('test2', elapsed);
+      setPhase('test2', '');
+
+      const combined = `## STEP 1: Competitor TikTok Discovery (Gemini)\n\n${searchResult}\n\n${'═'.repeat(60)}\n\n## STEP 2: Visual Competitive Analysis (Qwen VL)\n\n${visualResult}`;
+
+      // Quality assessment
+      const partiesFound = ['GERB','ГЕРБ','DPS','ДПС','Radev','Радев','Vazrazhdane','Възраждане','Kostadinov','Borisov','Peevski'];
+      const mentionsParties = new Set(partiesFound.filter(p => combined.includes(p)).map(p => {
+        if (['GERB','ГЕРБ','Borisov'].includes(p)) return 'GERB';
+        if (['DPS','ДПС','Peevski'].includes(p)) return 'DPS';
+        if (['Radev','Радев'].includes(p)) return 'Radev';
+        if (['Vazrazhdane','Възраждане','Kostadinov'].includes(p)) return 'Vazrazhdane';
+        return p;
+      })).size;
+      const hasReferences = /(https?:\/\/|source:)/i.test(searchResult);
+      const hasTikTokFocus = (combined.match(/tiktok/gi) || []).length >= 5;
+      const hasVisualAnalysis = /(visual|thumbnail|production|branding|format)/i.test(visualResult);
+      const isSubstantial = combined.length > 2000;
+
+      const score = [mentionsParties >= 4, hasReferences, hasTikTokFocus, hasVisualAnalysis, isSubstantial].filter(Boolean).length;
+
+      if (score >= 4) setStatus('test2', 'pass', `PASS — ${mentionsParties}/4 parties, ${score}/5 criteria`);
+      else if (score >= 2) setStatus('test2', 'partial', `PARTIAL — ${mentionsParties}/4 parties, ${score}/5 criteria`);
+      else setStatus('test2', 'fail', `FAIL — ${score}/5 criteria`);
+
+      setOutput('test2', `QUALITY CHECK:\n- All 4 parties: ${mentionsParties >= 4 ? '✅' : '❌'} (${mentionsParties}/4)\n- References: ${hasReferences ? '✅' : '❌'}\n- TikTok focus: ${hasTikTokFocus ? '✅' : '❌'}\n- Visual analysis: ${hasVisualAnalysis ? '✅' : '❌'}\n- Substantial: ${isSubstantial ? '✅' : '❌'}\n- Images analysed: ${imageUrls.length}\n\n${'─'.repeat(60)}\n\n${combined}`);
+    } catch (err) {
+      setStatus('test2', 'fail', `FAIL: ${err.message}`);
+      setOutput('test2', err.stack || err.message);
+      setTime('test2', Date.now() - start);
+      setPhase('test2', '');
+    }
+  }
+
+  // ─── TEST 3: @zahoratabg Channel Visual Analysis ────────────────────
+
+  async function runTest3() {
+    setStatus('test3', 'running', 'Running...');
+    const start = Date.now();
+
+    try {
+      // STEP 1: Gemini finds channel data and content URLs
+      setPhase('test3', 'Step 1/2: Finding @zahoratabg content...');
+      const searchResult = await callGemini(
+        `Search for the TikTok channel @zahoratabg ("За Хората" / "For the People").
+Channel URL: https://www.tiktok.com/@zahoratabg
+
+This is a Bulgarian political satire channel using children's songs about politicians.
+
+Find:
+1. Channel metrics: follower count, total videos, total likes
+2. URLs of ALL their posted TikTok videos (as many as you can find)
+3. Any thumbnail/preview images from their videos
+4. Any mentions or reviews of the channel in media/blogs/forums
+5. Engagement data: views, likes, comments on individual videos
+6. Any cached screenshots or previews of the channel profile page
+
+Also search for: "за хората tiktok" "zahoratabg" "за хората политици" "за хората сатира"
+
+Today is April 2, 2026. Include source URLs for everything found.`,
+        'Find REAL data about this specific TikTok channel. Use Google Search. If you find the channel, report everything visible. If the channel has limited public data, report what you can find and state gaps clearly.'
+      );
+
+      // Extract content URLs for visual analysis
+      const imageUrls = [];
+      const urlMatches = searchResult.match(/https?:\/\/[^\s"'<>\]]+\.(jpg|jpeg|png|webp|gif)/gi) || [];
+      imageUrls.push(...urlMatches.slice(0, 5));
+
+      // STEP 2: Qwen VL visual analysis
+      setPhase('test3', 'Step 2/2: Qwen VL analysing channel visuals...');
+
+      const visualPrompt = `You are a TikTok growth strategist analysing the Bulgarian political satire channel @zahoratabg.
+
+${imageUrls.length > 0 ? 'Analyse these screenshots/thumbnails from their TikTok content.' : 'Based on the channel data below, provide a comprehensive visual and content strategy analysis.'}
+
+The channel posts satirical children\'s songs about Bulgarian politicians and corruption.
+
+Provide your analysis in TABULAR FORMAT:
+
+## 1. TikTok Metrics Education
+| Metric | What it is | Why it matters for @zahoratabg | What\'s "good" | What\'s "viral" | How to improve it |
+
+Cover: Views, Likes, Comments, Shares, Saves, Engagement Rate, Watch Time, Completion Rate, FYP reach, Follower Growth Rate.
+
+## 2. Content Assessment
+| Video/Content | Visual Quality (1-10) | Hook Score (1-10) | Shareability (1-10) | What works | What doesn\'t | Specific fix |
+
+## 3. Production Quality Gap Analysis
+| Aspect | Current @zahoratabg | Best satirical TikTok benchmark | Gap | How to close it | Cost/effort |
+Cover: video quality, text overlays, transitions, audio mix, thumbnail design, branding consistency.
+
+## 4. Improvement Recommendations
+| Area | Current state | Recommendation | WHY (with evidence/example) | Example to copy (with URL if possible) | Expected impact |
+MUST cover: Hook (first 3s), Format, Posting frequency, Timing, Hashtags, Audio/music, Thumbnails, Captions, CTA strategy.
+
+## 5. Boosting Strategy
+| Content type | Daily budget (EUR) | Target audience | Age range | Location | Interests | Expected CPM | Legal notes |
+Include EU/Bulgarian rules for political content paid promotion.
+
+## 6. 30-Day Growth Roadmap
+| Week | Actions | Content to produce | Expected followers gained | Key metric to track |
+
+Channel data from web search:
+${searchResult.substring(0, 4000)}`;
+
+      let visualResult = '';
+      if (imageUrls.length > 0) {
+        visualResult = await callQwenVL(visualPrompt, imageUrls);
+      } else {
+        visualResult = await callQwenVL(visualPrompt, []);
+      }
+
+      const elapsed = Date.now() - start;
+      setTime('test3', elapsed);
+      setPhase('test3', '');
+
+      const combined = `## STEP 1: Channel Discovery (Gemini)\n\n${searchResult}\n\n${'═'.repeat(60)}\n\n## STEP 2: Visual & Strategy Analysis (Qwen VL)\n\n${visualResult}`;
+
+      // Quality assessment
+      const hasChannelData = /(zahoratabg|За Хората)/i.test(combined);
+      const hasReferences = /(https?:\/\/|source:)/i.test(searchResult);
+      const hasTables = /\|.*\|.*\|/m.test(visualResult);
+      const hasMetricsEducation = /(engagement rate|watch time|completion rate|FYP|For You)/i.test(combined);
+      const hasVisualAnalysis = /(visual|thumbnail|hook|production quality|video quality)/i.test(visualResult);
+      const hasBoosting = /(boost|budget|EUR|CPM|target audience|paid)/i.test(combined);
+      const isSubstantial = combined.length > 2500;
+
+      const score = [hasChannelData, hasReferences, hasTables, hasMetricsEducation, hasVisualAnalysis, hasBoosting, isSubstantial].filter(Boolean).length;
+
+      if (score >= 6) setStatus('test3', 'pass', `PASS — ${score}/7 criteria`);
+      else if (score >= 4) setStatus('test3', 'partial', `PARTIAL — ${score}/7 criteria`);
+      else setStatus('test3', 'fail', `FAIL — ${score}/7 criteria`);
+
+      setOutput('test3', `QUALITY CHECK:\n- Channel data: ${hasChannelData ? '✅' : '❌'}\n- References: ${hasReferences ? '✅' : '❌'}\n- Tabular format: ${hasTables ? '✅' : '❌'}\n- Metrics education: ${hasMetricsEducation ? '✅' : '❌'}\n- Visual analysis: ${hasVisualAnalysis ? '✅' : '❌'}\n- Boosting strategy: ${hasBoosting ? '✅' : '❌'}\n- Substantial: ${isSubstantial ? '✅' : '❌'}\n- Images analysed: ${imageUrls.length}\n\n${'─'.repeat(60)}\n\n${combined}`);
+    } catch (err) {
+      setStatus('test3', 'fail', `FAIL: ${err.message}`);
+      setOutput('test3', err.stack || err.message);
+      setTime('test3', Date.now() - start);
+      setPhase('test3', '');
+    }
+  }
+
+  // ─── Run all tests ──────────────────────────────────────────────────
+
+  window.runAllTests = async function() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    btn.textContent = 'Running tests...';
+    await Promise.all([runTest1(), runTest2(), runTest3()]);
+    btn.textContent = 'Tests Complete — Run Again?';
+    btn.disabled = false;
+  };
+</script>
+
+</body>
+</html>
