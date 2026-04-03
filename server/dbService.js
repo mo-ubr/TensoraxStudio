@@ -6,9 +6,10 @@
  */
 
 import { Router } from "express";
-import { mkdir, writeFile, readdir } from "fs/promises";
+import { mkdir, writeFile, readdir, readFile, stat } from "fs/promises";
 import { resolve, join } from "path";
 import Database from "better-sqlite3";
+import multer from "multer";
 
 const router = Router();
 
@@ -548,6 +549,99 @@ router.post("/projects/:id/files", async (req, res) => {
 
     console.log(`[DB] Saved project file: ${filePath}`);
     res.json({ path: filePath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Multipart file upload to project folder ─────────────────────────────────
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB limit
+
+router.post("/projects/:id/upload", upload.array("files", 20), async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    const subfolder = req.body.subfolder || "uploads";
+    const targetDir = join(projectDir, subfolder);
+    await mkdir(targetDir, { recursive: true });
+
+    const saved = [];
+    for (const file of (req.files || [])) {
+      const filePath = join(targetDir, file.originalname);
+      await writeFile(filePath, file.buffer);
+      saved.push({ name: file.originalname, path: filePath, size: file.size });
+      console.log(`[DB] Uploaded: ${filePath} (${file.size} bytes)`);
+    }
+
+    res.json({ uploaded: saved.length, files: saved });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List ALL files in a project directory (recursive)
+router.get("/projects/:id/all-files", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    await mkdir(projectDir, { recursive: true });
+
+    const files = [];
+    async function walk(dir, prefix) {
+      try {
+        const entries = await readdir(dir, { withFileTypes: true });
+        for (const e of entries) {
+          const fullPath = join(dir, e.name);
+          if (e.isDirectory()) {
+            await walk(fullPath, prefix ? prefix + "/" + e.name : e.name);
+          } else {
+            const s = await stat(fullPath).catch(() => null);
+            files.push({
+              name: e.name,
+              folder: prefix || "",
+              path: fullPath,
+              size: s?.size || 0,
+              modified: s?.mtime?.toISOString() || "",
+              url: `/api/db/projects/${p.id}/serve-file/${encodeURIComponent(prefix ? prefix + "/" + e.name : e.name)}`,
+            });
+          }
+        }
+      } catch { /* dir doesn't exist yet */ }
+    }
+    await walk(projectDir, "");
+    res.json({ projectDir, files });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Serve any file from the project directory
+router.get("/projects/:id/serve-file/:filepath(*)", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    const filePath = join(projectDir, decodeURIComponent(req.params.filepath));
+
+    // Security: ensure the resolved path is within the project directory
+    const resolved = resolve(filePath);
+    if (!resolved.startsWith(resolve(projectDir))) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const { existsSync } = await import("fs");
+    if (!existsSync(resolved)) return res.status(404).json({ error: "File not found" });
+
+    res.sendFile(resolved);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

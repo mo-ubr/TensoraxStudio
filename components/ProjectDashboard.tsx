@@ -18,6 +18,9 @@ interface ProjectFile {
   name: string;
   path: string;
   url: string;
+  folder?: string;
+  size?: number;
+  modified?: string;
 }
 
 // Helper: parse JSON string or return array as-is
@@ -128,9 +131,15 @@ const SectionCard: React.FC<{
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onBack, onOpenInChat }) => {
   const [metadata, setMetadata] = useState<Record<string, unknown>>({});
   const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [allFiles, setAllFiles] = useState<ProjectFile[]>([]);
   const [projectDir, setProjectDir] = useState('');
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'word' | 'excel' | null>(null);
+  const [instructions, setInstructions] = useState('');
+  const [instructionsSaved, setInstructionsSaved] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const slug = project.slug || project.name.replace(/\s+/g, '_');
 
@@ -139,20 +148,72 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
   const loadProjectData = async () => {
     setLoading(true);
     try {
-      const [meta, dirInfo, outputsInfo] = await Promise.all([
+      const [meta, dirInfo, outputsInfo, allFilesInfo] = await Promise.all([
         DB.getMetadata(project.id).catch(() => ({})),
         fetch(`/api/db/projects/${project.id}/directory`).then(r => r.json()).catch(() => ({ path: '' })),
         fetch(`/api/db/projects/${project.id}/outputs`).then(r => r.json()).catch(() => ({ files: [] })),
+        fetch(`/api/db/projects/${project.id}/all-files`).then(r => r.json()).catch(() => ({ files: [] })),
       ]);
       setMetadata(meta);
       setProjectDir(dirInfo.path || '');
       setFiles(outputsInfo.files || []);
+      setAllFiles(allFilesInfo.files || []);
+      setInstructions(typeof meta.instructions === 'string' ? meta.instructions : '');
     } catch (err) {
       console.error('[ProjectDashboard] Load failed:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // ─── Instructions auto-save (debounced) ────────────────────────────────
+
+  const handleInstructionsChange = useCallback((text: string) => {
+    setInstructions(text);
+    setInstructionsSaved(false);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      await DB.saveMetadata(project.id, { instructions: text }).catch(() => {});
+      setInstructionsSaved(true);
+    }, 1000);
+  }, [project.id]);
+
+  // ─── File Upload ───────────────────────────────────────────────────────
+
+  const uploadFiles = useCallback(async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('subfolder', 'uploads');
+      for (const f of files) {
+        formData.append('files', f);
+      }
+      const res = await fetch(`/api/db/projects/${project.id}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      // Reload file list
+      const allFilesInfo = await fetch(`/api/db/projects/${project.id}/all-files`).then(r => r.json()).catch(() => ({ files: [] }));
+      setAllFiles(allFilesInfo.files || []);
+    } catch (err: any) {
+      console.error('[Upload] Failed:', err);
+      alert('Upload failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploading(false);
+      setIsDragging(false);
+    }
+  }, [project.id]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files);
+  }, [uploadFiles]);
 
   const m = metadata as any;
 
@@ -337,6 +398,98 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
               <p className="text-sm text-[#333] leading-relaxed">{project.description}</p>
             </div>
           )}
+
+          {/* Project Instructions */}
+          <div className="bg-white rounded-xl border border-[#e0d6e3] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#f0e6f4] bg-[#faf7fb]">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-clipboard-list text-[#91569c] text-xs" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#5c3a62]">Project Instructions</h3>
+              </div>
+              <span className="text-[9px] text-[#aaa]">
+                {instructionsSaved ? <><i className="fa-solid fa-check text-green-500" /> Saved</> : <><i className="fa-solid fa-spinner fa-spin text-[#91569c]" /> Saving...</>}
+              </span>
+            </div>
+            <div className="px-5 py-4">
+              <textarea
+                value={instructions}
+                onChange={e => handleInstructionsChange(e.target.value)}
+                placeholder="Write instructions for MO when working on this project... (e.g. target audience, objectives, constraints, platform-specific notes)"
+                rows={4}
+                className="w-full text-sm px-3 py-2.5 border border-[#e0d6e3] rounded-lg focus:outline-none focus:border-[#91569c] focus:ring-1 focus:ring-[#91569c]/20 resize-y min-h-[80px] placeholder:text-[#bbb]"
+              />
+              <p className="text-[9px] text-[#aaa] mt-1.5">These instructions persist across sessions and are used by MO when working on this project.</p>
+            </div>
+          </div>
+
+          {/* Project Files — Upload Zone */}
+          <div className="bg-white rounded-xl border border-[#e0d6e3] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#f0e6f4] bg-[#faf7fb]">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-file-arrow-up text-[#91569c] text-xs" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#5c3a62]">Project Files</h3>
+              </div>
+              <label className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#91569c] text-white text-[9px] font-bold cursor-pointer hover:bg-[#7a4785] transition-colors">
+                <i className="fa-solid fa-plus" />
+                Upload
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) uploadFiles(e.target.files); e.target.value = ''; }}
+                />
+              </label>
+            </div>
+            <div className="px-5 py-4">
+              {/* Drop zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+                  isDragging ? 'border-[#91569c] bg-[#f6f0f8]' : 'border-[#e0d6e3] hover:border-[#ceadd4]'
+                } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                {uploading ? (
+                  <p className="text-xs text-[#91569c] font-bold"><i className="fa-solid fa-spinner fa-spin mr-1" /> Uploading...</p>
+                ) : isDragging ? (
+                  <p className="text-xs text-[#91569c] font-bold"><i className="fa-solid fa-cloud-arrow-up mr-1" /> Drop files here</p>
+                ) : (
+                  <p className="text-[10px] text-[#aaa]"><i className="fa-solid fa-cloud-arrow-up mr-1" /> Drag & drop files here, or click Upload above</p>
+                )}
+              </div>
+
+              {/* File list */}
+              {allFiles.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {allFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#faf7fb] transition-colors">
+                      <i className={`fa-solid ${
+                        /\.(json)$/i.test(f.name) ? 'fa-file-code text-yellow-600' :
+                        /\.(mp4|webm|mov)$/i.test(f.name) ? 'fa-video text-[#91569c]' :
+                        /\.(png|jpg|jpeg|webp|gif)$/i.test(f.name) ? 'fa-image text-blue-500' :
+                        /\.(docx?)$/i.test(f.name) ? 'fa-file-word text-blue-600' :
+                        /\.(xlsx?)$/i.test(f.name) ? 'fa-file-excel text-green-600' :
+                        /\.(pdf)$/i.test(f.name) ? 'fa-file-pdf text-red-500' :
+                        /\.(zip|gz|tar)$/i.test(f.name) ? 'fa-file-zipper text-amber-600' :
+                        /\.(txt|md|csv)$/i.test(f.name) ? 'fa-file-lines text-[#888]' :
+                        'fa-file text-[#888]'
+                      } text-xs w-4 text-center`} />
+                      <span className="text-xs text-[#5c3a62] font-bold truncate flex-1">{f.name}</span>
+                      {f.folder && <span className="text-[9px] text-[#aaa]">{f.folder}/</span>}
+                      {f.size ? <span className="text-[9px] text-[#aaa]">{f.size > 1048576 ? (f.size/1048576).toFixed(1) + ' MB' : f.size > 1024 ? (f.size/1024).toFixed(0) + ' KB' : f.size + ' B'}</span> : null}
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[9px] text-[#91569c] hover:underline">
+                        <i className="fa-solid fa-download" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {allFiles.length === 0 && !uploading && (
+                <p className="text-[9px] text-[#aaa] mt-2 text-center">No files uploaded yet.</p>
+              )}
+            </div>
+          </div>
 
           {/* Research Summary */}
           {m.researchSummary && (
