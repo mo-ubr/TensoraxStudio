@@ -141,6 +141,32 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
   const [isDragging, setIsDragging] = useState(false);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Actions config
+  const [actions, setActions] = useState<{
+    saveFormat: 'excel' | 'word' | 'pdf' | 'none';
+    scheduleEnabled: boolean;
+    scheduleFrequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+    scheduleDay: string;
+    scheduleTime: string;
+    schedulePeriodStart: string;
+    schedulePeriodEnd: string;
+    notifyTrigger: 'schedule' | 'when-ready' | 'both';
+    notifyRecipients: string;
+    notifyInclude: 'link' | 'link-summary' | 'link-attachment';
+  }>({
+    saveFormat: 'excel',
+    scheduleEnabled: false,
+    scheduleFrequency: 'weekly',
+    scheduleDay: 'Monday',
+    scheduleTime: '09:00',
+    schedulePeriodStart: '',
+    schedulePeriodEnd: '',
+    notifyTrigger: 'both',
+    notifyRecipients: '',
+    notifyInclude: 'link-summary',
+  });
+  const [actionsSaved, setActionsSaved] = useState(true);
+
   const slug = project.slug || project.name.replace(/\s+/g, '_');
 
   useEffect(() => { loadProjectData(); }, [project.id]);
@@ -159,6 +185,13 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
       setFiles(outputsInfo.files || []);
       setAllFiles(allFilesInfo.files || []);
       setInstructions(typeof meta.instructions === 'string' ? meta.instructions : '');
+      if (meta.actions && typeof meta.actions === 'object') {
+        setActions(prev => ({ ...prev, ...(meta.actions as any) }));
+      }
+      if (!meta.actions?.notifyRecipients) {
+        const globalEmail = localStorage.getItem('tensorax_notify_email') || '';
+        if (globalEmail) setActions(prev => ({ ...prev, notifyRecipients: globalEmail }));
+      }
     } catch (err) {
       console.error('[ProjectDashboard] Load failed:', err);
     } finally {
@@ -176,6 +209,20 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
       await DB.saveMetadata(project.id, { instructions: text }).catch(() => {});
       setInstructionsSaved(true);
     }, 1000);
+  }, [project.id]);
+
+  // ─── Actions auto-save ──────────────────────────────────────────────────
+
+  const updateAction = useCallback((patch: Partial<typeof actions>) => {
+    setActions(prev => {
+      const updated = { ...prev, ...patch };
+      setActionsSaved(false);
+      setTimeout(async () => {
+        await DB.saveMetadata(project.id, { actions: updated }).catch(() => {});
+        setActionsSaved(true);
+      }, 800);
+      return updated;
+    });
   }, [project.id]);
 
   // ─── File Upload ───────────────────────────────────────────────────────
@@ -488,6 +535,134 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
               {allFiles.length === 0 && !uploading && (
                 <p className="text-[9px] text-[#aaa] mt-2 text-center">No files uploaded yet.</p>
               )}
+            </div>
+          </div>
+
+          {/* Actions — save, schedule, notify */}
+          <div className="bg-white rounded-xl border border-[#e0d6e3] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#f0e6f4] bg-[#faf7fb]">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-bolt text-[#91569c] text-xs" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#5c3a62]">Actions</h3>
+              </div>
+              <span className="text-[9px] text-[#aaa]">
+                {actionsSaved ? <><i className="fa-solid fa-check text-green-500" /> Saved</> : <><i className="fa-solid fa-spinner fa-spin text-[#91569c]" /> Saving...</>}
+              </span>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+
+              {/* Save format */}
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-[#888] mb-1">Save output as</label>
+                <div className="flex gap-2">
+                  {(['excel', 'word', 'pdf', 'none'] as const).map(fmt => (
+                    <button
+                      key={fmt}
+                      onClick={() => updateAction({ saveFormat: fmt })}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                        actions.saveFormat === fmt
+                          ? 'bg-[#91569c] text-white border-[#91569c]'
+                          : 'bg-white text-[#5c3a62] border-[#e0d6e3] hover:border-[#91569c]'
+                      }`}
+                    >
+                      {fmt === 'none' ? 'No auto-save' : fmt.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Schedule */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-[9px] font-bold uppercase tracking-wider text-[#888]">Schedule</label>
+                  <button
+                    onClick={() => updateAction({ scheduleEnabled: !actions.scheduleEnabled })}
+                    className={`w-8 h-4 rounded-full transition-colors relative ${actions.scheduleEnabled ? 'bg-[#91569c]' : 'bg-[#ddd]'}`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all shadow-sm ${actions.scheduleEnabled ? 'left-[17px]' : 'left-0.5'}`} />
+                  </button>
+                  <span className="text-[9px] text-[#aaa]">{actions.scheduleEnabled ? 'Active' : 'Off'}</span>
+                </div>
+
+                {actions.scheduleEnabled && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-[#faf7fb] rounded-lg p-3 border border-[#f0e6f4]">
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Frequency</label>
+                      <select value={actions.scheduleFrequency} onChange={e => updateAction({ scheduleFrequency: e.target.value as any })}
+                        className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Biweekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                    {actions.scheduleFrequency !== 'daily' && (
+                      <div>
+                        <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Day</label>
+                        <select value={actions.scheduleDay} onChange={e => updateAction({ scheduleDay: e.target.value })}
+                          className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]">
+                          {actions.scheduleFrequency === 'monthly'
+                            ? Array.from({length:28}, (_,i) => <option key={i+1} value={String(i+1)}>{i+1}</option>)
+                            : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => <option key={d} value={d}>{d}</option>)
+                          }
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Time</label>
+                      <input type="time" value={actions.scheduleTime} onChange={e => updateAction({ scheduleTime: e.target.value })}
+                        className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]" />
+                    </div>
+                    <div>
+                      <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Period</label>
+                      <div className="flex gap-1 items-center">
+                        <input type="date" value={actions.schedulePeriodStart} onChange={e => updateAction({ schedulePeriodStart: e.target.value })}
+                          className="w-full text-[10px] px-1 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]" />
+                        <span className="text-[9px] text-[#aaa]">→</span>
+                        <input type="date" value={actions.schedulePeriodEnd} onChange={e => updateAction({ schedulePeriodEnd: e.target.value })}
+                          className="w-full text-[10px] px-1 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Notification */}
+              <div>
+                <label className="block text-[9px] font-bold uppercase tracking-wider text-[#888] mb-1">Notification</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Trigger</label>
+                    <select value={actions.notifyTrigger} onChange={e => updateAction({ notifyTrigger: e.target.value as any })}
+                      className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]">
+                      <option value="schedule">On schedule</option>
+                      <option value="when-ready">When ready (task completes)</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Include</label>
+                    <select value={actions.notifyInclude} onChange={e => updateAction({ notifyInclude: e.target.value as any })}
+                      className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white focus:outline-none focus:border-[#91569c]">
+                      <option value="link">Link only</option>
+                      <option value="link-summary">Link + summary</option>
+                      <option value="link-attachment">Link + full report attached</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[8px] font-bold uppercase text-[#aaa] mb-0.5">Recipients</label>
+                    <input type="text" value={actions.notifyRecipients} onChange={e => updateAction({ notifyRecipients: e.target.value })}
+                      placeholder="email@example.com"
+                      className="w-full text-xs px-2 py-1.5 border border-[#e0d6e3] rounded bg-white placeholder:text-[#bbb] focus:outline-none focus:border-[#91569c]" />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[9px] text-[#aaa]">
+                {actions.scheduleEnabled
+                  ? `Scheduled: save ${actions.saveFormat.toUpperCase()} ${actions.scheduleFrequency}${actions.scheduleFrequency !== 'daily' ? ' on ' + actions.scheduleDay : ''} at ${actions.scheduleTime}. Notify: ${actions.notifyTrigger}.`
+                  : 'Schedule is off. Results will be saved and notifications sent when tasks complete (if "when ready" trigger is selected).'}
+              </p>
             </div>
           </div>
 

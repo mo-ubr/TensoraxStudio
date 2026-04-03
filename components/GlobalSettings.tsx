@@ -12,6 +12,8 @@ const LS = {
   defaultAspectRatio: 'tensorax_default_aspect_ratio',
   defaultOutputType:  'tensorax_default_output_type',
   defaultAssetDir:    'tensorax_default_asset_dir',
+  notifyEmail:        'tensorax_notify_email',
+  notifyMethod:       'tensorax_notify_method',       // 'email' | 'in-app' | 'both'
   // Legacy keys we also write to for backward-compat
   defaultProvider:    'tensorax_default_provider',
   mainProvider:       'tensorax_main_provider',
@@ -648,6 +650,8 @@ export const GlobalSettings: React.FC = () => {
   const [aspectRatio, setAspectRatio] = useState(() => localStorage.getItem(LS.defaultAspectRatio) ?? '9:16');
   const [outputType, setOutputType] = useState(() => localStorage.getItem(LS.defaultOutputType) ?? 'video');
   const [assetDir, setAssetDir] = useState(() => localStorage.getItem(LS.defaultAssetDir) ?? '');
+  const [notifyEmail, setNotifyEmail] = useState(() => localStorage.getItem(LS.notifyEmail) ?? '');
+  const [notifyMethod, setNotifyMethod] = useState(() => localStorage.getItem(LS.notifyMethod) ?? 'both');
 
   // Provider keys state
   const [providerKeys, setProviderKeys] = useState<Record<string, string>>(() => {
@@ -852,6 +856,42 @@ export const GlobalSettings: React.FC = () => {
           {!assetDir && (
             <p className="text-[9px] text-[#888] mt-2">Type the full folder path where project files should be saved. Each project gets its own subfolder.</p>
           )}
+        </SectionCard>
+
+        {/* Notifications */}
+        <SectionCard icon="fa-bell" title="Notifications">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-[#888] mb-1">Email address for notifications</label>
+              <input
+                type="email"
+                value={notifyEmail}
+                onChange={e => {
+                  setNotifyEmail(e.target.value);
+                  if (e.target.value.trim()) localStorage.setItem(LS.notifyEmail, e.target.value.trim());
+                  else localStorage.removeItem(LS.notifyEmail);
+                }}
+                placeholder="your@email.com"
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-2 text-sm text-[#3a3a3a] placeholder:text-[#bbb] outline-none focus:ring-2 focus:ring-[#91569c]/30"
+              />
+            </div>
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-wider text-[#888] mb-1">Notification method</label>
+              <select
+                value={notifyMethod}
+                onChange={e => {
+                  setNotifyMethod(e.target.value);
+                  localStorage.setItem(LS.notifyMethod, e.target.value);
+                }}
+                className="w-full bg-[#f6f0f8] border border-[#ceadd4] rounded-lg px-4 py-2 text-sm text-[#3a3a3a] outline-none focus:ring-2 focus:ring-[#91569c]/30"
+              >
+                <option value="email">Email only</option>
+                <option value="in-app">In-app only</option>
+                <option value="both">Both email and in-app</option>
+              </select>
+            </div>
+            <p className="text-[9px] text-[#888]">These are default notification settings. Each project can override the schedule and recipients in its Actions section.</p>
+          </div>
         </SectionCard>
 
         <div className="h-6" />
