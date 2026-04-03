@@ -23,7 +23,7 @@ const router = Router();
 // ─── Platform scrapers ───────────────────────────────────────────────────────
 
 const SCRAPERS = {
-  tiktok: async ({ channelUrl, channelHandle, resultsLimit = 20 }) => {
+  tiktok: async ({ channelUrl, channelHandle, resultsLimit = 20, periodDays }) => {
     // Parse handle from URL if needed
     let handle = channelHandle || "";
     if (!handle && channelUrl) {
@@ -31,13 +31,17 @@ const SCRAPERS = {
       if (match) handle = match[1];
       else handle = channelUrl.split("/").filter(Boolean).pop() || "";
     }
-    return scrapeTikTok({
+    const opts = {
       profiles: handle ? [handle] : [],
       urls: !handle && channelUrl ? [channelUrl] : [],
       resultsPerPage: resultsLimit,
-    });
+    };
+    if (periodDays) {
+      opts.oldestPostDate = new Date(Date.now() - periodDays * 86400000).toISOString().substring(0, 10);
+    }
+    return scrapeTikTok(opts);
   },
-  facebook: async ({ channelUrl, channelHandle, resultsLimit = 50 }) => {
+  facebook: async ({ channelUrl, channelHandle, resultsLimit = 50, periodDays }) => {
     let url = channelUrl || "";
     if (!url && channelHandle) {
       url = /^\d+$/.test(channelHandle)
@@ -47,6 +51,8 @@ const SCRAPERS = {
     return scrapeFacebook({
       startUrls: [{ url }],
       resultsLimit,
+      activeFilter: periodDays ? "custom" : "all",
+      startDate: periodDays ? new Date(Date.now() - periodDays * 86400000).toISOString() : "",
     });
   },
   // Instagram and YouTube can be added here when scrapers are ready
@@ -81,6 +87,7 @@ async function runResearchPipeline({
   channelHandle,
   competitors = [],       // [{ handle, url }]
   resultsLimit = 50,
+  periodDays = 7,          // default: last 7 days
   projectSlug,
   projectName,
   onProgress,              // optional: (step, message) => void
@@ -89,11 +96,11 @@ async function runResearchPipeline({
   const results = { steps: {} };
 
   // ── Step 1: Scrape main channel ──
-  progress("scrape", `Scraping ${platform} channel...`);
+  progress("scrape", `Scraping ${platform} channel (last ${periodDays} days)...`);
   const scraper = SCRAPERS[platform];
   if (!scraper) throw new Error(`Unsupported platform: ${platform}. Supported: ${Object.keys(SCRAPERS).join(", ")}`);
 
-  const scrapeResult = await scraper({ channelUrl, channelHandle, resultsLimit });
+  const scrapeResult = await scraper({ channelUrl, channelHandle, resultsLimit, periodDays });
   const channelName = extractChannelName(platform, scrapeResult);
   const rawPosts = getRawPosts(platform, scrapeResult);
   progress("scrape", `Got ${rawPosts.length} posts from @${channelName}. Cost: $${scrapeResult.cost}`);
@@ -108,6 +115,7 @@ async function runResearchPipeline({
         channelUrl: comp.url,
         channelHandle: comp.handle,
         resultsLimit: Math.min(resultsLimit, 20), // fewer for competitors
+        periodDays,
       });
       const compName = extractChannelName(platform, compResult);
       const compPosts = getRawPosts(platform, compResult);

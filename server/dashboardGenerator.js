@@ -489,22 +489,68 @@ function exportExcel(lang) {
   const wb = XLSX.utils.book_new();
   const isEN = lang === 'en';
 
-  // Overview sheet
-  const overviewData = ALL_POSTS.map(p => ({
-    [isEN ? 'Author' : 'Автор']: p.authorName,
-    [isEN ? 'Text' : 'Текст']: (p.text||'').substring(0, 200),
-    [isEN ? CFG.viewsLabel : 'Гледания']: p.views||0,
-    [isEN ? CFG.likesLabel : 'Харесвания']: p.likes||0,
-    [isEN ? CFG.sharesLabel : 'Споделяния']: p.shares||0,
-    [isEN ? CFG.commentsLabel : 'Коментари']: p.comments||0,
-    [isEN ? 'Engagement' : 'Ангажираност']: engRate(p),
-    [isEN ? 'Date' : 'Дата']: (p.createdAt||'').substring(0, 10),
-    [isEN ? 'URL' : 'Линк']: p.url||'',
-  }));
-  const ws1 = XLSX.utils.json_to_sheet(overviewData);
-  XLSX.utils.book_append_sheet(wb, ws1, isEN ? 'All Content' : 'Съдържание');
+  function postRow(p) {
+    return {
+      [isEN ? 'Author' : 'Автор']: p.authorName,
+      [isEN ? 'Text' : 'Текст']: (p.text||'').substring(0, 300),
+      [isEN ? CFG.viewsLabel : 'Гледания']: p.views||0,
+      [isEN ? CFG.likesLabel : 'Харесвания']: p.likes||0,
+      [isEN ? CFG.sharesLabel : 'Споделяния']: p.shares||0,
+      [isEN ? CFG.commentsLabel : 'Коментари']: p.comments||0,
+      [isEN ? 'Engagement' : 'Ангажираност']: engRate(p),
+      [isEN ? 'Date' : 'Дата']: (p.createdAt||'').substring(0, 10),
+      [isEN ? 'URL' : 'Линк']: p.url||'',
+      [isEN ? 'Hashtags' : 'Хаштагове']: (p.hashtags||[]).map(h => '#'+h).join(' '),
+    };
+  }
 
-  // Hashtags sheet
+  // 1. Overview — accounts ranked by views
+  const authors = {};
+  ALL_POSTS.forEach(p => {
+    const a = p.authorName || 'unknown';
+    if (!authors[a]) authors[a] = { count: 0, followers: p.authorFollowers||0, totalViews: 0, totalLikes: 0 };
+    authors[a].count++;
+    authors[a].totalViews += p.views||0;
+    authors[a].totalLikes += p.likes||0;
+  });
+  const overviewData = Object.entries(authors).sort((a,b) => b[1].totalViews - a[1].totalViews).map(([name, d], i) => ({
+    '#': i+1,
+    [isEN ? 'Account' : 'Акаунт']: '@' + name,
+    [isEN ? 'Followers' : 'Последователи']: d.followers,
+    [isEN ? CFG.contentLabel : 'Публикации']: d.count,
+    [isEN ? 'Total ' + CFG.viewsLabel : 'Общо гледания']: d.totalViews,
+    [isEN ? 'Total ' + CFG.likesLabel : 'Общо харесвания']: d.totalLikes,
+    [isEN ? 'Avg ' + CFG.viewsLabel : 'Средно гледания']: Math.round(d.totalViews / d.count),
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(overviewData), isEN ? 'Overview' : 'Преглед');
+
+  // 2. Channel — only our posts
+  const chPosts = POSTS.sort((a,b) => (b.views||0) - (a.views||0));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(chPosts.map(postRow)), isEN ? 'Channel' : 'Канал');
+
+  // 3. Competitors — one section per competitor
+  const compRows = [];
+  COMPETITORS.forEach(comp => {
+    if (!comp.posts || !comp.posts.length) return;
+    comp.posts.sort((a,b) => (b.views||0) - (a.views||0)).forEach(p => {
+      const r = postRow(p);
+      r[isEN ? 'Competitor' : 'Конкурент'] = comp.name;
+      compRows.push(r);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(compRows), isEN ? 'Competitors' : 'Конкуренти');
+
+  // 4. Top 10
+  const top10 = [...ALL_POSTS].sort((a,b) => (b.views||0) - (a.views||0)).slice(0, 10).map((p, i) => {
+    const r = postRow(p); r['#'] = i+1; return r;
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(top10), 'Top 10');
+
+  // 5. All Posts
+  const allRows = ALL_POSTS.sort((a,b) => (b.views||0) - (a.views||0)).map(postRow);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allRows), isEN ? 'All Posts' : 'Публикации');
+
+  // 6. Hashtags
   const tags = {};
   ALL_POSTS.forEach(p => (p.hashtags||[]).forEach(h => {
     const key = h.toLowerCase();
@@ -512,14 +558,28 @@ function exportExcel(lang) {
     tags[key].count++;
     tags[key].views += p.views||0;
   }));
-  const hashData = Object.values(tags).sort((a,b) => b.count - a.count).map(t => ({
+  const hashData = Object.values(tags).sort((a,b) => b.count - a.count).map((t, i) => ({
+    '#': i+1,
     [isEN ? 'Hashtag' : 'Хаштаг']: '#' + t.tag,
-    [isEN ? 'Count' : 'Брой']: t.count,
-    [isEN ? 'Total Views' : 'Общо гледания']: t.views,
-    [isEN ? 'Avg Views' : 'Средно гледания']: Math.round(t.views/t.count),
+    [isEN ? 'Used' : 'Употреби']: t.count,
+    [isEN ? 'Total ' + CFG.viewsLabel : 'Общо гледания']: t.views,
+    [isEN ? 'Avg ' + CFG.viewsLabel : 'Средно гледания']: Math.round(t.views/t.count),
   }));
-  const ws2 = XLSX.utils.json_to_sheet(hashData);
-  XLSX.utils.book_append_sheet(wb, ws2, isEN ? 'Hashtags' : 'Хаштагове');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hashData), isEN ? 'Hashtags' : 'Хаштагове');
+
+  // 7. Analysis (placeholder — populated by Gemini later)
+  const analysisEl = document.getElementById('sec-analysis');
+  const analysisText = analysisEl ? analysisEl.innerText.substring(0, 5000) : '';
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+    [isEN ? 'Analysis' : 'Анализ']: analysisText || (isEN ? 'Analysis not yet generated' : 'Анализът все още не е генериран'),
+  }]), isEN ? 'Analysis' : 'Анализ');
+
+  // 8. Recommendations (placeholder — populated by Gemini later)
+  const recsEl = document.getElementById('sec-recommendations');
+  const recsText = recsEl ? recsEl.innerText.substring(0, 5000) : '';
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+    [isEN ? 'Recommendations' : 'Препоръки']: recsText || (isEN ? 'Recommendations not yet generated' : 'Препоръките все още не са генерирани'),
+  }]), isEN ? 'Recommendations' : 'Препоръки');
 
   XLSX.writeFile(wb, '${channelName || "research"}_' + PLATFORM + '_' + lang + '.xlsx');
 }

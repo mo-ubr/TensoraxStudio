@@ -3069,6 +3069,7 @@ export const socialMediaResearch: TemplateConfig = {
     customFields: [
       { id: 'platform', label: 'Platform', type: 'select', options: ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'LinkedIn'], required: true },
       { id: 'channelHandle', label: 'Channel Handle or URL', type: 'text', required: true },
+      { id: 'periodDays', label: 'Period (days)', type: 'select', options: ['7', '14', '30', '60', '90', '180', '365'], defaultValue: '7', required: true },
       { id: 'competitors', label: 'Competitor handles (comma-separated)', type: 'textarea', required: false },
       { id: 'hashtags', label: 'Hashtags/keywords to research (comma-separated)', type: 'textarea', required: false },
       { id: 'language', label: 'Report Language', type: 'select', options: ['English', 'Bulgarian', 'Greek', 'Both EN+Local'], defaultValue: 'Both EN+Local', required: true },
