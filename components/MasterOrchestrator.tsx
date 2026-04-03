@@ -304,15 +304,25 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const savingDir = localStorage.getItem('tensorax_default_asset_dir') || '';
 
+      // Capture user's messages as project instructions
+      const userMessages = messages.filter(m => m.role === 'user').map(m => m.text).join('\n\n');
+      const firstUserMsg = messages.find(m => m.role === 'user')?.text || '';
+
       // Create project via API
+      const projectMeta: Record<string, unknown> = {
+        instructions: userMessages || firstUserMsg,
+        chatHistory: messages.map(m => `${m.role === 'user' ? 'User' : 'MO'}: ${m.text}`).join('\n'),
+      };
+      if (savingDir) projectMeta.customDirectory = `${savingDir}/${slug}`;
+
       const res = await fetch('/api/db/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           slug,
-          description: `Created from chat conversation`,
-          metadata: savingDir ? { customDirectory: `${savingDir}/${slug}` } : {},
+          description: firstUserMsg.substring(0, 200) || 'Created from chat conversation',
+          metadata: projectMeta,
         }),
       });
 
@@ -330,7 +340,7 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
 
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: `Project "${name}" has been created${savingDir ? ` and will save to ${savingDir}/${slug}` : ''}. You can find it in your Projects list.`,
+        text: `Project "${name}" has been created${savingDir ? ` and will save to ${savingDir}/${slug}` : ''}. Your instructions have been saved. You can find it in your Projects list.`,
         timestamp: Date.now(),
       }]);
       setSaveProjectPrompt(null);
