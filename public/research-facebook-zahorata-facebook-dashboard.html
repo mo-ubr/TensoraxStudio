@@ -666,36 +666,80 @@ function exportExcel(lang) {
     } catch(e) { /* duplicate name */ }
   }
 
-  function addSectionsAsSheets(sectionId, prefix, maxSheets) {
+  function sectionToSingleSheet(sectionId, sheetName) {
     const el = document.getElementById(sectionId);
     if (!el) {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
         Content: isEN ? 'Not yet generated' : 'Все още не е генериран'
-      }]), prefix.trim());
+      }]), sheetName);
       return;
     }
+
+    const ws = XLSX.utils.aoa_to_sheet([]);
+    let row = 0;
+    let maxCols = 1;
+
+    // Walk all cards sequentially onto one sheet
     const cards = el.querySelectorAll('.card');
-    let sheetCount = 0;
-    if (cards.length === 0) {
-      const rows = [];
-      el.querySelectorAll('h2, h3, p, li').forEach(n => {
-        rows.push({ Content: n.innerText.trim() });
+    const sources = cards.length > 0 ? cards : [el];
+
+    sources.forEach((card, ci) => {
+      // Add blank row between cards (not before the first)
+      if (ci > 0) { row += 2; }
+
+      const nodes = card.querySelectorAll('h2, h3, p, li, table, ul');
+      nodes.forEach(node => {
+        if (node.tagName !== 'TABLE' && node.closest('table')) return;
+        if (node.tagName === 'LI' && node.parentElement && node.parentElement.tagName === 'UL') return;
+
+        if (node.tagName === 'H2' || node.tagName === 'H3') {
+          row++;
+          XLSX.utils.sheet_add_aoa(ws, [['\u25CC ' + node.innerText.trim().toUpperCase()]], { origin: { r: row, c: 0 } });
+          row++;
+          return;
+        }
+        if (node.tagName === 'P') {
+          if (node.closest('table')) return;
+          XLSX.utils.sheet_add_aoa(ws, [[node.innerText.trim()]], { origin: { r: row, c: 0 } });
+          row++;
+          return;
+        }
+        if (node.tagName === 'UL') {
+          if (node.closest('table')) return;
+          [...node.querySelectorAll('li')].forEach(li => {
+            XLSX.utils.sheet_add_aoa(ws, [['  \u2022 ' + li.innerText.trim()]], { origin: { r: row, c: 0 } });
+            row++;
+          });
+          return;
+        }
+        if (node.tagName === 'TABLE') {
+          row++;
+          const headers = [...node.querySelectorAll('th')].map(th => th.innerText.trim());
+          if (headers.length > maxCols) maxCols = headers.length;
+          // Header row
+          XLSX.utils.sheet_add_aoa(ws, [headers], { origin: { r: row, c: 0 } });
+          row++;
+          // Data rows
+          node.querySelectorAll('tr').forEach(tr => {
+            const cells = [...tr.querySelectorAll('td')];
+            if (cells.length === 0) return;
+            XLSX.utils.sheet_add_aoa(ws, [cells.map(td => td.innerText.trim())], { origin: { r: row, c: 0 } });
+            row++;
+          });
+          row++;
+          return;
+        }
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ Content: 'Empty' }]), prefix.trim());
-      return;
-    }
-    cards.forEach((card, i) => {
-      if (sheetCount >= (maxSheets || 10)) return;
-      const heading = card.querySelector('h2, h3');
-      const title = heading ? heading.innerText.trim() : 'Section ' + (i+1);
-      let name = (prefix + (i+1) + ' ' + title).replace(/[\/*?:[]]/g, '').substring(0, 31);
-      cardToSheet(card, wb, name);
-      sheetCount++;
     });
+
+    // Auto-size columns
+    ws['!cols'] = Array.from({ length: maxCols }, (_, i) => ({ wch: i === 0 ? 45 : 25 }));
+
+    try { XLSX.utils.book_append_sheet(wb, ws, sheetName); } catch(e) {}
   }
 
-  addSectionsAsSheets('sec-analysis', 'A', 8);
-  addSectionsAsSheets('sec-recommendations', 'R', 12);
+  sectionToSingleSheet('sec-analysis', isEN ? 'Analysis' : 'Анализ');
+  sectionToSingleSheet('sec-recommendations', isEN ? 'Recommendations' : 'Препоръки');
 
   XLSX.writeFile(wb, 'Za Horata_' + PLATFORM + '_' + lang + '.xlsx');
 }
