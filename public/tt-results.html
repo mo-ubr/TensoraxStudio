@@ -478,6 +478,64 @@
     }
     html += '</div>';
 
+    // ─── 6. Paid Promotion Analysis ───
+    html += '<div class="card" style="border-left: 4px solid #d32f2f;">';
+    html += '<h3>6. Paid Promotion Analysis</h3>';
+    html += '<p style="margin-bottom:10px">Three promotions were run. Two delivered results, one was blocked. Total spend: <strong>€119.04</strong> out of €125 budget.</p>';
+
+    html += '<h4 style="color:#d32f2f;margin:12px 0 6px">Promotion Results Summary</h4>';
+    html += '<table style="table-layout:auto"><tr><th>Promotion</th><th>Video</th><th>Goal</th><th>Budget</th><th>Spent</th><th>Views</th><th>Likes</th><th>Comments</th><th>Shares</th><th>New Followers</th><th>Profile Views</th><th>Status</th></tr>';
+    html += '<tr><td>1</td><td>#боратино</td><td>More video views</td><td>€60</td><td>€59.54</td><td class="engagement">111,526</td><td>1,499</td><td>93</td><td>24</td><td>37</td><td>182</td><td class="engagement">Completed</td></tr>';
+    html += '<tr><td>2</td><td>#боратино</td><td>More likes & comments</td><td>€60</td><td>€59.50</td><td>28,580</td><td class="engagement">2,083</td><td class="engagement">74</td><td>44</td><td>59</td><td>98</td><td><span class="low">Closed — political content flagged</span></td></tr>';
+    html += '<tr><td>3</td><td>#зайобайо</td><td>More likes & comments</td><td>€5</td><td>€0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td><span class="low">Not delivering — blocked</span></td></tr>';
+    html += '<tr style="font-weight:bold;background:#f6f0f8"><td></td><td>TOTAL</td><td></td><td>€125</td><td>€119.04</td><td>140,106</td><td>3,582</td><td>167</td><td>68</td><td>96</td><td>280</td><td></td></tr>';
+    html += '</table>';
+
+    html += '<h4 style="color:#d32f2f;margin:12px 0 6px">Cost Efficiency</h4>';
+    html += '<table style="table-layout:auto; max-width:600px"><tr><th>Metric</th><th>Promo 1 (Views)</th><th>Promo 2 (Engagement)</th><th>Combined</th></tr>';
+    html += '<tr><td>Cost per view</td><td class="engagement">€0.00053</td><td>€0.0021</td><td>€0.00085</td></tr>';
+    html += '<tr><td>Cost per like</td><td>€0.040</td><td class="engagement">€0.029</td><td>€0.033</td></tr>';
+    html += '<tr><td>Cost per follower</td><td>€1.61</td><td class="engagement">€1.01</td><td>€1.24</td></tr>';
+    html += '<tr><td>Cost per comment</td><td>€0.64</td><td class="engagement">€0.80</td><td>€0.71</td></tr>';
+    html += '<tr><td>Cost per share</td><td>€2.48</td><td class="engagement">€1.35</td><td>€1.75</td></tr>';
+    html += '</table>';
+
+    html += '<h4 style="color:#d32f2f;margin:12px 0 6px">Audience Demographics (Paid)</h4>';
+    html += '<table style="table-layout:auto; max-width:500px"><tr><th>Age Group</th><th>Promo 1 (Views)</th><th>Promo 2 (Engagement)</th><th>Insight</th></tr>';
+    html += '<tr><td>13-17</td><td>0%</td><td>0%</td><td>Not reached — content is adult-oriented</td></tr>';
+    html += '<tr><td>18-24</td><td>16%</td><td>19%</td><td>Young adults — lower engagement</td></tr>';
+    html += '<tr><td>25-34</td><td class="engagement">23%</td><td class="engagement">25%</td><td class="engagement"><strong>Strongest segment — highest response rate</strong></td></tr>';
+    html += '<tr><td>35-44</td><td>17%</td><td>16%</td><td>Good secondary segment</td></tr>';
+    html += '<tr><td>45-54</td><td>20%</td><td>18%</td><td>Strong — remembers the references</td></tr>';
+    html += '<tr><td>55+</td><td>24%</td><td>22%</td><td>Surprisingly strong — high political engagement</td></tr>';
+    html += '</table>';
+
+    html += '<h4 style="color:#d32f2f;margin:12px 0 6px">Key Findings</h4>';
+    html += '<div class="card" style="border-color:#d32f2f; margin-top:0">';
+    html += '<ol style="font-size:12px;line-height:1.8;padding-left:18px">';
+    html += '<li><strong>Video Views goal (Promo 1) delivered 4x more views</strong> than Engagement goal (Promo 2) for the same budget. Use Video Views for maximum reach.</li>';
+    html += '<li><strong>Engagement goal (Promo 2) delivered more followers per euro</strong> (59 vs 37). If follower growth is the priority, this goal is more efficient.</li>';
+    html += '<li><strong>Political content gets flagged.</strong> Promo 2 was closed and Promo 3 was blocked entirely. TikTok\'s ad policy restricts "referencing, promoting, opposing, or advocating for or against any political candidates, policy proposals, elections, or selling political merchandise." This is a structural barrier for paid promotion.</li>';
+    html += '<li><strong>Audience skews older than typical TikTok.</strong> 55+ was the largest segment in Promo 1 (24%) and second-largest in Promo 2 (22%). This aligns with political content consumption patterns — older users are more politically engaged.</li>';
+    html += '<li><strong>25-34 is the sweet spot.</strong> Highest response rate across both promotions. Target this age group in future paid campaigns.</li>';
+    html += '<li><strong>Cost per follower (€1.24) is within industry range</strong> (€0.50-€3.00 typical for niche content). Given the political content restrictions, this is a good result.</li>';
+    html += '<li><strong>Organic vs Paid split:</strong> The боратино video has ~147K total views. Paid accounted for ~140K (95%). Without promotion, this video would have ~7K organic views — still the best-performing video, but the viral numbers are primarily paid.</li>';
+    html += '</ol>';
+    html += '</div>';
+
+    html += '<h4 style="color:#d32f2f;margin:12px 0 6px">Recommendations for Future Promotions</h4>';
+    html += '<div class="card" style="border-color:#2e7d32; border-left: 4px solid #2e7d32; margin-top:0">';
+    html += '<ol style="font-size:12px;line-height:1.8;padding-left:18px">';
+    html += '<li><strong>Use "Video Views" goal, not "Likes & Comments"</strong> — 4x more views for the same spend. Views drive algorithm momentum; likes/comments follow naturally.</li>';
+    html += '<li><strong>Keep budgets small (€10-15/day)</strong> — TikTok flags larger spends on political content faster. Multiple small promotions are safer than one big one.</li>';
+    html += '<li><strong>Avoid explicit political hashtags in promoted posts</strong> — use #сатира #хумор #детскипеснички instead of #пеевски #борисов when running promotions. Switch to political hashtags in organic posts only.</li>';
+    html += '<li><strong>Target age 25-54 manually</strong> — don\'t use Default audience. Create your own: Bulgaria, age 25-54, interests: Comedy, Entertainment, News.</li>';
+    html += '<li><strong>Promote only videos that already have organic traction</strong> — wait 24-48 hours, then promote the ones that got 500+ organic views. Don\'t promote cold content.</li>';
+    html += '<li><strong>Budget allocation:</strong> 80% organic effort (posting 5-7/week with good hashtags/hooks) + 20% paid promotion (€30-50/month on 2-3 best-performing videos).</li>';
+    html += '</ol>';
+    html += '</div>';
+    html += '</div>';
+
     document.getElementById('sec-analysis').innerHTML = html;
   }
 
@@ -1201,7 +1259,22 @@
     wsAnalysis['!cols'] = [{wch:28},{wch:30},{wch:55},{wch:25},{wch:30}];
     XLSX.utils.book_append_sheet(wb, wsAnalysis, bg ? 'Анализ' : 'Analysis');
 
-    // 8. Recommendations — algorithm, audience, setup, action plan, content strategy
+    // 8. Promotions
+    const promoRows = [
+      bg ? {'Промоция': 1, 'Видео': '#боратино', 'Цел': 'Повече гледания', 'Бюджет': '€60', 'Изхарчено': '€59.54', 'Гледания': 111526, 'Харесвания': 1499, 'Коментари': 93, 'Споделяния': 24, 'Нови последователи': 37, 'Профилни прегледи': 182, 'Цена/гледане': '€0.00053', 'Цена/последовател': '€1.61', 'Статус': 'Завършена'}
+         : {'Promotion': 1, 'Video': '#боратино', 'Goal': 'More video views', 'Budget': '€60', 'Spent': '€59.54', 'Views': 111526, 'Likes': 1499, 'Comments': 93, 'Shares': 24, 'New Followers': 37, 'Profile Views': 182, 'Cost/View': '€0.00053', 'Cost/Follower': '€1.61', 'Status': 'Completed'},
+      bg ? {'Промоция': 2, 'Видео': '#боратино', 'Цел': 'Повече харесвания и коментари', 'Бюджет': '€60', 'Изхарчено': '€59.50', 'Гледания': 28580, 'Харесвания': 2083, 'Коментари': 74, 'Споделяния': 44, 'Нови последователи': 59, 'Профилни прегледи': 98, 'Цена/гледане': '€0.0021', 'Цена/последовател': '€1.01', 'Статус': 'Затворена — политическо съдържание'}
+         : {'Promotion': 2, 'Video': '#боратино', 'Goal': 'More likes & comments', 'Budget': '€60', 'Spent': '€59.50', 'Views': 28580, 'Likes': 2083, 'Comments': 74, 'Shares': 44, 'New Followers': 59, 'Profile Views': 98, 'Cost/View': '€0.0021', 'Cost/Follower': '€1.01', 'Status': 'Closed — political content flagged'},
+      bg ? {'Промоция': 3, 'Видео': '#зайобайо', 'Цел': 'Повече харесвания и коментари', 'Бюджет': '€5', 'Изхарчено': '€0', 'Гледания': 0, 'Харесвания': 0, 'Коментари': 0, 'Споделяния': 0, 'Нови последователи': 0, 'Профилни прегледи': 0, 'Цена/гледане': 'N/A', 'Цена/последовател': 'N/A', 'Статус': 'Блокирана — не доставя'}
+         : {'Promotion': 3, 'Video': '#зайобайо', 'Goal': 'More likes & comments', 'Budget': '€5', 'Spent': '€0', 'Views': 0, 'Likes': 0, 'Comments': 0, 'Shares': 0, 'New Followers': 0, 'Profile Views': 0, 'Cost/View': 'N/A', 'Cost/Follower': 'N/A', 'Status': 'Blocked — not delivering'},
+      bg ? {'Промоция': '', 'Видео': 'ОБЩО', 'Цел': '', 'Бюджет': '€125', 'Изхарчено': '€119.04', 'Гледания': 140106, 'Харесвания': 3582, 'Коментари': 167, 'Споделяния': 68, 'Нови последователи': 96, 'Профилни прегледи': 280, 'Цена/гледане': '€0.00085', 'Цена/последовател': '€1.24', 'Статус': ''}
+         : {'Promotion': '', 'Video': 'TOTAL', 'Goal': '', 'Budget': '€125', 'Spent': '€119.04', 'Views': 140106, 'Likes': 3582, 'Comments': 167, 'Shares': 68, 'New Followers': 96, 'Profile Views': 280, 'Cost/View': '€0.00085', 'Cost/Follower': '€1.24', 'Status': ''},
+    ];
+    const wsPromo = XLSX.utils.json_to_sheet(promoRows);
+    wsPromo['!cols'] = [{wch:10},{wch:14},{wch:24},{wch:8},{wch:8},{wch:10},{wch:10},{wch:10},{wch:8},{wch:14},{wch:14},{wch:12},{wch:14},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsPromo, bg ? 'Промоции' : 'Promotions');
+
+    // 9. Recommendations — algorithm, audience, setup, action plan, content strategy
     const RC = [];
     const RS = bg ? 'Раздел' : 'Section';
     const RD = bg ? 'Подробности' : 'Details';
