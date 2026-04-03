@@ -567,19 +567,47 @@ function exportExcel(lang) {
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hashData), isEN ? 'Hashtags' : 'Хаштагове');
 
-  // 7. Analysis (placeholder — populated by Gemini later)
-  const analysisEl = document.getElementById('sec-analysis');
-  const analysisText = analysisEl ? analysisEl.innerText.substring(0, 5000) : '';
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
-    [isEN ? 'Analysis' : 'Анализ']: analysisText || (isEN ? 'Analysis not yet generated' : 'Анализът все още не е генериран'),
-  }]), isEN ? 'Analysis' : 'Анализ');
+  // 7. Analysis — extract tables and text from the DOM
+  function htmlSectionToRows(sectionId) {
+    const el = document.getElementById(sectionId);
+    if (!el) return [{ Section: 'Not yet generated' }];
+    const rows = [];
+    // Extract all tables
+    el.querySelectorAll('table').forEach(table => {
+      const headers = [...table.querySelectorAll('th')].map(th => th.innerText.trim());
+      table.querySelectorAll('tbody tr, tr').forEach(tr => {
+        const cells = [...tr.querySelectorAll('td')];
+        if (cells.length === 0) return;
+        const row = {};
+        cells.forEach((td, i) => {
+          row[headers[i] || ('Col ' + (i+1))] = td.innerText.trim();
+        });
+        rows.push(row);
+      });
+      rows.push({}); // blank row between tables
+    });
+    // Extract headings and paragraphs
+    const textRows = [];
+    el.querySelectorAll('h2, h3, p, li').forEach(node => {
+      const tag = node.tagName.toLowerCase();
+      const text = node.innerText.trim();
+      if (!text) return;
+      if (tag === 'h2' || tag === 'h3') {
+        textRows.push({ Section: text });
+      } else {
+        textRows.push({ Detail: text });
+      }
+    });
+    // Combine: if we got table rows, use those; otherwise use text
+    return rows.length > 1 ? rows : textRows.length > 0 ? textRows : [{ Section: 'No content' }];
+  }
 
-  // 8. Recommendations (placeholder — populated by Gemini later)
-  const recsEl = document.getElementById('sec-recommendations');
-  const recsText = recsEl ? recsEl.innerText.substring(0, 5000) : '';
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
-    [isEN ? 'Recommendations' : 'Препоръки']: recsText || (isEN ? 'Recommendations not yet generated' : 'Препоръките все още не са генерирани'),
-  }]), isEN ? 'Recommendations' : 'Препоръки');
+  const analysisRows = htmlSectionToRows('sec-analysis');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisRows), isEN ? 'Analysis' : 'Анализ');
+
+  // 8. Recommendations
+  const recsRows = htmlSectionToRows('sec-recommendations');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recsRows), isEN ? 'Recommendations' : 'Препоръки');
 
   XLSX.writeFile(wb, '${channelName || "research"}_' + PLATFORM + '_' + lang + '.xlsx');
 }
