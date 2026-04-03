@@ -114,6 +114,7 @@
   <div class="tab" onclick="showTab('allvideos')">All Videos</div>
   <div class="tab" onclick="showTab('hashtags')">Hashtags</div>
   <div class="tab" onclick="showTab('analysis')">Analysis</div>
+  <div class="tab" onclick="showTab('recommendations')">Recommendations</div>
 </div>
 
 <div class="section active" id="sec-overview"></div>
@@ -123,6 +124,7 @@
 <div class="section" id="sec-allvideos"></div>
 <div class="section" id="sec-hashtags"></div>
 <div class="section" id="sec-analysis"></div>
+<div class="section" id="sec-recommendations"></div>
 
 <script>
   let allData = [];
@@ -473,9 +475,38 @@
     }
     html += '</div>';
 
-    // ─── 6. How the Algorithm Works ───
+    document.getElementById('sec-analysis').innerHTML = html;
+  }
+
+  // ─── Recommendations Tab ──────────────────────────────────────────────────
+  function renderRecommendations(data) {
+    const zh = data.filter(v => v.authorMeta?.name === 'zahoratabg');
+    const zhPlays = zh.reduce((s,v) => s + (v.playCount||0), 0);
+    const zhLikes = zh.reduce((s,v) => s + (v.diggCount||0), 0);
+    const zhShares = zh.reduce((s,v) => s + (v.shareCount||0), 0);
+    const zhComments = zh.reduce((s,v) => s + (v.commentCount||0), 0);
+    const zhFollowers = zh[0]?.authorMeta?.fans || 0;
+    const zhEngRate = zhPlays > 0 ? ((zhLikes + zhShares + zhComments) / zhPlays * 100).toFixed(1) : '0';
+    const zhViralVideo = [...zh].sort((a,b) => (b.playCount||0) - (a.playCount||0))[0];
+    const zhNonViral = [...zh].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(1);
+    const zhNonViralAvg = zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.playCount||0), 0) / zhNonViral.length) : 0;
+
+    const durationBuckets = { '0-15s': [], '16-30s': [], '31-60s': [], '60s+': [] };
+    data.forEach(v => {
+      const d = v.videoMeta?.duration || 0;
+      if (d <= 15) durationBuckets['0-15s'].push(v);
+      else if (d <= 30) durationBuckets['16-30s'].push(v);
+      else if (d <= 60) durationBuckets['31-60s'].push(v);
+      else durationBuckets['60s+'].push(v);
+    });
+
+    let html = '';
+    html += '<h2>Recommendations & Action Plan</h2>';
+    html += '<p class="subtitle">Platform knowledge, account setup, content strategy, and step-by-step implementation guides</p>';
+
+    // ─── 1. How the Algorithm Works ───
     html += '<div class="card" style="border-left: 4px solid #1a237e; background: #f5f5ff;">';
-    html += '<h3>6. How the TikTok Algorithm Works (2026)</h3>';
+    html += '<h3>1. How the TikTok Algorithm Works (2026)</h3>';
     html += '<p style="margin-bottom:10px">Understanding the algorithm is the foundation of everything else. TikTok uses an <strong>interest graph</strong>, not a social graph — it recommends content based on what a user will enjoy, not who they follow. <strong>Follower count does not matter.</strong> Every video is evaluated independently.</p>';
 
     html += '<h4 style="color:#1a237e;margin:12px 0 6px">The 6 Algorithm Signals (ranked by weight)</h4>';
@@ -506,7 +537,7 @@
 
     // ─── 7. Target Audience Strategy ───
     html += '<div class="card" style="border-left: 4px solid #e65100; background: #fff8f0;">';
-    html += '<h3>7. Target Audience Strategy</h3>';
+    html += '<h3>2. Target Audience Strategy</h3>';
 
     html += '<h4 style="color:#e65100;margin:12px 0 6px">Who is your audience?</h4>';
     html += '<table style="table-layout:auto; max-width:700px"><tr><th>Parameter</th><th>Current (estimated)</th><th>Recommended target</th></tr>';
@@ -559,7 +590,7 @@
 
     // ─── 8. Complete Account Setup Checklist ───
     html += '<div class="card" style="border-left: 4px solid #00695c; background: #f0faf8;">';
-    html += '<h3>8. Complete Account Setup Checklist</h3>';
+    html += '<h3>3. Complete Account Setup Checklist</h3>';
     html += '<p style="margin-bottom:10px">Every setting matters. Here is <strong>every relevant parameter</strong> on your TikTok account and what it should be set to for maximum reach.</p>';
 
     const setupItems = [
@@ -666,7 +697,7 @@
 
     // ─── 9. Action Plan with Learn How guides ───
     html += '<div class="card" style="border-left: 4px solid #2e7d32; background: #f9fdf9;">';
-    html += '<h3>9. 30-Day Action Plan</h3>';
+    html += '<h3>4. 30-Day Action Plan</h3>';
 
     const actions = [
       {
@@ -830,7 +861,7 @@
 
     // ─── 10. Growth Targets ───
     html += '<div class="card" style="border-left: 4px solid #91569c; background: #faf5fc;">';
-    html += '<h3>10. Growth Targets (30 days)</h3>';
+    html += '<h3>5. Growth Targets (30 days)</h3>';
     html += '<table style="table-layout:auto; max-width:500px"><tr><th>Metric</th><th>Current</th><th>30-Day Target</th></tr>';
     html += '<tr><td>Followers</td><td>' + fmt(zhFollowers) + '</td><td class="engagement">500+</td></tr>';
     html += '<tr><td>Total plays</td><td>' + fmt(zhPlays) + '</td><td class="engagement">500K+</td></tr>';
@@ -839,7 +870,71 @@
     html += '<tr><td>Engagement rate</td><td>' + zhEngRate + '%</td><td class="engagement">4.5%+</td></tr>';
     html += '</table></div>';
 
-    document.getElementById('sec-analysis').innerHTML = html;
+    // ─── 6. Content Series & Playlists ───
+    html += '<div class="card" style="border-left: 4px solid #4a148c; background: #faf5ff;">';
+    html += '<h3>6. Content Series, Playlists & Post Formats</h3>';
+    html += '<p style="margin-bottom:10px">Organising your content into series and using different post formats significantly increases watch time, profile visits, and follower retention.</p>';
+
+    html += '<h4 style="color:#4a148c;margin:12px 0 6px">TikTok Playlists</h4>';
+    html += '<p>Playlists let you group videos by theme on your profile. When a viewer finishes one video, the next plays automatically — creating a binge-watching experience. This massively increases views on older content.</p>';
+    html += '<details class="learn-how"><summary>+ Learn how to create playlists</summary><div class="guide">';
+    html += '<h4>How to create a playlist</h4>';
+    html += '<ol>';
+    html += '<li>Go to your <strong>Profile</strong> → <strong>Videos</strong> tab</li>';
+    html += '<li>Look for <strong>"Sort videos into playlists"</strong> banner, or tap the <strong>+</strong> icon next to existing playlists</li>';
+    html += '<li>Name the playlist with a <strong>keyword-rich title</strong> (e.g. "Борисов — детски песнички" not "Видеа 1")</li>';
+    html += '<li>Select which videos to include — tap the circles on each video</li>';
+    html += '<li>The <strong>first video\'s cover</strong> becomes the playlist thumbnail — choose wisely</li>';
+    html += '</ol>';
+    html += '<div class="tip">Note: Playlists require 10,000+ followers. Until then, use a consistent naming convention in your captions (e.g. "Серия: Пеевски #1") and pin your best video to your profile.</div>';
+    html += '</div></details>';
+
+    html += '<h4 style="color:#4a148c;margin:12px 0 6px">Recommended Playlist Structure for Za Horata</h4>';
+    html += '<table style="table-layout:auto; max-width:700px"><tr><th>Playlist Name</th><th>Content Type</th><th>Post Frequency</th><th>Purpose</th></tr>';
+    html += '<tr><td><strong>🎵 Детски песнички за политици</strong></td><td>Children\'s song satire with politician themes</td><td>2-3/week</td><td>Core format — proven viral potential</td></tr>';
+    html += '<tr><td><strong>📊 Сметката на корупцията</strong></td><td>Carousel/slideshow infographics with corruption stats</td><td>1-2/week</td><td>Educational, high save rate</td></tr>';
+    html += '<tr><td><strong>🔥 Реакции на деня</strong></td><td>Quick reactions to daily political news</td><td>2-3/week</td><td>Timely, high comment potential</td></tr>';
+    html += '<tr><td><strong>🤖 AI сатира</strong></td><td>AI-generated scenes with politicians</td><td>1/week</td><td>Differentiation from competitors</td></tr>';
+    html += '</table>';
+
+    html += '<h4 style="color:#4a148c;margin:12px 0 6px">Carousel Posts (Photo Mode)</h4>';
+    html += '<p>TikTok carousels get <strong>1.9x more likes, 2.9x more comments, and 2.6x more shares</strong> than video posts. They\'re ideal for data-driven political content.</p>';
+    html += '<details class="learn-how"><summary>+ Learn how to create carousel posts</summary><div class="guide">';
+    html += '<h4>How to create a carousel</h4>';
+    html += '<ol>';
+    html += '<li>Open TikTok → tap <strong>+</strong> (create)</li>';
+    html += '<li>At the bottom, switch from <strong>Video</strong> to <strong>Photo</strong> mode</li>';
+    html += '<li>Select <strong>2-35 images</strong> from your gallery (optimal: 5-10 slides)</li>';
+    html += '<li>Add <strong>music</strong> — this is required for carousels</li>';
+    html += '<li>Write a keyword-rich caption with hashtags</li>';
+    html += '</ol>';
+    html += '<h4>Best carousel ideas for Za Horata</h4>';
+    html += '<ul>';
+    html += '<li><strong>"Сметката на Пеевски"</strong> — Slide-by-slide corruption breakdown with numbers</li>';
+    html += '<li><strong>"5 неща, които не знаеш за..."</strong> — Listicle format about a politician</li>';
+    html += '<li><strong>"Преди vs Сега"</strong> — Before/after comparisons of political promises vs reality</li>';
+    html += '<li><strong>"Речник на парламента"</strong> — Satirical definitions of political terms</li>';
+    html += '</ul>';
+    html += '<h4>Technical specs</h4>';
+    html += '<ul>';
+    html += '<li>Image size: <strong>1080 x 1920px</strong> (9:16 vertical)</li>';
+    html += '<li>Max images: 35 per post</li>';
+    html += '<li>Always use <strong>native Photo Mode</strong> (not video slideshow) — the algorithm treats it differently and gives better reach</li>';
+    html += '</ul>';
+    html += '<div class="tip">Tip: Carousels generate more saves than videos. Saves = the viewer wants to come back. The algorithm heavily rewards saves in 2026.</div>';
+    html += '</div></details>';
+
+    html += '<h4 style="color:#4a148c;margin:12px 0 6px">Content Mix Strategy</h4>';
+    html += '<p>Don\'t post the same format every time. Mix formats to reach different audience segments and keep the algorithm interested:</p>';
+    html += '<table style="table-layout:auto; max-width:600px"><tr><th>Format</th><th>% of Posts</th><th>Algorithm Advantage</th></tr>';
+    html += '<tr><td><strong>Short video (20-30s)</strong></td><td>50%</td><td>High completion rate, loops, shares</td></tr>';
+    html += '<tr><td><strong>Carousel / Photo Mode</strong></td><td>25%</td><td>2.9x more comments, high save rate</td></tr>';
+    html += '<tr><td><strong>Duet / Stitch reactions</strong></td><td>15%</td><td>Taps into existing audience of stitched creator</td></tr>';
+    html += '<tr><td><strong>Longer commentary (60s+)</strong></td><td>10%</td><td>Deep engagement, higher watch time per view</td></tr>';
+    html += '</table>';
+    html += '</div>';
+
+    document.getElementById('sec-recommendations').innerHTML = html;
   }
 
   // ─── Excel Export — 7 sheets matching dashboard tabs ─────────────
@@ -1119,6 +1214,7 @@
       renderAllVideos(data);
       renderHashtags(data);
       renderAnalysis(data);
+      renderRecommendations(data);
     })
     .catch(err => {
       document.getElementById('sec-overview').innerHTML = '<p style="color:#ef5350">Error loading data: ' + err.message + '</p>';
