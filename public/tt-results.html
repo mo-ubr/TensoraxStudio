@@ -1198,6 +1198,132 @@
     wsAnalysis['!cols'] = [{wch:28},{wch:30},{wch:55},{wch:25},{wch:30}];
     XLSX.utils.book_append_sheet(wb, wsAnalysis, bg ? 'Анализ' : 'Analysis');
 
+    // 8. Recommendations — algorithm, audience, setup, action plan, content strategy
+    const RC = [];
+    const RS = bg ? 'Раздел' : 'Section';
+    const RD = bg ? 'Подробности' : 'Details';
+    const RV = bg ? 'Стойност' : 'Value';
+    const RI = bg ? 'Въздействие' : 'Impact';
+    const rr = (s,d,v,im) => { const r={}; r[RS]=s; r[RD]=d; r[RV]=v; r[RI]=im; return r; };
+
+    // Algorithm signals
+    RC.push(rr(bg ? '1. АЛГОРИТЪМ НА TIKTOK (2026)' : '1. TIKTOK ALGORITHM (2026)', '', '', ''));
+    RC.push(rr('', bg ? 'Време на гледане и завършване' : 'Watch time & completion', '~40-50%', bg ? 'Целете 70%+ завършване' : 'Target 70%+ completion'));
+    RC.push(rr('', bg ? 'Повторни гледания / цикли' : 'Replays / loops', '~15-20%', bg ? 'Съдържание с обрат = преглеждане отново' : 'Twist endings = rewatches'));
+    RC.push(rr('', bg ? 'Споделяния' : 'Shares', '~10-15%', bg ? '3x по-тежки от харесвания' : 'Weighted 3x higher than likes'));
+    RC.push(rr('', bg ? 'Запазвания' : 'Saves', '~8-10%', bg ? 'Расте с TikTok търсенето' : 'Growing with TikTok search'));
+    RC.push(rr('', bg ? 'Коментари' : 'Comments', '~8-10%', bg ? 'Скорост в първия час е критична' : 'First-hour velocity is critical'));
+    RC.push(rr('', bg ? 'Харесвания' : 'Likes', '~5%', bg ? 'Най-малко тежест в 2026' : 'Least weighted in 2026'));
+    RC.push(rr('', '', '', ''));
+    RC.push(rr('', bg ? 'Първите 60 минути' : 'First 60 minutes', '', bg ? 'Ранната ангажираност решава дали видеото се разпространява' : 'Early engagement determines if video gets pushed'));
+    RC.push(rr('', bg ? 'Оригинално съдържание' : 'Original content', '', bg ? 'Препубликувано от други платформи = потиснато' : 'Reposted from other platforms = suppressed'));
+    RC.push(rr('', 'TikTok SEO', '', bg ? 'Ключови думи в описание, говор и текст върху видео = +20-40% видимост' : 'Keywords in caption, speech, on-screen text = +20-40% visibility'));
+    RC.push(rr('', bg ? 'Оптимално време за БГ' : 'Best times Bulgaria', '', bg ? 'Вт-Чт 14-18ч, Пт-Нд 18-23ч' : 'Tue-Thu 2-6PM, Fri-Sun 6-11PM'));
+    RC.push(rr('', '', '', ''));
+
+    // Target audience
+    RC.push(rr(bg ? '2. ЦЕЛЕВА АУДИТОРИЯ' : '2. TARGET AUDIENCE', '', '', ''));
+    RC.push(rr('', bg ? 'Възраст' : 'Age', '25-45', bg ? 'Политически ангажирани възрастни' : 'Politically engaged adults'));
+    RC.push(rr('', bg ? 'Локация' : 'Location', bg ? 'България + диаспора' : 'Bulgaria + diaspora', bg ? 'UK, Германия, Испания' : 'UK, Germany, Spain'));
+    RC.push(rr('', bg ? 'Език' : 'Language', bg ? 'Български' : 'Bulgarian', bg ? 'Нишово предимство' : 'Niche advantage'));
+    RC.push(rr('', bg ? 'Интереси' : 'Interests', bg ? 'Политика, новини, комедия, сатира' : 'Politics, news, comedy, satire', ''));
+    RC.push(rr('', bg ? 'Как да сигнализирате' : 'How to signal', bg ? 'Хаштагове + ключови думи + звук + дует/стич' : 'Hashtags + keywords + audio + duet/stitch', ''));
+    RC.push(rr('', '', '', ''));
+
+    // Account setup
+    RC.push(rr(bg ? '3. НАСТРОЙКИ НА АКАУНТА' : '3. ACCOUNT SETUP', bg ? 'Настройка' : 'Setting', bg ? 'Препоръка' : 'Recommended', ''));
+    const setupRows = bg ? [
+      ['Био', 'Добавете описание с ключови думи + линк', 'Високо'],
+      ['Категория', 'Медии и развлечения / Публична личност', 'Средно'],
+      ['Дуети', 'Разрешете от ВСИЧКИ', 'Високо'],
+      ['Стичове', 'Разрешете от ВСИЧКИ', 'Високо'],
+      ['Изтегляния', 'Разрешете — за споделяне в WhatsApp', 'Високо'],
+      ['Коментари', 'От всички — коментарите са сигнал №1', 'Високо'],
+      ['AI декларация', 'Включете за AI-генерирано съдържание (EU закон)', 'Задължително'],
+      ['Препоръчване на акаунта', 'Включете всички опции', 'Средно'],
+      ['Свързани акаунти', 'Свържете Instagram и YouTube', 'Средно'],
+    ] : [
+      ['Bio', 'Add description with keywords + link', 'High'],
+      ['Category', 'Media & Entertainment / Public Figure', 'Medium'],
+      ['Duets', 'Allow from EVERYONE', 'High'],
+      ['Stitches', 'Allow from EVERYONE', 'High'],
+      ['Downloads', 'Allow — enables WhatsApp sharing', 'High'],
+      ['Comments', 'From everyone — comments are signal #1', 'High'],
+      ['AI disclosure', 'Enable for AI-generated content (EU law)', 'Required'],
+      ['Suggest account', 'Turn ON all options', 'Medium'],
+      ['Linked accounts', 'Connect Instagram and YouTube', 'Medium'],
+    ];
+    setupRows.forEach(s => RC.push(rr('', s[0], s[1], s[2])));
+    RC.push(rr('', '', '', ''));
+
+    // Action plan
+    RC.push(rr(bg ? '4. ПЛАН ЗА ДЕЙСТВИЕ (30 ДНИ)' : '4. 30-DAY ACTION PLAN', bg ? 'Действие' : 'Action', bg ? 'Подробности' : 'Details', bg ? 'Въздействие' : 'Impact'));
+    const planRows = bg ? [
+      ['1. Поправи хаштаговете', 'Замени #хумор с #бгполитика #bgpolitics #политика + политик', 'Високо'],
+      ['2. Кука в първите 3с', 'Текст с името на политика в първия кадър', 'Високо'],
+      ['3. 5-7 видеа/седмица', 'Увеличи обема — всяко видео е лотариен билет', 'Високо'],
+      ['4. 20-30с времетраене', 'Оптимална зона. Вирусното беше 29с', 'Средно'],
+      ['5. Собствени обложки', 'Текст, лице на политик, ярки цветове', 'Средно'],
+      ['6. Провокирай коментари', 'Завършвай с въпрос. Цел: 50+ за 1 час', 'Високо'],
+      ['7. Оригинален звук', 'Продължавай с детските песнички', 'Ниско (вече)'],
+      ['8. Кръстосано публикуване', 'Reels + Shorts за безплатен обхват', 'Средно'],
+      ['9. TikTok SEO', 'Ключови думи в описание, говор и текст', 'Високо'],
+      ['10. Постване в правилното време', 'Вт-Чт 14-18ч, Пт-Нд 18-23ч', 'Средно'],
+    ] : [
+      ['1. Fix hashtags', 'Replace #хумор with #бгполитика #bgpolitics #политика + politician', 'High'],
+      ['2. Hook in first 3s', 'Bold text with politician name in first frame', 'High'],
+      ['3. Post 5-7/week', 'Increase volume — each video is a lottery ticket', 'High'],
+      ['4. Target 20-30s', 'Sweet spot. Viral video was 29s', 'Medium'],
+      ['5. Custom thumbnails', 'Text, politician face, bright colours', 'Medium'],
+      ['6. Provoke comments', 'End with question. Target 50+ in first hour', 'High'],
+      ['7. Original audio', 'Keep children\'s song format', 'Low (already)'],
+      ['8. Cross-post', 'Reels + Shorts for free reach', 'Medium'],
+      ['9. TikTok SEO', 'Keywords in caption, speech, on-screen text', 'High'],
+      ['10. Post at right time', 'Tue-Thu 2-6PM, Fri-Sun 6-11PM', 'Medium'],
+    ];
+    planRows.forEach(p => RC.push(rr('', p[0], p[1], p[2])));
+    RC.push(rr('', '', '', ''));
+
+    // Growth targets
+    RC.push(rr(bg ? '5. ЦЕЛИ ЗА РАСТЕЖ (30 ДНИ)' : '5. GROWTH TARGETS (30 DAYS)', bg ? 'Метрика' : 'Metric', bg ? 'Текущо' : 'Current', bg ? 'Цел' : 'Target'));
+    RC.push(rr('', bg ? 'Последователи' : 'Followers', zhFollowers, '500+'));
+    RC.push(rr('', bg ? 'Общо гледания' : 'Total plays', zhPlays, '500K+'));
+    RC.push(rr('', bg ? 'Публикувани видеа' : 'Videos posted', zh.length, '35-40'));
+    RC.push(rr('', bg ? 'Средно гл./видео' : 'Avg plays/video', zhNonViralAvg, '5K+'));
+    RC.push(rr('', bg ? 'Ангажираност' : 'Engagement rate', zhEngRate + '%', '4.5%+'));
+    RC.push(rr('', '', '', ''));
+
+    // Content series & playlists
+    RC.push(rr(bg ? '6. СЕРИИ, ПЛЕЙЛИСТИ И ФОРМАТИ' : '6. CONTENT SERIES, PLAYLISTS & FORMATS', '', '', ''));
+    RC.push(rr('', bg ? 'Препоръчани плейлисти' : 'Recommended playlists', '', ''));
+    const playlistRows = bg ? [
+      ['🎵 Детски песнички за политици', 'Основен формат — доказан вирусен потенциал', '2-3/седмица'],
+      ['📊 Сметката на корупцията', 'Карусел/инфографики с числа за корупция', '1-2/седмица'],
+      ['🔥 Реакции на деня', 'Бързи реакции на ежедневни политически новини', '2-3/седмица'],
+      ['🤖 AI сатира', 'AI-генерирани сцени с политици', '1/седмица'],
+    ] : [
+      ['🎵 Children\'s songs for politicians', 'Core format — proven viral potential', '2-3/week'],
+      ['📊 Corruption bill', 'Carousel infographics with corruption stats', '1-2/week'],
+      ['🔥 Daily reactions', 'Quick reactions to daily political news', '2-3/week'],
+      ['🤖 AI satire', 'AI-generated scenes with politicians', '1/week'],
+    ];
+    playlistRows.forEach(p => RC.push(rr('', p[0], p[1], p[2])));
+    RC.push(rr('', '', '', ''));
+
+    RC.push(rr('', bg ? 'Микс от формати' : 'Content mix', bg ? 'Формат' : 'Format', bg ? '% от публикациите' : '% of posts'));
+    RC.push(rr('', bg ? 'Кратко видео (20-30с)' : 'Short video (20-30s)', '50%', bg ? 'Висок % завършване, цикли, споделяния' : 'High completion, loops, shares'));
+    RC.push(rr('', bg ? 'Карусел / Фото режим' : 'Carousel / Photo Mode', '25%', bg ? '2.9x повече коментари, висок % запазвания' : '2.9x more comments, high save rate'));
+    RC.push(rr('', bg ? 'Дует / Стич реакции' : 'Duet / Stitch reactions', '15%', bg ? 'Достъп до аудиторията на друг създател' : 'Taps into other creator\'s audience'));
+    RC.push(rr('', bg ? 'По-дълъг коментар (60с+)' : 'Longer commentary (60s+)', '10%', bg ? 'Дълбока ангажираност' : 'Deep engagement'));
+    RC.push(rr('', '', '', ''));
+
+    RC.push(rr('', bg ? 'КАРУСЕЛ СЪВЕТ' : 'CAROUSEL TIP', bg ? 'TikTok карусели получават 1.9x повече харесвания, 2.9x повече коментари, 2.6x повече споделяния от видео. Използвайте Photo Mode (не видео слайдшоу). Размер: 1080x1920px. Оптимално: 5-10 слайда.' : 'TikTok carousels get 1.9x more likes, 2.9x more comments, 2.6x more shares than video. Use native Photo Mode (not video slideshow). Size: 1080x1920px. Optimal: 5-10 slides.', ''));
+    RC.push(rr('', bg ? 'ПЛЕЙЛИСТ СЪВЕТ' : 'PLAYLIST TIP', bg ? 'Плейлистите изискват 10,000+ последователи. Дотогава използвайте последователно именуване в описанията (напр. "Серия: Пеевски #1") и закачете най-доброто видео на профила.' : 'Playlists require 10,000+ followers. Until then, use consistent naming in captions (e.g. "Series: Peevski #1") and pin your best video to your profile.', ''));
+
+    const wsRec = XLSX.utils.json_to_sheet(RC);
+    wsRec['!cols'] = [{wch:30},{wch:45},{wch:55},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsRec, bg ? 'Препоръки' : 'Recommendations');
+
     XLSX.writeFile(wb, 'ZaHorata_TikTok_' + (bg ? 'Проучване_' : 'Research_') + new Date().toISOString().substring(0,10) + '.xlsx');
   };
 
