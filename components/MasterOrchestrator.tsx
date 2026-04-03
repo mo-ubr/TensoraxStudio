@@ -340,10 +340,13 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
 
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: `Project "${name}" has been created${savingDir ? ` and will save to ${savingDir}/${slug}` : ''}. Your instructions have been saved. You can find it in your Projects list.`,
+        text: `Project "${name}" has been created${savingDir ? ` and will save to ${savingDir}/${slug}` : ''}. Your instructions have been saved. Opening project dashboard...`,
         timestamp: Date.now(),
       }]);
       setSaveProjectPrompt(null);
+
+      // Navigate to project dashboard with project data
+      onAction({ type: 'navigate', screen: 'project-dashboard', description: JSON.stringify(project) } as MasterAction);
     } catch (err: any) {
       setMessages(prev => [...prev, {
         role: 'assistant',

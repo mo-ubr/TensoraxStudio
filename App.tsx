@@ -1427,7 +1427,15 @@ const App: React.FC = () => {
             projectContext={null}
             brand={null}
             activeProject={activeProject}
-            onAction={() => {}}
+            onAction={(action) => {
+              if (action.type === 'navigate' && action.screen === 'project-dashboard' && action.description) {
+                try {
+                  const project = JSON.parse(action.description);
+                  persistProject(project);
+                  setCurrentScreen('project-dashboard');
+                } catch { /* ignore parse errors */ }
+              }
+            }}
             onStartTemplate={(templateId, initialContext) => {
               setSelectedRunnerTemplateId(templateId);
               setRunnerInitialContext(initialContext);

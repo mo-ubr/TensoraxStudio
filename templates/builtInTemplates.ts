@@ -3035,15 +3035,15 @@ export const socialMediaResearch: TemplateConfig = {
       name: 'Dashboard',
       teamId: 'presentation-comms',
       agents: ['report-generator', 'chart-creator'],
-      requiresReview: true,
-      description: 'Build interactive HTML dashboard with tabs: Overview, Channel, Competitors, Top Content, All Content, Hashtags/Keywords',
+      requiresReview: false,
+      description: 'Build interactive HTML dashboard with tabs: Overview, Channel, Competitors, Top Content, All Content, Hashtags/Keywords. Auto-opens in browser.',
     },
     {
       order: 4,
       name: 'Analysis',
       teamId: 'data-analysis',
       agents: ['general-analysis'],
-      requiresReview: true,
+      requiresReview: false,
       description: 'Data-driven analysis: current position vs benchmarks, viral content breakdown, optimal timing/format/duration, content gaps, competitor intelligence, promotion ROI (if data available)',
     },
     {
@@ -3051,7 +3051,7 @@ export const socialMediaResearch: TemplateConfig = {
       name: 'Recommendations',
       teamId: 'data-analysis',
       agents: ['deep-research', 'general-analysis'],
-      requiresReview: true,
+      requiresReview: false,
       description: 'Platform algorithm deep-dive (current year), target audience strategy, account setup checklist with how-to guides, action plan with step-by-step implementation, content series/playlist strategy, promotion strategy (including anti-ban for political/sensitive content), growth targets',
     },
     {
@@ -3059,8 +3059,8 @@ export const socialMediaResearch: TemplateConfig = {
       name: 'Export',
       teamId: 'presentation-comms',
       agents: ['report-generator'],
-      requiresReview: false,
-      description: 'Generate downloadable reports: bilingual Excel (all dashboard tabs + analysis + recommendations with How To column), Word summary, save to project directory',
+      requiresReview: true,
+      description: 'Generate downloadable reports: bilingual Excel (all dashboard tabs + analysis + recommendations with How To column), Word summary, save to project directory. Review dashboard before exporting.',
     },
   ],
 

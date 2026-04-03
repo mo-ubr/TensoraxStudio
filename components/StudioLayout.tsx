@@ -30,6 +30,10 @@ import {
 } from '../services/pipelineEngine';
 import type { BrandProfile } from '../types';
 import type { Project } from '../services/projectDB';
+import { registerResearchHandlers } from '../services/researchStepHandlers';
+
+// Register SM Research custom step handlers (scrape, dashboard)
+registerResearchHandlers();
 
 interface StudioLayoutProps {
   projectContext?: Record<string, unknown> | null;
@@ -123,7 +127,17 @@ export const StudioLayout: React.FC<StudioLayoutProps> = ({
         }
         break;
       case 'navigate':
-        if (action.screen) onNavigate(action.screen);
+        if (action.screen === 'project-dashboard' && action.description) {
+          // Navigate to project dashboard with project data
+          try {
+            const project = JSON.parse(action.description);
+            onAction({ type: 'navigate', screen: 'project-dashboard', description: action.description } as MasterAction);
+          } catch {
+            onNavigate(action.screen);
+          }
+        } else if (action.screen) {
+          onNavigate(action.screen);
+        }
         break;
       default:
         onAction(action);

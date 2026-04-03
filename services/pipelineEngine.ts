@@ -126,6 +126,43 @@ export type PromptResolver = (agentId: AgentId, stepContext: Record<string, unkn
 
 let promptResolver: PromptResolver = defaultPromptResolver;
 
+// ─── Custom Step Handlers ───────────────────────────────────────────────────
+
+/**
+ * Custom step handlers allow templates to intercept specific steps and run
+ * real backend APIs instead of generic Gemini agent calls.
+ *
+ * Key: `${templateId}:${stepName}` (e.g. "social-media-research:Scrape")
+ * Value: async function that receives step input and returns AgentRunResult[]
+ */
+export type CustomStepHandler = (
+  input: Record<string, unknown>,
+  step: TemplateStep,
+  pipeline: PipelineState,
+) => Promise<AgentRunResult[]>;
+
+const customStepHandlers = new Map<string, CustomStepHandler>();
+
+/**
+ * Register a custom step handler for a specific template + step combination.
+ * @param templateId - The template ID (e.g. "social-media-research")
+ * @param stepName - The step name (e.g. "Scrape", "Dashboard")
+ * @param handler - The handler function
+ */
+export function registerStepHandler(
+  templateId: string,
+  stepName: string,
+  handler: CustomStepHandler,
+): void {
+  customStepHandlers.set(`${templateId}:${stepName}`, handler);
+  console.log(`[PipelineEngine] Registered custom handler: ${templateId}:${stepName}`);
+}
+
+/** Check if a custom handler exists for a given template + step */
+function getCustomHandler(templateId: string, stepName: string): CustomStepHandler | undefined {
+  return customStepHandlers.get(`${templateId}:${stepName}`);
+}
+
 function defaultPromptResolver(agentId: AgentId, _context: Record<string, unknown>): string {
   // Default: return a generic prompt that describes the agent's role
   const agent = findAgentMeta(agentId);
@@ -244,10 +281,15 @@ export async function executeNextStep(
   stepState.input = buildStepInput(pipeline, stepIndex);
 
   try {
-    // Run agents — with Team Leader QA gate if step.executionMode === 'team-leader'
-    const agentResults = stepState.step.executionMode === 'team-leader'
-      ? await runWithTeamLeaderGate(stepState.step, stepState.input, stepState, onEvent, pipeline.id, stepIndex)
-      : await runStepAgents(stepState.step, stepState.input);
+    // Check for custom step handler (e.g. SM Research scrape/dashboard)
+    const customHandler = getCustomHandler(pipeline.templateId, stepState.step.name);
+
+    // Run agents — custom handler, TL gate, or generic agents
+    const agentResults = customHandler
+      ? await customHandler(stepState.input, stepState.step, pipeline)
+      : stepState.step.executionMode === 'team-leader'
+        ? await runWithTeamLeaderGate(stepState.step, stepState.input, stepState, onEvent, pipeline.id, stepIndex)
+        : await runStepAgents(stepState.step, stepState.input);
 
     // Build step output
     stepState.output = {

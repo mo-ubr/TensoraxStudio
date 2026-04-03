@@ -31,6 +31,9 @@ import videoAnalysisRouter from "./videoAnalysis.js";
 import templateRouter from "./templateRoutes.js";
 import pipelineRouter from "./pipelineRoutes.js";
 import tiktokRouter from "./apifyTiktokService.js";
+import facebookRouter from "./apifyFacebookService.js";
+import dashboardRouter from "./dashboardGenerator.js";
+import researchPipelineRouter from "./researchPipeline.js";
 
 const app = express();
 const PORT = process.env.PORT || 5182;
@@ -52,6 +55,9 @@ app.use("/api/video", videoAnalysisRouter);
 app.use("/api/templates", templateRouter);
 app.use("/api/pipeline", pipelineRouter);
 app.use("/api/tiktok", tiktokRouter);
+app.use("/api/facebook", facebookRouter);
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/research", researchPipelineRouter);
 
 import { writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join } from "path";
