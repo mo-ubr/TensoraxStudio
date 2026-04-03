@@ -129,6 +129,22 @@ const API_SLOTS: ApiSlot[] = [
       { group: 'Shotstack', items: ['shotstack-v1'] },
     ],
   },
+  {
+    id: 'legal',
+    label: 'Legal Review & Compliance',
+    icon: 'fa-scale-balanced',
+    description: 'Legal reasoning, compliance review, contract analysis, regulatory guidance (EU/BG/GR)',
+    provider: 'anthropic',
+    keyStorageKey: 'tensorax_legal_key',
+    modelStorageKey: 'tensorax_legal_model',
+    defaultModel: 'claude-opus-4-6',
+    models: [
+      { group: 'Anthropic Claude (Recommended)', items: ['claude-opus-4-6', 'claude-sonnet-4-6'] },
+      { group: 'OpenAI', items: ['gpt-5.4', 'gpt-4.1', 'o3'] },
+      { group: 'Google Gemini', items: ['gemini-3.1-pro-preview', 'gemini-3.0-pro'] },
+      { group: 'DeepSeek', items: ['deepseek-chat'] },
+    ],
+  },
 ];
 
 function getStoredKey(storageKey: string): string {
