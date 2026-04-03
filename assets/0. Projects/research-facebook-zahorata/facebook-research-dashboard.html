@@ -18,7 +18,7 @@
     .stat .num { font-size: 22px; font-weight: 500; color: #91569c; font-family: 'Poppins', sans-serif; }
     .stat .label { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
     .card { background: white; border: 1px solid #e0d4e8; border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(145,86,156,0.04); }
-    table { border-collapse: collapse; width: 100%; font-size: 11px; table-layout: fixed; }
+    table { border-collapse: collapse; width: 100%; font-size: 11px; table-layout: auto; }
     th, td { border: 1px solid #e8dced; padding: 6px 8px; text-align: left; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
     th { background: #91569c; color: white; font-weight: 500; font-family: 'Sora', sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; position: sticky; top: 0; white-space: nowrap; }
     td { background: white; }
@@ -380,7 +380,7 @@ function renderOverview() {
   const sorted = Object.entries(authors).sort((a,b) => b[1].totalViews - a[1].totalViews);
 
   let html = '<h2>Top Accounts by Total ' + CFG.viewsLabel + '</h2>';
-  html += '<table><tr><th>#</th><th>Account</th><th>Followers</th><th>' + CFG.contentLabel + '</th><th>Total ' + CFG.viewsLabel + '</th><th>Total ' + CFG.likesLabel + '</th><th>Avg ' + CFG.viewsLabel + '</th></tr>';
+  html += '<table><tr><th style="width:30px">#</th><th style="min-width:150px">Account</th><th style="width:80px">Followers</th><th style="width:55px">' + CFG.contentLabel + '</th><th style="width:85px">Total ' + CFG.viewsLabel + '</th><th style="width:85px">Total ' + CFG.likesLabel + '</th><th style="width:80px">Avg ' + CFG.viewsLabel + '</th></tr>';
   sorted.slice(0, 25).forEach(([name, d], i) => {
     const isChannel = name === CHANNEL_NAME;
     html += '<tr class="' + (isChannel ? 'highlight' : '') + '"><td>' + (i+1) + '</td><td><a href="' + (d.url||'#') + '" target="_blank">@' + escHtml(name) + '</a>' + (isChannel ? ' ⭐' : '') + '</td><td>' + fmt(d.followers) + '</td><td>' + d.count + '</td><td>' + fmt(d.totalViews) + '</td><td>' + fmt(d.totalLikes) + '</td><td>' + fmt(Math.round(d.totalViews/d.count)) + '</td></tr>';
@@ -465,7 +465,7 @@ function renderHashtags() {
 
 // ── Content Table Builder ──────────────────────────────────────────────
 function buildContentTable(data) {
-  let html = '<table><tr><th style="width:64px">Thumb</th><th>Author</th><th style="width:200px">Text</th><th>' + CFG.viewsLabel + '</th><th>' + CFG.likesLabel + '</th><th>' + CFG.sharesLabel + '</th><th>' + CFG.commentsLabel + '</th><th>Eng %</th><th>Date</th><th>Link</th></tr>';
+  let html = '<table><tr><th style="width:56px">Thumb</th><th style="width:120px">Author</th><th style="min-width:200px">Text</th><th style="width:65px">' + CFG.viewsLabel + '</th><th style="width:65px">' + CFG.likesLabel + '</th><th style="width:55px">' + CFG.sharesLabel + '</th><th style="width:55px">' + CFG.commentsLabel + '</th><th style="width:50px">Eng %</th><th style="width:80px">Date</th><th style="width:40px">Link</th></tr>';
   data.forEach(p => {
     const isHighViews = (p.views||0) > 10000;
     html += '<tr class="' + (isHighViews ? 'highlight' : '') + '">'
@@ -568,47 +568,135 @@ function exportExcel(lang) {
   }));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hashData), isEN ? 'Hashtags' : 'Хаштагове');
 
-  // 7. Analysis — extract tables and text from the DOM
-  function htmlSectionToRows(sectionId) {
-    const el = document.getElementById(sectionId);
-    if (!el) return [{ Section: 'Not yet generated' }];
-    const rows = [];
-    // Extract all tables
-    el.querySelectorAll('table').forEach(table => {
-      const headers = [...table.querySelectorAll('th')].map(th => th.innerText.trim());
-      table.querySelectorAll('tbody tr, tr').forEach(tr => {
-        const cells = [...tr.querySelectorAll('td')];
-        if (cells.length === 0) return;
-        const row = {};
-        cells.forEach((td, i) => {
-          row[headers[i] || ('Col ' + (i+1))] = td.innerText.trim();
+  // 7 & 8. Analysis + Recommendations — each card/section becomes its own Excel sheet
+  // 7 & 8. Analysis + Recommendations — each card becomes its own sheet
+  // Walk the DOM in order to interleave headings, text, and tables correctly
+  function cardToSheet(card, wb, sheetName) {
+    // Collect text items and tables in document order
+    const textBefore = []; // text before the first table
+    const tables = [];     // [{headers, rows}]
+    const textAfter = [];  // text after last table
+    let seenTable = false;
+
+    const nodes = card.querySelectorAll('h2, h3, p, li, table, ul');
+    nodes.forEach(node => {
+      if (node.tagName !== 'TABLE' && node.closest('table')) return;
+      if (node.tagName === 'LI' && node.parentElement && node.parentElement.tagName === 'UL') return;
+
+      if (node.tagName === 'TABLE') {
+        seenTable = true;
+        const headers = [...node.querySelectorAll('th')].map(th => th.innerText.trim());
+        const tRows = [];
+        node.querySelectorAll('tr').forEach(tr => {
+          const cells = [...tr.querySelectorAll('td')];
+          if (cells.length === 0) return;
+          const row = {};
+          cells.forEach((td, i) => { row[headers[i] || ('Col'+(i+1))] = td.innerText.trim(); });
+          tRows.push(row);
         });
-        rows.push(row);
-      });
-      rows.push({}); // blank row between tables
-    });
-    // Extract headings and paragraphs
-    const textRows = [];
-    el.querySelectorAll('h2, h3, p, li').forEach(node => {
-      const tag = node.tagName.toLowerCase();
-      const text = node.innerText.trim();
-      if (!text) return;
-      if (tag === 'h2' || tag === 'h3') {
-        textRows.push({ Section: text });
-      } else {
-        textRows.push({ Detail: text });
+        tables.push({ headers, rows: tRows });
+        return;
       }
+
+      let text = '';
+      if (node.tagName === 'UL') {
+        if (node.closest('table')) return;
+        text = [...node.querySelectorAll('li')].map(li => '• ' + li.innerText.trim()).join('
+');
+      } else if (node.tagName === 'H2' || node.tagName === 'H3') {
+        text = '▌ ' + node.innerText.trim().toUpperCase();
+      } else if (node.tagName === 'P') {
+        if (node.closest('table')) return;
+        text = node.innerText.trim();
+      }
+      if (!text) return;
+      if (!seenTable || tables.length === 0) textBefore.push(text);
+      else textAfter.push(text);
     });
-    // Combine: if we got table rows, use those; otherwise use text
-    return rows.length > 1 ? rows : textRows.length > 0 ? textRows : [{ Section: 'No content' }];
+
+    // Build the sheet: use the FIRST table as the primary structure
+    // Put text above and below it
+    const ws = XLSX.utils.aoa_to_sheet([]);
+    let currentRow = 0;
+
+    // Text before table
+    if (textBefore.length > 0) {
+      const aoa = textBefore.map(t => [t]);
+      XLSX.utils.sheet_add_aoa(ws, aoa, { origin: { r: currentRow, c: 0 } });
+      currentRow += textBefore.length + 1; // +1 for blank row
+    }
+
+    // Tables — each as proper columnar data
+    tables.forEach((table, ti) => {
+      if (table.rows.length === 0) return;
+      // Header row
+      XLSX.utils.sheet_add_aoa(ws, [table.headers], { origin: { r: currentRow, c: 0 } });
+      currentRow++;
+      // Data rows
+      const dataAoa = table.rows.map(row => table.headers.map(h => row[h] || ''));
+      XLSX.utils.sheet_add_aoa(ws, dataAoa, { origin: { r: currentRow, c: 0 } });
+      currentRow += dataAoa.length + 1; // +1 blank after table
+    });
+
+    // Text after table
+    if (textAfter.length > 0) {
+      const aoa = textAfter.map(t => [t]);
+      XLSX.utils.sheet_add_aoa(ws, aoa, { origin: { r: currentRow, c: 0 } });
+    }
+
+    // Auto-size column widths based on content
+    const maxCols = Math.max(1, ...tables.map(t => t.headers.length), 1);
+    const colWidths = [];
+    for (let c = 0; c < maxCols; c++) {
+      let maxLen = 10;
+      // Check headers
+      tables.forEach(t => { if (t.headers[c]) maxLen = Math.max(maxLen, t.headers[c].length); });
+      // Check data
+      tables.forEach(t => t.rows.forEach(r => {
+        const val = Object.values(r)[c] || '';
+        maxLen = Math.max(maxLen, String(val).length);
+      }));
+      // Check text rows
+      if (c === 0) textBefore.concat(textAfter).forEach(t => { maxLen = Math.max(maxLen, Math.min(t.length, 80)); });
+      colWidths.push({ wch: Math.min(maxLen + 2, 80) });
+    }
+    ws['!cols'] = colWidths;
+
+    try {
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    } catch(e) { /* duplicate name */ }
   }
 
-  const analysisRows = htmlSectionToRows('sec-analysis');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(analysisRows), isEN ? 'Analysis' : 'Анализ');
+  function addSectionsAsSheets(sectionId, prefix, maxSheets) {
+    const el = document.getElementById(sectionId);
+    if (!el) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+        Content: isEN ? 'Not yet generated' : 'Все още не е генериран'
+      }]), prefix.trim());
+      return;
+    }
+    const cards = el.querySelectorAll('.card');
+    let sheetCount = 0;
+    if (cards.length === 0) {
+      const rows = [];
+      el.querySelectorAll('h2, h3, p, li').forEach(n => {
+        rows.push({ Content: n.innerText.trim() });
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ Content: 'Empty' }]), prefix.trim());
+      return;
+    }
+    cards.forEach((card, i) => {
+      if (sheetCount >= (maxSheets || 10)) return;
+      const heading = card.querySelector('h2, h3');
+      const title = heading ? heading.innerText.trim() : 'Section ' + (i+1);
+      let name = (prefix + (i+1) + ' ' + title).replace(/[\/*?:[]]/g, '').substring(0, 31);
+      cardToSheet(card, wb, name);
+      sheetCount++;
+    });
+  }
 
-  // 8. Recommendations
-  const recsRows = htmlSectionToRows('sec-recommendations');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recsRows), isEN ? 'Recommendations' : 'Препоръки');
+  addSectionsAsSheets('sec-analysis', 'A', 8);
+  addSectionsAsSheets('sec-recommendations', 'R', 12);
 
   XLSX.writeFile(wb, 'Za Horata_' + PLATFORM + '_' + lang + '.xlsx');
 }
