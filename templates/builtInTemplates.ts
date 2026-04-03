@@ -2981,7 +2981,116 @@ export const databaseMigrationPlanner: TemplateConfig = {
 
 // ─── Registry of all built-in templates ──────────────────────────────────────
 
+// ─── Social Media Research Workflow ──────────────────────────────────────────
+
+export const socialMediaResearch: TemplateConfig = {
+  id: 'social-media-research',
+  name: 'Social Media Research',
+  description: 'Deep research workflow for any social media channel: scrape public data, build interactive dashboard with analytics, competitive benchmarks, hashtag/keyword analysis, audience insights, promotion effectiveness, and actionable recommendations with step-by-step implementation guides. Works across TikTok, Instagram, Facebook, YouTube, and LinkedIn.',
+  icon: 'fa-microscope',
+  category: 'research',
+  domain: 'research',
+  version: '1.0.0',
+  builtIn: true,
+  author: 'TensorAx Studio',
+  tags: ['social-media', 'research', 'analytics', 'tiktok', 'instagram', 'facebook', 'youtube', 'competitive-analysis', 'audience-insights'],
+
+  teams: [
+    {
+      teamId: 'research',
+      agents: ['social-media-trend-research', 'competitive-trend-research', 'audience-research', 'web-scraper', 'deep-research'],
+      notes: 'Scrape channel data, competitor profiles, hashtag/keyword trends, audience demographics',
+    },
+    {
+      teamId: 'data-analysis',
+      agents: ['general-analysis'],
+      notes: 'Analyse scraped data: engagement rates, growth patterns, content performance, promotion ROI',
+    },
+    {
+      teamId: 'presentation-comms',
+      agents: ['report-generator', 'chart-creator'],
+      notes: 'Build interactive HTML dashboard, generate Excel/Word reports in multiple languages',
+    },
+  ],
+
+  steps: [
+    {
+      order: 1,
+      name: 'Configure',
+      teamId: 'research',
+      agents: [],
+      requiresReview: false,
+      description: 'Select platform, enter channel handle/URL, define research scope, set language and save location',
+    },
+    {
+      order: 2,
+      name: 'Scrape',
+      teamId: 'research',
+      agents: ['web-scraper', 'social-media-trend-research'],
+      requiresReview: false,
+      description: 'Scrape public channel data: all posts, engagement metrics, follower counts, hashtags, competitor profiles. Uses platform-specific APIs (Apify for TikTok, native APIs for others)',
+    },
+    {
+      order: 3,
+      name: 'Dashboard',
+      teamId: 'presentation-comms',
+      agents: ['report-generator', 'chart-creator'],
+      requiresReview: true,
+      description: 'Build interactive HTML dashboard with tabs: Overview, Channel, Competitors, Top Content, All Content, Hashtags/Keywords',
+    },
+    {
+      order: 4,
+      name: 'Analysis',
+      teamId: 'data-analysis',
+      agents: ['general-analysis'],
+      requiresReview: true,
+      description: 'Data-driven analysis: current position vs benchmarks, viral content breakdown, optimal timing/format/duration, content gaps, competitor intelligence, promotion ROI (if data available)',
+    },
+    {
+      order: 5,
+      name: 'Recommendations',
+      teamId: 'data-analysis',
+      agents: ['deep-research', 'general-analysis'],
+      requiresReview: true,
+      description: 'Platform algorithm deep-dive (current year), target audience strategy, account setup checklist with how-to guides, action plan with step-by-step implementation, content series/playlist strategy, promotion strategy (including anti-ban for political/sensitive content), growth targets',
+    },
+    {
+      order: 6,
+      name: 'Export',
+      teamId: 'presentation-comms',
+      agents: ['report-generator'],
+      requiresReview: false,
+      description: 'Generate downloadable reports: bilingual Excel (all dashboard tabs + analysis + recommendations with How To column), Word summary, save to project directory',
+    },
+  ],
+
+  inputs: {
+    requiresBrief: true,
+    customFields: [
+      { id: 'platform', label: 'Platform', type: 'select', options: ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'LinkedIn'], required: true },
+      { id: 'channelHandle', label: 'Channel Handle or URL', type: 'text', required: true },
+      { id: 'competitors', label: 'Competitor handles (comma-separated)', type: 'textarea', required: false },
+      { id: 'hashtags', label: 'Hashtags/keywords to research (comma-separated)', type: 'textarea', required: false },
+      { id: 'language', label: 'Report Language', type: 'select', options: ['English', 'Bulgarian', 'Greek', 'Both EN+Local'], defaultValue: 'Both EN+Local', required: true },
+      { id: 'geo', label: 'Geographic Focus', type: 'text', defaultValue: 'Bulgaria', required: false },
+      { id: 'includePromoAnalysis', label: 'Include promotion/ad analysis', type: 'toggle', defaultValue: true, required: false },
+    ],
+  },
+
+  outputs: {
+    primary: 'report',
+    formats: ['html-dashboard', 'xlsx', 'docx'],
+    destination: 'project',
+  },
+
+  schedule: {
+    schedulable: true,
+    suggestedInterval: 'weekly',
+  },
+};
+
 export const BUILT_IN_TEMPLATES: TemplateConfig[] = [
+  socialMediaResearch,
   whatIfTransformation,
   videoFromKeyframes,
   staffTrainingVideo,
