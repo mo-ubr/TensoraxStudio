@@ -1204,7 +1204,8 @@
     const RD = bg ? 'Подробности' : 'Details';
     const RV = bg ? 'Стойност' : 'Value';
     const RI = bg ? 'Въздействие' : 'Impact';
-    const rr = (s,d,v,im) => { const r={}; r[RS]=s; r[RD]=d; r[RV]=v; r[RI]=im; return r; };
+    const RH = bg ? 'Как да го направите' : 'How To';
+    const rr = (s,d,v,im,howto) => { const r={}; r[RS]=s; r[RD]=d; r[RV]=v; r[RI]=im; r[RH]=howto||''; return r; };
 
     // Algorithm signals
     RC.push(rr(bg ? '1. АЛГОРИТЪМ НА TIKTOK (2026)' : '1. TIKTOK ALGORITHM (2026)', '', '', ''));
@@ -1231,57 +1232,57 @@
     RC.push(rr('', '', '', ''));
 
     // Account setup
-    RC.push(rr(bg ? '3. НАСТРОЙКИ НА АКАУНТА' : '3. ACCOUNT SETUP', bg ? 'Настройка' : 'Setting', bg ? 'Препоръка' : 'Recommended', ''));
+    RC.push(rr(bg ? '3. НАСТРОЙКИ НА АКАУНТА' : '3. ACCOUNT SETUP', bg ? 'Настройка' : 'Setting', bg ? 'Препоръка' : 'Recommended', '', bg ? 'Как да го направите' : 'How To'));
     const setupRows = bg ? [
-      ['Био', 'Добавете описание с ключови думи + линк', 'Високо'],
-      ['Категория', 'Медии и развлечения / Публична личност', 'Средно'],
-      ['Дуети', 'Разрешете от ВСИЧКИ', 'Високо'],
-      ['Стичове', 'Разрешете от ВСИЧКИ', 'Високо'],
-      ['Изтегляния', 'Разрешете — за споделяне в WhatsApp', 'Високо'],
-      ['Коментари', 'От всички — коментарите са сигнал №1', 'Високо'],
-      ['AI декларация', 'Включете за AI-генерирано съдържание (EU закон)', 'Задължително'],
-      ['Препоръчване на акаунта', 'Включете всички опции', 'Средно'],
-      ['Свързани акаунти', 'Свържете Instagram и YouTube', 'Средно'],
+      ['Био', 'Добавете описание с ключови думи + линк', 'Високо', 'Профил → Редактирай профил → Био → напишете: "За Хората 🇧🇬 Политическа сатира с AI | Деца пеят за корупцията" + добавете линк'],
+      ['Категория', 'Медии и развлечения / Публична личност', 'Средно', 'Настройки → Управление на акаунта → Категория → изберете "Медии и развлечения"'],
+      ['Дуети', 'Разрешете от ВСИЧКИ', 'Високо', 'Настройки → Поверителност → Повторна употреба на съдържание → Всички'],
+      ['Стичове', 'Разрешете от ВСИЧКИ', 'Високо', 'Същото място — Настройки → Поверителност → Повторна употреба на съдържание → Всички'],
+      ['Изтегляния', 'Разрешете — за споделяне в WhatsApp', 'Високо', 'Настройки → Поверителност → Изтегляния → ВКЛ'],
+      ['Коментари', 'От всички — коментарите са сигнал №1', 'Високо', 'Настройки → Поверителност → Коментари → Всички'],
+      ['AI декларация', 'Включете за AI-генерирано съдържание (EU закон)', 'Задължително', 'При публикуване → Content disclosure → AI-generated content → ВКЛ. Задължително по EU Digital Services Act'],
+      ['Препоръчване на акаунта', 'Включете всички опции', 'Средно', 'Настройки → Поверителност → Suggest your account → включете всички опции'],
+      ['Свързани акаунти', 'Свържете Instagram и YouTube', 'Средно', 'Профил → Редактирай профил → Add Instagram / Add YouTube → свържете акаунтите'],
     ] : [
-      ['Bio', 'Add description with keywords + link', 'High'],
-      ['Category', 'Media & Entertainment / Public Figure', 'Medium'],
-      ['Duets', 'Allow from EVERYONE', 'High'],
-      ['Stitches', 'Allow from EVERYONE', 'High'],
-      ['Downloads', 'Allow — enables WhatsApp sharing', 'High'],
-      ['Comments', 'From everyone — comments are signal #1', 'High'],
-      ['AI disclosure', 'Enable for AI-generated content (EU law)', 'Required'],
-      ['Suggest account', 'Turn ON all options', 'Medium'],
-      ['Linked accounts', 'Connect Instagram and YouTube', 'Medium'],
+      ['Bio', 'Add description with keywords + link', 'High', 'Profile → Edit Profile → Bio → write: "За Хората 🇧🇬 Политическа сатира с AI | Деца пеят за корупцията" + add link'],
+      ['Category', 'Media & Entertainment / Public Figure', 'Medium', 'Settings → Manage Account → Category → select "Media & Entertainment"'],
+      ['Duets', 'Allow from EVERYONE', 'High', 'Settings → Privacy → Reuse of content → Everyone'],
+      ['Stitches', 'Allow from EVERYONE', 'High', 'Same location — Settings → Privacy → Reuse of content → Everyone'],
+      ['Downloads', 'Allow — enables WhatsApp sharing', 'High', 'Settings → Privacy → Downloads → ON'],
+      ['Comments', 'From everyone — comments are signal #1', 'High', 'Settings → Privacy → Comments → Everyone'],
+      ['AI disclosure', 'Enable for AI-generated content (EU law)', 'Required', 'When posting → Content disclosure → AI-generated content → ON. Required by EU Digital Services Act'],
+      ['Suggest account', 'Turn ON all options', 'Medium', 'Settings → Privacy → Suggest your account to others → turn ALL options ON'],
+      ['Linked accounts', 'Connect Instagram and YouTube', 'Medium', 'Profile → Edit Profile → Add Instagram / Add YouTube → connect accounts'],
     ];
-    setupRows.forEach(s => RC.push(rr('', s[0], s[1], s[2])));
+    setupRows.forEach(s => RC.push(rr('', s[0], s[1], s[2], s[3])));
     RC.push(rr('', '', '', ''));
 
     // Action plan
-    RC.push(rr(bg ? '4. ПЛАН ЗА ДЕЙСТВИЕ (30 ДНИ)' : '4. 30-DAY ACTION PLAN', bg ? 'Действие' : 'Action', bg ? 'Подробности' : 'Details', bg ? 'Въздействие' : 'Impact'));
+    RC.push(rr(bg ? '4. ПЛАН ЗА ДЕЙСТВИЕ (30 ДНИ)' : '4. 30-DAY ACTION PLAN', bg ? 'Действие' : 'Action', bg ? 'Подробности' : 'Details', bg ? 'Въздействие' : 'Impact', bg ? 'Как да го направите' : 'How To'));
     const planRows = bg ? [
-      ['1. Поправи хаштаговете', 'Замени #хумор с #бгполитика #bgpolitics #политика + политик', 'Високо'],
-      ['2. Кука в първите 3с', 'Текст с името на политика в първия кадър', 'Високо'],
-      ['3. 5-7 видеа/седмица', 'Увеличи обема — всяко видео е лотариен билет', 'Високо'],
-      ['4. 20-30с времетраене', 'Оптимална зона. Вирусното беше 29с', 'Средно'],
-      ['5. Собствени обложки', 'Текст, лице на политик, ярки цветове', 'Средно'],
-      ['6. Провокирай коментари', 'Завършвай с въпрос. Цел: 50+ за 1 час', 'Високо'],
-      ['7. Оригинален звук', 'Продължавай с детските песнички', 'Ниско (вече)'],
-      ['8. Кръстосано публикуване', 'Reels + Shorts за безплатен обхват', 'Средно'],
-      ['9. TikTok SEO', 'Ключови думи в описание, говор и текст', 'Високо'],
-      ['10. Постване в правилното време', 'Вт-Чт 14-18ч, Пт-Нд 18-23ч', 'Средно'],
+      ['1. Поправи хаштаговете', 'Замени #хумор с #бгполитика #bgpolitics #политика + политик', 'Високо', 'Видео → три точки → Редактирай публикация → изтрий старите хаштагове → добави: #захората + #бгполитика + #bgpolitics + #политика + хаштаг за политик. Макс. 5 хаштага. Може до 7 дни след публикуване.'],
+      ['2. Кука в първите 3с', 'Текст с името на политика в първия кадър', 'Високо', 'В TikTok редактора натисни Text (Аа) → напиши провокативен текст (напр. "Пеевски НЕ иска да видиш това") → голям шрифт, бял текст на черен фон → Set duration: 0-3с → позиция: горна третина на екрана.'],
+      ['3. 5-7 видеа/седмица', 'Увеличи обема — всяко видео е лотариен билет', 'Високо', 'Отдели 2-3 часа веднъж седмично за създаване на 7 видеа наведнъж. При публикуване → More options → Schedule → избери дата и час. Оптимални часове: 14-18ч делник, 18-23ч уикенд.'],
+      ['4. 20-30с времетраене', 'Оптимална зона. Вирусното беше 29с', 'Средно', 'Планирай видеото за 25-30с преди снимане. Структура: Кука (0-3с) → Съдържание (3-25с) → Въпрос/CTA (25-30с). В редактора използвай trim за премахване на мъртво време.'],
+      ['5. Собствени обложки', 'Текст, лице на политик, ярки цветове', 'Средно', 'При публикуване → Select cover → Upload cover. Размер: 1080x1920px. Направи в Canva: удебелен текст + лице на политик + ярки цветове. За съществуващо видео: три точки → Edit post → Edit cover (до 7 дни).'],
+      ['6. Провокирай коментари', 'Завършвай с въпрос. Цел: 50+ за 1 час', 'Високо', 'Завършвай с "Съгласни ли сте?" или "Кой е по-лош?". Публикувай провокативен коментар и го закачи. Отговаряй на всеки коментар в първия час. Сподели линка в WhatsApp/Telegram групи веднага.'],
+      ['7. Оригинален звук', 'Продължавай с детските песнички', 'Ниско (вече)', 'Не се изисква действие — вече го правите. Оригиналният звук е предимство: може да стане trending sound, алгоритъмът го предпочита, звукът е търсим.'],
+      ['8. Кръстосано публикуване', 'Reels + Shorts за безплатен обхват', 'Средно', 'Изтегли видеото без воден знак от snaptik.app → качи в Instagram Reels (+ → Reel → избери видео) → качи в YouTube Shorts (+ → Create a Short). Или ползвай repurpose.io за автоматизация.'],
+      ['9. TikTok SEO', 'Ключови думи в описание, говор и текст', 'Високо', 'Проучи ключови думи: TikTok Search → напиши темата → виж autocomplete. Описание: 150-300 символа с ключова дума в началото. Кажи ключовата дума на глас в първите 5с. Текстът върху видеото също се индексира.'],
+      ['10. Постване в правилното време', 'Вт-Чт 14-18ч, Пт-Нд 18-23ч', 'Средно', 'Провери Analytics → Audience → Most active times за конкретните часове на аудиторията. Използвай Schedule при публикуване. Бъди онлайн 60 мин след публикуване за отговори на коментари.'],
     ] : [
-      ['1. Fix hashtags', 'Replace #хумор with #бгполитика #bgpolitics #политика + politician', 'High'],
-      ['2. Hook in first 3s', 'Bold text with politician name in first frame', 'High'],
-      ['3. Post 5-7/week', 'Increase volume — each video is a lottery ticket', 'High'],
-      ['4. Target 20-30s', 'Sweet spot. Viral video was 29s', 'Medium'],
-      ['5. Custom thumbnails', 'Text, politician face, bright colours', 'Medium'],
-      ['6. Provoke comments', 'End with question. Target 50+ in first hour', 'High'],
-      ['7. Original audio', 'Keep children\'s song format', 'Low (already)'],
-      ['8. Cross-post', 'Reels + Shorts for free reach', 'Medium'],
-      ['9. TikTok SEO', 'Keywords in caption, speech, on-screen text', 'High'],
-      ['10. Post at right time', 'Tue-Thu 2-6PM, Fri-Sun 6-11PM', 'Medium'],
+      ['1. Fix hashtags', 'Replace #хумор with #бгполитика #bgpolitics #политика + politician', 'High', 'Video → three dots → Edit post → delete old hashtags → add: #захората + #бгполитика + #bgpolitics + #политика + politician hashtag. Max 5 hashtags. Editable up to 7 days after posting.'],
+      ['2. Hook in first 3s', 'Bold text with politician name in first frame', 'High', 'In TikTok editor tap Text (Aa) → type provocative line (e.g. "Пеевски НЕ иска да видиш това") → large font, white on black → Set duration: 0-3s → position: upper third of screen.'],
+      ['3. Post 5-7/week', 'Increase volume — each video is a lottery ticket', 'High', 'Set aside 2-3 hours once/week to batch-create 7 videos. When posting → More options → Schedule → pick date/time. Best times: 2-6PM weekdays, 6-11PM weekends.'],
+      ['4. Target 20-30s', 'Sweet spot. Viral video was 29s', 'Medium', 'Plan video for 25-30s before filming. Structure: Hook (0-3s) → Content (3-25s) → Question/CTA (25-30s). Use trim tool in editor to cut dead space.'],
+      ['5. Custom thumbnails', 'Text, politician face, bright colours', 'Medium', 'When posting → Select cover → Upload cover. Size: 1080x1920px. Design in Canva: bold text + politician face + bright colours. For existing video: three dots → Edit post → Edit cover (within 7 days).'],
+      ['6. Provoke comments', 'End with question. Target 50+ in first hour', 'High', 'End with "Съгласни ли сте?" or "Кой е по-лош?". Post a provocative comment yourself and pin it. Reply to every comment in first hour. Share link in WhatsApp/Telegram groups immediately.'],
+      ['7. Original audio', 'Keep children\'s song format', 'Low (already)', 'No action needed — already doing this. Original audio is an advantage: can become trending sound, algorithm favours it, sound is searchable.'],
+      ['8. Cross-post', 'Reels + Shorts for free reach', 'Medium', 'Download without watermark from snaptik.app → upload to Instagram Reels (+ → Reel → select video) → upload to YouTube Shorts (+ → Create a Short). Or use repurpose.io for automation.'],
+      ['9. TikTok SEO', 'Keywords in caption, speech, on-screen text', 'High', 'Research keywords: TikTok Search → type topic → note autocomplete suggestions. Caption: 150-300 chars with main keyword first. Say keyword aloud in first 5s. On-screen text also gets indexed.'],
+      ['10. Post at right time', 'Tue-Thu 2-6PM, Fri-Sun 6-11PM', 'Medium', 'Check Analytics → Audience → Most active times for your specific audience times. Use Schedule when posting. Stay online 60 min after posting to reply to comments.'],
     ];
-    planRows.forEach(p => RC.push(rr('', p[0], p[1], p[2])));
+    planRows.forEach(p => RC.push(rr('', p[0], p[1], p[2], p[3])));
     RC.push(rr('', '', '', ''));
 
     // Growth targets
@@ -1321,7 +1322,7 @@
     RC.push(rr('', bg ? 'ПЛЕЙЛИСТ СЪВЕТ' : 'PLAYLIST TIP', bg ? 'Плейлистите изискват 10,000+ последователи. Дотогава използвайте последователно именуване в описанията (напр. "Серия: Пеевски #1") и закачете най-доброто видео на профила.' : 'Playlists require 10,000+ followers. Until then, use consistent naming in captions (e.g. "Series: Peevski #1") and pin your best video to your profile.', ''));
 
     const wsRec = XLSX.utils.json_to_sheet(RC);
-    wsRec['!cols'] = [{wch:30},{wch:45},{wch:55},{wch:20}];
+    wsRec['!cols'] = [{wch:28},{wch:35},{wch:50},{wch:16},{wch:70}];
     XLSX.utils.book_append_sheet(wb, wsRec, bg ? 'Препоръки' : 'Recommendations');
 
     XLSX.writeFile(wb, 'ZaHorata_TikTok_' + (bg ? 'Проучване_' : 'Research_') + new Date().toISOString().substring(0,10) + '.xlsx');
