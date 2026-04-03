@@ -68,6 +68,8 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const [activityIdx, setActivityIdx] = useState(0);
+  const [saveProjectPrompt, setSaveProjectPrompt] = useState<{ name: string; saving: boolean } | null>(null);
+  const [saveProjectName, setSaveProjectName] = useState('');
 
   const chatRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -192,7 +194,10 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
 
       // Dispatch non-pipeline actions
       for (const action of actions) {
-        if (action.type !== 'show_pipeline') {
+        if (action.type === 'suggest_save_project' && action.projectName) {
+          setSaveProjectPrompt({ name: action.projectName, saving: false });
+          setSaveProjectName(action.projectName);
+        } else if (action.type !== 'show_pipeline') {
           onAction(action);
         }
       }
@@ -285,6 +290,59 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
       timestamp: Date.now(),
     }]);
   }, []);
+
+  // ─── Save Project Handler ────────────────────────────────────────────────
+
+  const handleSaveProject = useCallback(async () => {
+    if (!saveProjectPrompt || saveProjectPrompt.saving) return;
+    const name = saveProjectName.trim();
+    if (!name) return;
+
+    setSaveProjectPrompt({ name, saving: true });
+
+    try {
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const savingDir = localStorage.getItem('tensorax_default_asset_dir') || '';
+
+      // Create project via API
+      const res = await fetch('/api/db/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          slug,
+          description: `Created from chat conversation`,
+          metadata: savingDir ? { customDirectory: `${savingDir}/${slug}` } : {},
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const project = await res.json();
+
+      // If a saving directory is set, also set the custom directory
+      if (savingDir) {
+        await fetch(`/api/db/projects/${project.id}/set-directory`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: `${savingDir}/${slug}` }),
+        });
+      }
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: `Project "${name}" has been created${savingDir ? ` and will save to ${savingDir}/${slug}` : ''}. You can find it in your Projects list.`,
+        timestamp: Date.now(),
+      }]);
+      setSaveProjectPrompt(null);
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: `Failed to create project: ${err.message || 'Unknown error'}`,
+        timestamp: Date.now(),
+      }]);
+      setSaveProjectPrompt(prev => prev ? { ...prev, saving: false } : null);
+    }
+  }, [saveProjectPrompt, saveProjectName]);
 
   // ─── Key Handler ───────────────────────────────────────────────────────────
 
@@ -537,6 +595,43 @@ export const MasterOrchestrator: React.FC<MasterOrchestratorProps> = ({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Save Project Prompt */}
+      {saveProjectPrompt && (
+        <div className="flex-shrink-0 px-6 py-3 bg-[#f6f0f8] border-t border-[#ceadd4]">
+          <div className="flex items-center gap-3">
+            <i className="fa-solid fa-folder-plus text-[#91569c]" />
+            <span className="text-xs font-bold text-[#5c3a62]">Save as project?</span>
+            <input
+              type="text"
+              value={saveProjectName}
+              onChange={e => setSaveProjectName(e.target.value)}
+              className="flex-1 text-xs px-3 py-1.5 border border-[#ceadd4] rounded-lg focus:outline-none focus:border-[#91569c] bg-white"
+              placeholder="Project name..."
+              disabled={saveProjectPrompt.saving}
+            />
+            <button
+              onClick={handleSaveProject}
+              disabled={saveProjectPrompt.saving || !saveProjectName.trim()}
+              className="px-3 py-1.5 rounded-lg bg-[#91569c] text-white text-[10px] font-bold uppercase tracking-wider hover:bg-[#7a4785] disabled:opacity-40 transition-colors"
+            >
+              {saveProjectPrompt.saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setSaveProjectPrompt(null)}
+              disabled={saveProjectPrompt.saving}
+              className="text-[#aaa] hover:text-[#5c3a62] text-xs"
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </div>
+          {localStorage.getItem('tensorax_default_asset_dir') && (
+            <p className="text-[9px] text-[#aaa] mt-1 ml-7">
+              Will save to: {localStorage.getItem('tensorax_default_asset_dir')}/{saveProjectName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || '...'}
+            </p>
+          )}
         </div>
       )}
 

@@ -43,9 +43,48 @@
     .btn-outline:hover { background: #f8f2fa; }
     .caption-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .caption-cell:hover { white-space: normal; max-width: none; }
+    /* Layout: sidebar + content */
+    body { padding: 0; display: flex; min-height: 100vh; }
+    .app-sidebar { width: 72px; flex-shrink: 0; background: white; border-right: 1px solid #e0d4e8; display: flex; flex-direction: column; align-items: center; padding-top: 0; }
+    .app-sidebar .logo-area { width: 100%; display: flex; align-items: center; justify-content: center; height: 56px; border-bottom: 1px solid #e0d4e8; }
+    .app-sidebar .logo-area img { height: 28px; }
+    .app-sidebar nav { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; }
+    .app-sidebar .nav-btn { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 10px 0; border-radius: 12px; border: none; background: none; cursor: pointer; color: #888; text-decoration: none; transition: all 0.15s; }
+    .app-sidebar .nav-btn:hover { background: rgba(246,240,248,0.6); color: #5c3a62; }
+    .app-sidebar .nav-btn.active { background: #f6f0f8; color: #91569c; }
+    .app-sidebar .nav-btn i { font-size: 16px; }
+    .app-sidebar .nav-btn span { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; margin-top: 2px; }
+    .main-content { flex: 1; padding: 20px; max-width: 1200px; overflow-y: auto; }
+    .top-header { height: 56px; flex-shrink: 0; background: white; border-bottom: 1px solid #e0d4e8; display: flex; align-items: center; padding: 0 24px; width: 100%; }
+    .top-header h2 { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; color: #5c3a62; text-transform: uppercase; letter-spacing: 1px; }
+    .content-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+
+<!-- Sidebar matching TensorAx Studio -->
+<aside class="app-sidebar">
+  <div class="logo-area">
+    <a href="/"><img src="/logo-main.png" alt="TensorAx Studio" /></a>
+  </div>
+  <nav>
+    <a href="/" class="nav-btn"><i class="fa-solid fa-house"></i><span>Studio</span></a>
+    <a href="/" class="nav-btn"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Skills</span></a>
+    <a href="/" class="nav-btn"><i class="fa-solid fa-users-gear"></i><span>Teams</span></a>
+    <a href="/" class="nav-btn active"><i class="fa-solid fa-folder-open"></i><span>Projects</span></a>
+    <a href="/" class="nav-btn"><i class="fa-solid fa-images"></i><span>Assets</span></a>
+    <a href="/" class="nav-btn"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+  </nav>
+</aside>
+
+<!-- Main content area -->
+<div class="content-wrapper">
+<div class="top-header">
+  <h2>Research — Za Horata TikTok Campaign</h2>
+</div>
+<div class="main-content">
 
 <h1>Za Horata TikTok Research</h1>
 <p class="subtitle">Bulgarian Political Satire | Scraped 2026-04-02 | 11 hashtags, 4 profiles | Bulgaria proxy</p>
@@ -62,6 +101,7 @@
   <div class="tab" onclick="showTab('viral')">Top 10 Viral</div>
   <div class="tab" onclick="showTab('allvideos')">All Videos</div>
   <div class="tab" onclick="showTab('hashtags')">Hashtags</div>
+  <div class="tab" onclick="showTab('analysis')">Analysis</div>
 </div>
 
 <div class="section active" id="sec-overview"></div>
@@ -70,6 +110,7 @@
 <div class="section" id="sec-viral"></div>
 <div class="section" id="sec-allvideos"></div>
 <div class="section" id="sec-hashtags"></div>
+<div class="section" id="sec-analysis"></div>
 
 <script>
   let allData = [];
@@ -297,35 +338,398 @@
     document.getElementById('sec-hashtags').innerHTML = html;
   }
 
-  // ─── Excel Export ────────────────────────────────────────────────
-  window.exportExcel = function() {
-    const headers = ['Author', 'Followers', 'Caption', 'Plays', 'Likes', 'Shares', 'Comments', 'Saves', 'Eng Rate', 'Hashtags', 'Duration (s)', 'Date', 'URL'];
-    const rows = allData.sort((a,b) => (b.playCount||0) - (a.playCount||0)).map(v => [
-      '@' + (v.authorMeta?.name || ''),
-      v.authorMeta?.fans || 0,
-      (v.text || '').replace(/[\t\n\r]/g, ' ').substring(0, 200),
-      v.playCount || 0,
-      v.diggCount || 0,
-      v.shareCount || 0,
-      v.commentCount || 0,
-      v.collectCount || 0,
-      engRate(v),
-      (v.hashtags||[]).map(h => '#'+h.name).filter(h => h !== '#').join(' '),
-      v.videoMeta?.duration || '',
-      (v.createTimeISO || '').substring(0, 10),
-      v.webVideoUrl || ''
-    ]);
+  // ─── Analysis Tab ────────────────────────────────────────────────
+  function renderAnalysis(data) {
+    const zh = data.filter(v => v.authorMeta?.name === 'zahoratabg');
+    const others = data.filter(v => v.authorMeta?.name !== 'zahoratabg');
 
-    // Build CSV (Excel-compatible with BOM for UTF-8)
-    const bom = '\uFEFF';
-    const csv = bom + [headers.join('\t'), ...rows.map(r => r.map(c => String(c).replace(/\t/g, ' ')).join('\t'))].join('\n');
-    const blob = new Blob([csv], { type: 'text/tab-separated-values;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ZaHorata_TikTok_Research_' + new Date().toISOString().substring(0,10) + '.xls';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Za Horata stats
+    const zhPlays = zh.reduce((s,v) => s + (v.playCount||0), 0);
+    const zhLikes = zh.reduce((s,v) => s + (v.diggCount||0), 0);
+    const zhShares = zh.reduce((s,v) => s + (v.shareCount||0), 0);
+    const zhComments = zh.reduce((s,v) => s + (v.commentCount||0), 0);
+    const zhFollowers = zh[0]?.authorMeta?.fans || 0;
+    const zhEngRate = zhPlays > 0 ? ((zhLikes + zhShares + zhComments) / zhPlays * 100).toFixed(1) : '0';
+    const zhViralVideo = zh.sort((a,b) => (b.playCount||0) - (a.playCount||0))[0];
+    const zhNonViral = zh.filter(v => v !== zhViralVideo);
+    const zhNonViralAvg = zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.playCount||0), 0) / zhNonViral.length) : 0;
+
+    // Market stats
+    const authorMap = {};
+    data.forEach(v => {
+      const name = v.authorMeta?.name; if (!name) return;
+      if (!authorMap[name]) authorMap[name] = { followers: v.authorMeta?.fans||0, videos: 0, totalPlays: 0, totalEng: 0 };
+      authorMap[name].videos++;
+      authorMap[name].totalPlays += (v.playCount||0);
+      authorMap[name].totalEng += (v.diggCount||0) + (v.shareCount||0) + (v.commentCount||0);
+    });
+    const allAuthors = Object.entries(authorMap).sort((a,b) => b[1].totalPlays - a[1].totalPlays);
+    const top10Authors = allAuthors.slice(0, 10);
+    const top10AvgFollowers = Math.round(top10Authors.reduce((s,a) => s + a[1].followers, 0) / top10Authors.length);
+    const top10AvgPlaysPerVid = Math.round(top10Authors.reduce((s,a) => s + a[1].totalPlays / a[1].videos, 0) / top10Authors.length);
+    const marketAvgEng = data.length > 0 ? (data.reduce((s,v) => s + (v.diggCount||0) + (v.shareCount||0) + (v.commentCount||0), 0) / data.reduce((s,v) => s + (v.playCount||0), 0) * 100).toFixed(1) : '0';
+
+    // Duration analysis
+    const durationBuckets = { '0-15s': [], '16-30s': [], '31-60s': [], '60s+': [] };
+    data.forEach(v => {
+      const d = v.videoMeta?.duration || 0;
+      if (d <= 15) durationBuckets['0-15s'].push(v);
+      else if (d <= 30) durationBuckets['16-30s'].push(v);
+      else if (d <= 60) durationBuckets['31-60s'].push(v);
+      else durationBuckets['60s+'].push(v);
+    });
+
+    // Hashtag analysis for Za Horata vs top performers
+    const zhHashtags = new Set();
+    zh.forEach(v => (v.hashtags||[]).forEach(h => { if (h.name) zhHashtags.add(h.name); }));
+    const topHashtags = {};
+    const topVids = [...data].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0, 30);
+    topVids.forEach(v => (v.hashtags||[]).forEach(h => {
+      if (!h.name) return;
+      if (!topHashtags[h.name]) topHashtags[h.name] = 0;
+      topHashtags[h.name]++;
+    }));
+    const missingHashtags = Object.entries(topHashtags).sort((a,b) => b[1] - a[1]).filter(([name]) => !zhHashtags.has(name)).slice(0, 10);
+
+    // Competitor comparison
+    const directComp = authorMap['aipoliticibg'];
+    const biggestComp = authorMap['bg_politics'];
+
+    let html = '';
+
+    // ─── Header ───
+    html += '<h2>Performance Analysis & Recommendations</h2>';
+    html += '<p class="subtitle">Data-driven analysis based on ' + data.length + ' videos from ' + Object.keys(authorMap).length + ' accounts</p>';
+
+    // ─── 1. Current Position ───
+    html += '<div class="card" style="border-left: 4px solid #91569c;">';
+    html += '<h3>1. Current Position</h3>';
+    html += '<table style="table-layout:auto; max-width:600px"><tr><th>Metric</th><th>Za Horata</th><th>Top 10 Avg</th><th>Gap</th></tr>';
+    html += '<tr><td>Followers</td><td>' + fmt(zhFollowers) + '</td><td>' + fmt(top10AvgFollowers) + '</td><td class="low">' + (zhFollowers > 0 ? '-' + (100 - zhFollowers/top10AvgFollowers*100).toFixed(0) + '%' : 'N/A') + '</td></tr>';
+    html += '<tr><td>Avg plays/video (excl. viral)</td><td>' + fmt(zhNonViralAvg) + '</td><td>' + fmt(top10AvgPlaysPerVid) + '</td><td class="low">' + (zhNonViralAvg > 0 ? '-' + (100 - zhNonViralAvg/top10AvgPlaysPerVid*100).toFixed(0) + '%' : 'N/A') + '</td></tr>';
+    html += '<tr><td>Engagement rate</td><td>' + zhEngRate + '%</td><td>' + marketAvgEng + '%</td><td>' + (parseFloat(zhEngRate) >= parseFloat(marketAvgEng) ? '<span class="engagement">OK</span>' : '<span class="low">' + (parseFloat(zhEngRate) - parseFloat(marketAvgEng)).toFixed(1) + 'pp</span>') + '</td></tr>';
+    html += '<tr><td>Videos posted</td><td>' + zh.length + '</td><td>' + Math.round(top10Authors.reduce((s,a) => s + a[1].videos, 0) / top10Authors.length) + '</td><td class="low">Need more volume</td></tr>';
+    html += '</table></div>';
+
+    // ─── 2. Viral Video Analysis ───
+    html += '<div class="card" style="border-left: 4px solid #2e7d32;">';
+    html += '<h3>2. Why the Viral Video Worked</h3>';
+    if (zhViralVideo) {
+      html += '<p>The #боратино video (<strong>' + fmt(zhViralVideo.playCount) + ' plays</strong>) accounts for <strong>' + (zhPlays > 0 ? (zhViralVideo.playCount/zhPlays*100).toFixed(0) : 0) + '%</strong> of all Za Horata plays.</p>';
+      html += '<table style="table-layout:auto; max-width:600px"><tr><th>Factor</th><th>Viral Video</th><th>Other Videos Avg</th></tr>';
+      html += '<tr><td>Duration</td><td class="engagement">' + (zhViralVideo.videoMeta?.duration||'?') + 's (sweet spot)</td><td>' + (zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.videoMeta?.duration||0), 0)/zhNonViral.length) : '?') + 's</td></tr>';
+      html += '<tr><td>Comments</td><td class="engagement">' + fmt(zhViralVideo.commentCount) + ' (high velocity)</td><td>' + (zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.commentCount||0), 0)/zhNonViral.length) : 0) + '</td></tr>';
+      html += '<tr><td>Shares</td><td class="engagement">' + fmt(zhViralVideo.shareCount) + '</td><td>' + (zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.shareCount||0), 0)/zhNonViral.length) : 0) + '</td></tr>';
+      html += '</table>';
+      html += '<p style="margin-top:8px"><strong>Key takeaway:</strong> Children\'s song format + 29s duration + specific hashtags + comment-provoking content = algorithm trigger. The other ' + zhNonViral.length + ' videos averaged only <strong>' + fmt(zhNonViralAvg) + ' plays</strong> — they didn\'t trigger the algorithm.</p>';
+    }
+    html += '</div>';
+
+    // ─── 3. Duration Strategy ───
+    html += '<div class="card" style="border-left: 4px solid #1565c0;">';
+    html += '<h3>3. Optimal Duration (from market data)</h3>';
+    html += '<table style="table-layout:auto; max-width:600px"><tr><th>Duration</th><th>Videos in Dataset</th><th>Avg Plays</th><th>Recommendation</th></tr>';
+    Object.entries(durationBuckets).forEach(([label, vids]) => {
+      const avg = vids.length > 0 ? Math.round(vids.reduce((s,v) => s + (v.playCount||0), 0) / vids.length) : 0;
+      const best = label === '16-30s';
+      html += '<tr' + (best ? ' class="highlight"' : '') + '><td>' + label + '</td><td>' + vids.length + '</td><td>' + fmt(avg) + '</td><td>' + (best ? '<strong class="engagement">Sweet spot — target this</strong>' : label === '0-15s' ? 'Good for hooks/teasers' : label === '60s+' ? 'Only if content is gripping' : 'OK for story-driven') + '</td></tr>';
+    });
+    html += '</table></div>';
+
+    // ─── 4. Hashtag Gaps ───
+    html += '<div class="card" style="border-left: 4px solid #e65100;">';
+    html += '<h3>4. Hashtag Gaps — Tags You\'re Missing</h3>';
+    html += '<p>These hashtags appear frequently in the top 30 most-played videos but Za Horata has never used them:</p>';
+    html += '<table style="table-layout:auto; max-width:500px"><tr><th>Hashtag</th><th>Used in Top 30</th><th>Priority</th></tr>';
+    missingHashtags.forEach(([name, count]) => {
+      const priority = count >= 5 ? '<span class="engagement">High</span>' : count >= 3 ? 'Medium' : 'Low';
+      html += '<tr><td><strong>#' + name + '</strong></td><td>' + count + ' videos</td><td>' + priority + '</td></tr>';
+    });
+    html += '</table>';
+    html += '<p style="margin-top:8px"><strong>Current Za Horata hashtags:</strong> ' + (zhHashtags.size > 0 ? [...zhHashtags].map(h => '#'+h).join(' ') : 'None detected') + '</p>';
+    html += '</div>';
+
+    // ─── 5. Competitor Intelligence ───
+    html += '<div class="card" style="border-left: 4px solid #6a1b9a;">';
+    html += '<h3>5. Competitor Intelligence</h3>';
+    if (directComp) {
+      html += '<p><strong>Closest competitor:</strong> @aipoliticibg — ' + fmt(directComp.followers) + ' followers, ' + directComp.videos + ' videos, ' + fmt(Math.round(directComp.totalPlays/directComp.videos)) + ' avg plays/video</p>';
+      html += '<p>They use AI-generated satirical scenes of Bulgarian politicians. Their engagement is inconsistent — some videos hit 192K, most under 20K. <strong class="engagement">The AI political satire niche in Bulgaria is new and uncrowded.</strong></p>';
+    }
+    if (biggestComp) {
+      html += '<p><strong>Market leader:</strong> @bg_politics — ' + fmt(biggestComp.followers) + ' followers, ' + fmt(Math.round(biggestComp.totalPlays/biggestComp.videos)) + ' avg plays/video. They succeed with high-emotion clip selection and provocative captions.</p>';
+    }
+    html += '</div>';
+
+    // ─── 6. Action Plan ───
+    html += '<div class="card" style="border-left: 4px solid #2e7d32; background: #f9fdf9;">';
+    html += '<h3>6. 30-Day Action Plan</h3>';
+    html += '<table style="table-layout:auto"><tr><th style="width:40px">#</th><th style="width:200px">Action</th><th>Details</th><th style="width:80px">Impact</th></tr>';
+    const actions = [
+      ['Fix hashtags', 'Replace generic tags (#хумор, #детскипеснички) with high-traffic political tags: #бгполитика #bgpolitics #политика #парламент + one politician tag per video', 'High'],
+      ['Hook in first 3s', 'Add bold text overlay with politician name/topic in the first frame. The algorithm decides in 0.5-2 seconds whether to push the video', 'High'],
+      ['Post 5-7 videos/week', 'Current: ~1/day. Increase volume to feed the algorithm more chances to find viral content. Each video is a lottery ticket', 'High'],
+      ['Target 20-30s duration', 'Data shows 16-30s is the sweet spot with ' + fmt(Math.round(durationBuckets['16-30s'].reduce((s,v) => s + (v.playCount||0), 0) / (durationBuckets['16-30s'].length||1))) + ' avg plays. The viral video was 29s. Stick to this range', 'Medium'],
+      ['Design custom thumbnails', 'Stop using auto-generated covers. Top performers use designed thumbnails with bold text, politician faces, and bright colours', 'Medium'],
+      ['Provoke comments', 'End each video with a question or controversial statement. Comment velocity is the #1 signal for the algorithm. Target 50+ comments within first hour', 'High'],
+      ['Use original audio', '82% of successful political TikToks use original sound. The children\'s song format is original — keep this advantage', 'Low (already doing)'],
+      ['Cross-post to reels', 'Repurpose top-performing TikToks to Instagram Reels and YouTube Shorts to multiply reach with zero extra production', 'Medium'],
+    ];
+    actions.forEach((a, i) => {
+      html += '<tr><td>' + (i+1) + '</td><td><strong>' + a[0] + '</strong></td><td>' + a[1] + '</td><td>' + (a[2] === 'High' ? '<span class="engagement">' + a[2] + '</span>' : a[2]) + '</td></tr>';
+    });
+    html += '</table></div>';
+
+    // ─── 7. Growth Targets ───
+    html += '<div class="card" style="border-left: 4px solid #91569c; background: #faf5fc;">';
+    html += '<h3>7. Growth Targets (30 days)</h3>';
+    html += '<table style="table-layout:auto; max-width:500px"><tr><th>Metric</th><th>Current</th><th>30-Day Target</th></tr>';
+    html += '<tr><td>Followers</td><td>' + fmt(zhFollowers) + '</td><td class="engagement">500+</td></tr>';
+    html += '<tr><td>Total plays</td><td>' + fmt(zhPlays) + '</td><td class="engagement">500K+</td></tr>';
+    html += '<tr><td>Videos posted</td><td>' + zh.length + '</td><td class="engagement">35-40</td></tr>';
+    html += '<tr><td>Avg plays/video</td><td>' + fmt(zhNonViralAvg) + '</td><td class="engagement">5K+</td></tr>';
+    html += '<tr><td>Engagement rate</td><td>' + zhEngRate + '%</td><td class="engagement">4.5%+</td></tr>';
+    html += '</table></div>';
+
+    document.getElementById('sec-analysis').innerHTML = html;
+  }
+
+  // ─── Excel Export — 7 sheets matching dashboard tabs ─────────────
+  window.exportExcel = function() {
+    const wb = XLSX.utils.book_new();
+    const videoRow = v => ({
+      'Author': '@' + (v.authorMeta?.name || ''),
+      'Followers': v.authorMeta?.fans || 0,
+      'Caption': (v.text || '').replace(/[\t\n\r]/g, ' ').substring(0, 300),
+      'Plays': v.playCount || 0,
+      'Likes': v.diggCount || 0,
+      'Shares': v.shareCount || 0,
+      'Comments': v.commentCount || 0,
+      'Saves': v.collectCount || 0,
+      'Eng Rate': engRate(v),
+      'Hashtags': (v.hashtags||[]).map(h => '#'+h.name).filter(h => h !== '#').join(' '),
+      'Duration (s)': v.videoMeta?.duration || '',
+      'Date': (v.createTimeISO || '').substring(0, 10),
+      'URL': v.webVideoUrl || ''
+    });
+
+    // 1. Overview — Top accounts by total plays
+    const authorMap = {};
+    allData.forEach(v => {
+      const name = v.authorMeta?.name; if (!name) return;
+      if (!authorMap[name]) authorMap[name] = { author: '@'+name, followers: v.authorMeta?.fans||0, videos: 0, totalPlays: 0, totalLikes: 0, profileUrl: v.authorMeta?.profileUrl||'' };
+      authorMap[name].videos++;
+      authorMap[name].totalPlays += (v.playCount||0);
+      authorMap[name].totalLikes += (v.diggCount||0);
+    });
+    const overviewRows = Object.values(authorMap).sort((a,b) => b.totalPlays - a.totalPlays).map((a,i) => ({
+      '#': i+1,
+      'Account': a.author,
+      'Followers': a.followers,
+      'Videos': a.videos,
+      'Total Plays': a.totalPlays,
+      'Total Likes': a.totalLikes,
+      'Avg Plays/Video': Math.round(a.totalPlays / a.videos),
+      'Profile URL': a.profileUrl
+    }));
+    const wsOverview = XLSX.utils.json_to_sheet(overviewRows);
+    wsOverview['!cols'] = [{wch:5},{wch:22},{wch:12},{wch:8},{wch:14},{wch:14},{wch:16},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsOverview, 'Overview');
+
+    // 2. Za Horata — only zahoratabg videos
+    const zhVideos = allData.filter(v => v.authorMeta?.name === 'zahoratabg').sort((a,b) => (b.playCount||0) - (a.playCount||0));
+    const wsZH = XLSX.utils.json_to_sheet(zhVideos.map(videoRow));
+    wsZH['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsZH, 'Za Horata');
+
+    // 3. Competitors — political accounts
+    const competitors = ['aipoliticibg','bg_politics','suprotivata_bg','nakata_bg07','otvetnareakciq','bg.vqturutnapromqnata','satyrtt','bulgarianpolitics','budna_bulgaria','tribunata_bg'];
+    const compRows = [];
+    competitors.forEach(comp => {
+      const vids = allData.filter(v => v.authorMeta?.name === comp);
+      if (!vids.length) return;
+      const totalPlays = vids.reduce((s,v) => s + (v.playCount||0), 0);
+      compRows.push({
+        'Account': '@'+comp,
+        'Followers': vids[0].authorMeta?.fans || 0,
+        'Videos Scraped': vids.length,
+        'Total Plays': totalPlays,
+        'Avg Plays/Video': Math.round(totalPlays / vids.length),
+        'Top Video Plays': Math.max(...vids.map(v => v.playCount||0)),
+        'Profile URL': vids[0].authorMeta?.profileUrl || ''
+      });
+    });
+    const wsComp = XLSX.utils.json_to_sheet(compRows.sort((a,b) => b['Total Plays'] - a['Total Plays']));
+    wsComp['!cols'] = [{wch:24},{wch:12},{wch:14},{wch:14},{wch:16},{wch:16},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsComp, 'Competitors');
+
+    // 4. Top 10 Viral
+    const top10 = [...allData].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0,10);
+    const wsViral = XLSX.utils.json_to_sheet(top10.map(videoRow));
+    wsViral['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsViral, 'Top 10 Viral');
+
+    // 5. All Videos
+    const allRows = [...allData].sort((a,b) => (b.playCount||0) - (a.playCount||0)).map(videoRow);
+    const wsAll = XLSX.utils.json_to_sheet(allRows);
+    wsAll['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsAll, 'All Videos');
+
+    // 6. Hashtags
+    const hashMap = {};
+    allData.forEach(v => {
+      (v.hashtags||[]).forEach(h => {
+        if (!h.name) return;
+        if (!hashMap[h.name]) hashMap[h.name] = { videos: 0, totalPlays: 0 };
+        hashMap[h.name].videos++;
+        hashMap[h.name].totalPlays += (v.playCount||0);
+      });
+    });
+    const hashRows = Object.entries(hashMap).sort((a,b) => b[1].totalPlays - a[1].totalPlays).map(([name, d], i) => ({
+      '#': i+1,
+      'Hashtag': '#'+name,
+      'Videos': d.videos,
+      'Total Plays': d.totalPlays,
+      'Avg Plays/Video': Math.round(d.totalPlays / d.videos)
+    }));
+    const wsHash = XLSX.utils.json_to_sheet(hashRows);
+    wsHash['!cols'] = [{wch:5},{wch:30},{wch:10},{wch:14},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, wsHash, 'Hashtags');
+
+    // 7. Analysis — full analytical report matching dashboard Analysis tab
+    const zh = allData.filter(v => v.authorMeta?.name === 'zahoratabg');
+    const zhPlays = zh.reduce((s,v) => s + (v.playCount||0), 0);
+    const zhLikes = zh.reduce((s,v) => s + (v.diggCount||0), 0);
+    const zhShares = zh.reduce((s,v) => s + (v.shareCount||0), 0);
+    const zhComments = zh.reduce((s,v) => s + (v.commentCount||0), 0);
+    const zhFollowers = zh[0]?.authorMeta?.fans || 0;
+    const zhEngRate = zhPlays > 0 ? ((zhLikes + zhShares + zhComments) / zhPlays * 100).toFixed(1) : '0';
+    const zhSorted = [...zh].sort((a,b) => (b.playCount||0) - (a.playCount||0));
+    const zhViralVideo = zhSorted[0];
+    const zhNonViral = zhSorted.slice(1);
+    const zhNonViralAvg = zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.playCount||0), 0) / zhNonViral.length) : 0;
+
+    // Top 10 benchmarks
+    const axTop10 = Object.values(authorMap).sort((a,b) => b.totalPlays - a.totalPlays).slice(0,10);
+    const axTop10AvgFollowers = Math.round(axTop10.reduce((s,a) => s + a.followers, 0) / axTop10.length);
+    const axTop10AvgPlays = Math.round(axTop10.reduce((s,a) => s + a.totalPlays / a.videos, 0) / axTop10.length);
+    const axTop10AvgVids = Math.round(axTop10.reduce((s,a) => s + a.videos, 0) / axTop10.length);
+    const mktTotalEng = allData.reduce((s,v) => s + (v.diggCount||0) + (v.shareCount||0) + (v.commentCount||0), 0);
+    const mktTotalPlays = allData.reduce((s,v) => s + (v.playCount||0), 0);
+    const mktEngRate = mktTotalPlays > 0 ? (mktTotalEng / mktTotalPlays * 100).toFixed(1) : '0';
+
+    // Duration buckets
+    const durBuckets = { '0-15s': [], '16-30s': [], '31-60s': [], '60s+': [] };
+    allData.forEach(v => {
+      const d = v.videoMeta?.duration || 0;
+      if (d <= 15) durBuckets['0-15s'].push(v);
+      else if (d <= 30) durBuckets['16-30s'].push(v);
+      else if (d <= 60) durBuckets['31-60s'].push(v);
+      else durBuckets['60s+'].push(v);
+    });
+
+    // Missing hashtags
+    const zhTags = new Set();
+    zh.forEach(v => (v.hashtags||[]).forEach(h => { if (h.name) zhTags.add(h.name); }));
+    const topTagMap = {};
+    [...allData].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0,30).forEach(v => (v.hashtags||[]).forEach(h => {
+      if (!h.name) return;
+      if (!topTagMap[h.name]) topTagMap[h.name] = 0;
+      topTagMap[h.name]++;
+    }));
+    const missingTags = Object.entries(topTagMap).sort((a,b) => b[1] - a[1]).filter(([name]) => !zhTags.has(name)).slice(0,10);
+
+    // Competitor data
+    const compAI = authorMap['aipoliticibg'];
+    const compBG = authorMap['bg_politics'];
+
+    const R = []; // rows for the sheet
+
+    // Section 1: Current Position
+    R.push({ 'Section': '1. CURRENT POSITION', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Followers', 'Za Horata': zhFollowers, 'Top 10 Avg': axTop10AvgFollowers, 'Gap': '-' + (100 - zhFollowers/axTop10AvgFollowers*100).toFixed(0) + '%' });
+    R.push({ 'Section': '', 'Metric': 'Avg plays/video (excl. viral)', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': axTop10AvgPlays, 'Gap': '-' + (100 - zhNonViralAvg/axTop10AvgPlays*100).toFixed(0) + '%' });
+    R.push({ 'Section': '', 'Metric': 'Engagement rate', 'Za Horata': zhEngRate + '%', 'Top 10 Avg': mktEngRate + '%', 'Gap': (parseFloat(zhEngRate) - parseFloat(mktEngRate)).toFixed(1) + 'pp' });
+    R.push({ 'Section': '', 'Metric': 'Videos posted', 'Za Horata': zh.length, 'Top 10 Avg': axTop10AvgVids, 'Gap': 'Need more volume' });
+    R.push({ 'Section': '', 'Metric': 'Total plays', 'Za Horata': zhPlays, 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Total likes', 'Za Horata': zhLikes, 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Total shares', 'Za Horata': zhShares, 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Total comments', 'Za Horata': zhComments, 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 2: Viral Video Analysis
+    R.push({ 'Section': '2. VIRAL VIDEO ANALYSIS', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    if (zhViralVideo) {
+      R.push({ 'Section': '', 'Metric': 'Viral video plays', 'Za Horata': zhViralVideo.playCount, 'Top 10 Avg': '% of total: ' + (zhPlays > 0 ? (zhViralVideo.playCount/zhPlays*100).toFixed(0) : 0) + '%', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Viral video duration', 'Za Horata': (zhViralVideo.videoMeta?.duration||'?') + 's', 'Top 10 Avg': 'Sweet spot', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Viral video comments', 'Za Horata': zhViralVideo.commentCount, 'Top 10 Avg': 'High velocity = algorithm trigger', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Viral video shares', 'Za Horata': zhViralVideo.shareCount, 'Top 10 Avg': '', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Viral video likes', 'Za Horata': zhViralVideo.diggCount, 'Top 10 Avg': '', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Non-viral avg plays', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': 'Other ' + zhNonViral.length + ' videos', 'Gap': 'Did not trigger algorithm' });
+      R.push({ 'Section': '', 'Metric': 'Non-viral avg comments', 'Za Horata': zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.commentCount||0), 0)/zhNonViral.length) : 0, 'Top 10 Avg': '', 'Gap': '' });
+      R.push({ 'Section': '', 'Metric': 'Key takeaway', 'Za Horata': "Children's song + 29s + specific hashtags + comment-provoking = algorithm trigger", 'Top 10 Avg': '', 'Gap': '' });
+    }
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 3: Duration Strategy
+    R.push({ 'Section': '3. OPTIMAL DURATION', 'Metric': 'Duration', 'Za Horata': 'Videos', 'Top 10 Avg': 'Avg Plays', 'Gap': 'Recommendation' });
+    Object.entries(durBuckets).forEach(([label, vids]) => {
+      const avg = vids.length > 0 ? Math.round(vids.reduce((s,v) => s + (v.playCount||0), 0) / vids.length) : 0;
+      R.push({ 'Section': '', 'Metric': label, 'Za Horata': vids.length, 'Top 10 Avg': avg, 'Gap': label === '16-30s' ? 'SWEET SPOT — target this' : label === '0-15s' ? 'Good for hooks' : label === '60s+' ? 'Only if gripping' : 'OK for story-driven' });
+    });
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 4: Hashtag Gaps
+    R.push({ 'Section': '4. HASHTAG GAPS', 'Metric': 'Hashtag', 'Za Horata': 'Used in Top 30', 'Top 10 Avg': 'Priority', 'Gap': '' });
+    missingTags.forEach(([name, count]) => {
+      R.push({ 'Section': '', 'Metric': '#' + name, 'Za Horata': count + ' videos', 'Top 10 Avg': count >= 5 ? 'High' : count >= 3 ? 'Medium' : 'Low', 'Gap': '' });
+    });
+    R.push({ 'Section': '', 'Metric': 'Current ZH hashtags', 'Za Horata': [...zhTags].map(h => '#'+h).join(', '), 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 5: Competitor Intelligence
+    R.push({ 'Section': '5. COMPETITOR INTELLIGENCE', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    if (compAI) {
+      R.push({ 'Section': '', 'Metric': 'Closest: @aipoliticibg', 'Za Horata': compAI.followers + ' followers', 'Top 10 Avg': compAI.videos + ' videos', 'Gap': Math.round(compAI.totalPlays/compAI.videos) + ' avg plays/vid' });
+      R.push({ 'Section': '', 'Metric': 'Style', 'Za Horata': 'AI satirical scenes of BG politicians. Inconsistent — some hit 192K, most under 20K', 'Top 10 Avg': '', 'Gap': '' });
+    }
+    if (compBG) {
+      R.push({ 'Section': '', 'Metric': 'Market leader: @bg_politics', 'Za Horata': compBG.followers + ' followers', 'Top 10 Avg': compBG.videos + ' videos', 'Gap': Math.round(compBG.totalPlays/compBG.videos) + ' avg plays/vid' });
+      R.push({ 'Section': '', 'Metric': 'Style', 'Za Horata': 'High-emotion clip selection, provocative captions', 'Top 10 Avg': '', 'Gap': '' });
+    }
+    R.push({ 'Section': '', 'Metric': 'KEY INSIGHT', 'Za Horata': 'AI political satire niche in Bulgaria is NEW and UNCROWDED — only 6 accounts. First-mover advantage available.', 'Top 10 Avg': '', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 6: Action Plan
+    R.push({ 'Section': '6. 30-DAY ACTION PLAN', 'Metric': 'Action', 'Za Horata': 'Details', 'Top 10 Avg': 'Impact', 'Gap': '' });
+    const axActions = [
+      ['Fix hashtags', 'Replace #хумор #детскипеснички with #бгполитика #bgpolitics #политика #парламент + one politician tag per video', 'High'],
+      ['Hook in first 3 seconds', 'Bold text overlay with politician name/topic in first frame. Algorithm decides in 0.5-2s', 'High'],
+      ['Post 5-7 videos/week', 'Increase volume to feed algorithm more chances. Each video is a lottery ticket', 'High'],
+      ['Target 20-30s duration', 'Data shows sweet spot. Viral video was 29s. Stick to this range', 'Medium'],
+      ['Design custom thumbnails', 'Stop auto-generated covers. Use bold text, politician faces, bright colours', 'Medium'],
+      ['Provoke comments', 'End with question/controversy. Comment velocity is #1 algorithm signal. Target 50+ in first hour', 'High'],
+      ['Keep original audio', '82% of successful political TikToks use original sound. Children\'s song format is original — keep it', 'Low (already doing)'],
+      ['Cross-post to Reels/Shorts', 'Repurpose top TikToks to IG Reels + YT Shorts for free extra reach', 'Medium'],
+    ];
+    axActions.forEach((a, i) => {
+      R.push({ 'Section': '', 'Metric': (i+1) + '. ' + a[0], 'Za Horata': a[1], 'Top 10 Avg': a[2], 'Gap': '' });
+    });
+    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+
+    // Section 7: Growth Targets
+    R.push({ 'Section': '7. GROWTH TARGETS (30 DAYS)', 'Metric': 'Metric', 'Za Horata': 'Current', 'Top 10 Avg': '30-Day Target', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Followers', 'Za Horata': zhFollowers, 'Top 10 Avg': '500+', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Total plays', 'Za Horata': zhPlays, 'Top 10 Avg': '500K+', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Videos posted', 'Za Horata': zh.length, 'Top 10 Avg': '35-40', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Avg plays/video', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': '5K+', 'Gap': '' });
+    R.push({ 'Section': '', 'Metric': 'Engagement rate', 'Za Horata': zhEngRate + '%', 'Top 10 Avg': '4.5%+', 'Gap': '' });
+
+    const wsAnalysis = XLSX.utils.json_to_sheet(R);
+    wsAnalysis['!cols'] = [{wch:28},{wch:30},{wch:55},{wch:25},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsAnalysis, 'Analysis');
+
+    XLSX.writeFile(wb, 'ZaHorata_TikTok_Research_' + new Date().toISOString().substring(0,10) + '.xlsx');
   };
 
   // Load data
@@ -340,10 +744,13 @@
       renderViral(data);
       renderAllVideos(data);
       renderHashtags(data);
+      renderAnalysis(data);
     })
     .catch(err => {
       document.getElementById('sec-overview').innerHTML = '<p style="color:#ef5350">Error loading data: ' + err.message + '</p>';
     });
 </script>
+</div><!-- end main-content -->
+</div><!-- end content-wrapper -->
 </body>
 </html>

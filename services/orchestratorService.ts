@@ -22,7 +22,8 @@ export type MasterActionType =
   | 'set_field'
   | 'navigate'
   | 'upload_request'
-  | 'cancel_pipeline';
+  | 'cancel_pipeline'
+  | 'suggest_save_project';
 
 export interface MasterAction {
   type: MasterActionType;
@@ -35,6 +36,7 @@ export interface MasterAction {
   value?: string;
   screen?: string;
   description?: string;
+  projectName?: string;        // Suggested project name for save_project actions
 }
 
 export interface PipelinePlanStep {
@@ -201,7 +203,10 @@ Embed these tags in your responses. They are parsed and executed automatically �
   Delegate a complex, multi-team request to the Project Manager agent. The PM decomposes the brief into a structured execution plan with team assignments, dependencies, and quality gates — then presents the plan for user approval before any production starts. Use this for requests that span 3+ teams or require creative problem decomposition (full campaigns, multi-language content, cross-domain workflows). Example: [ACTION:RUN_PM:Launch our new eco water bottle. Target health-conscious millennials. Social, email, and video in English, Bulgarian, and Greek.]
 
 [ACTION:SET_FIELD:fieldName:value]
-  Set a project field. Valid fields: aim, cta, targetAudience, videoType, format, duration, tone`);
+  Set a project field. Valid fields: aim, cta, targetAudience, videoType, format, duration, tone
+
+[ACTION:SAVE_PROJECT:Suggested Project Name]
+  Suggest saving the current conversation as a named project. Use this when the conversation has become specific enough to warrant its own project folder — e.g. the user is discussing a particular campaign, research topic, brand initiative, or production task. The user will see a confirmation prompt with the suggested name and can accept or dismiss. Example: [ACTION:SAVE_PROJECT:TikTok Political Campaign Research]`);
 
   // Behavioural Rules
   sections.push(`═══ RULES ═══
@@ -215,7 +220,9 @@ Embed these tags in your responses. They are parsed and executed automatically �
 8. If unsure, ask a clarifying question — don't guess.
 8. After a successful custom pipeline, offer to save it as a reusable template.
 9. IMAGE ROUTING — Critical: When a user wants to REPRODUCE an existing image with different text (e.g. "make this identical but change the headline"), use [ACTION:RUN_AGENT:faithful-image-reproduction:instruction]. Do NOT use the 9-shot storyboard pipeline for this. The 9-shot grid is ONLY for creating storyboard frames for video production. Text replacement on existing images goes to the faithful-image-reproduction agent.
-10. CREATIVITY CONTROL — Every request has two freedom axes: TEXT (0=Verbatim, 1=Minor edits, 2=Adapt, 3=Rewrite) and VISUAL (0=Clone, 1=Match, 2=Inspired, 3=Freeform). DEFAULT RULE: When the user provides text/copy, TEXT FREEDOM IS ALWAYS 0 (VERBATIM) unless they explicitly ask you to rewrite it. This means you pass their text through character-for-character — no paraphrasing, no "improvements", no rewording. When you detect text was provided, mention it in your response: "I'll use your text exactly as provided." Watch for signals: "use this text", "replace with", "here is the text" all mean VERBATIM.`);
+10. PROJECT SAVE — When the user's first or second message is specific enough to be a distinct project (a named campaign, research topic, brand initiative, content production, or any scoped task), include a [ACTION:SAVE_PROJECT:Suggested Name] tag in your response. Only suggest once per conversation — do not repeat the suggestion if the user dismisses it. Good triggers: specific brand/product names, campaign briefs, research topics, production tasks. Bad triggers: generic greetings, vague questions, settings changes.
+12. PROJECT PARAMETERS — When the conversation becomes project-specific, proactively ask the user for relevant parameters: target audience, objectives, timeline, budget, platforms, geographic focus, language, key metrics, brand guidelines, or any domain-specific parameters. Gather these upfront so the work can be saved properly. Keep questions brief — ask 2-3 parameters at a time, not a long list.
+11. CREATIVITY CONTROL — Every request has two freedom axes: TEXT (0=Verbatim, 1=Minor edits, 2=Adapt, 3=Rewrite) and VISUAL (0=Clone, 1=Match, 2=Inspired, 3=Freeform). DEFAULT RULE: When the user provides text/copy, TEXT FREEDOM IS ALWAYS 0 (VERBATIM) unless they explicitly ask you to rewrite it. This means you pass their text through character-for-character — no paraphrasing, no "improvements", no rewording. When you detect text was provided, mention it in your response: "I'll use your text exactly as provided." Watch for signals: "use this text", "replace with", "here is the text" all mean VERBATIM.`);
 
 
   return sections.join('\n\n');
@@ -364,6 +371,10 @@ export function parseMasterActions(text: string): { cleanText: string; actions: 
       }
       case 'CANCEL_PIPELINE': {
         actions.push({ type: 'cancel_pipeline' });
+        break;
+      }
+      case 'SAVE_PROJECT': {
+        actions.push({ type: 'suggest_save_project', projectName: payload?.trim() });
         break;
       }
     }

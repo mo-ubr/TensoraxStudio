@@ -23,6 +23,7 @@ import { TemplateLibrary } from './components/TemplateLibrary';
 import { TemplateRunner } from './components/TemplateRunner';
 import { StudioLayout } from './components/StudioLayout';
 import { AgentCataloguePanel } from './components/AgentCataloguePanel';
+import { ProjectDashboard } from './components/ProjectDashboard';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -588,7 +589,7 @@ const App: React.FC = () => {
       promptSuffix: SHOT_SPECS[i].label,
     }))
   );
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'concept' | 'images' | 'scenes' | 'video' | 'projects' | 'project-settings' | 'settings' | 'template-library' | 'template-runner' | 'studio' | 'project-dashboard'>('studio');
   const [activeTemplateId, setActiveTemplateId] = useState<TemplateId | null>(null);
   const [landingInitialView, setLandingInitialView] = useState<'home' | 'projects' | 'templates' | undefined>(undefined);
   const [selectedRunnerTemplateId, setSelectedRunnerTemplateId] = useState<string | null>(null);
@@ -703,35 +704,48 @@ const App: React.FC = () => {
   };
 
   const handleSelectProject = (p: Project) => {
-    persistProject(p);
-    // Auto-detect template projects and restore activeTemplateId
-    // Primary: check description field (legacy/current approach)
-    const templateMatch = p.description?.match(/Template:\s*([\w-]+)/i);
-    if (templateMatch) {
-      const detectedTemplate = templateMatch[1] as TemplateId;
-      if (PROJECT_TEMPLATES.find(t => t.id === detectedTemplate)) {
-        console.log('[App] Detected template project (from description):', detectedTemplate);
-        setActiveTemplateId(detectedTemplate);
-        setCurrentScreen('template-wizard');
-        return;
-      }
-    }
-    // Fallback: check project metadata for templateId
+    // Check if project has a dashboard URL — open it directly
     if (p.id) {
       DB.getMetadata(p.id).then(meta => {
+        if (meta.dashboardUrl && typeof meta.dashboardUrl === 'string') {
+          window.open(meta.dashboardUrl as string, '_blank');
+          return;
+        }
+        // Auto-detect template projects and restore activeTemplateId
         if (meta.templateId && typeof meta.templateId === 'string') {
           const metaTemplateId = meta.templateId as TemplateId;
           if (PROJECT_TEMPLATES.find(t => t.id === metaTemplateId)) {
-            console.log('[App] Detected template project (from metadata):', metaTemplateId);
+            persistProject(p);
             setActiveTemplateId(metaTemplateId);
             setCurrentScreen('template-wizard');
             return;
           }
         }
-      }).catch(() => {});
+        // Default: open project dashboard
+        persistProject(p);
+        setActiveTemplateId(null);
+        setCurrentScreen('project-dashboard');
+      }).catch(() => {
+        persistProject(p);
+        setActiveTemplateId(null);
+        setCurrentScreen('project-dashboard');
+      });
+      return;
     }
+    // Fallback: check description for template
+    const templateMatch = p.description?.match(/Template:\s*([\w-]+)/i);
+    if (templateMatch) {
+      const detectedTemplate = templateMatch[1] as TemplateId;
+      if (PROJECT_TEMPLATES.find(t => t.id === detectedTemplate)) {
+        persistProject(p);
+        setActiveTemplateId(detectedTemplate);
+        setCurrentScreen('template-wizard');
+        return;
+      }
+    }
+    persistProject(p);
     setActiveTemplateId(null);
-    setCurrentScreen('landing');
+    setCurrentScreen('project-dashboard');
   };
 
   const handleStartPipeline = async (projectName: string, navigateTo: 'concept' | 'images' | 'scenes', sourceDocContent?: Record<string, string>) => {
@@ -1283,7 +1297,7 @@ const App: React.FC = () => {
   // ─── Shared top header ─────────────────────────────────────────────────────
   const TopHeader = (
     <header className="h-14 flex-shrink-0 bg-white border-b border-[#e0d6e3] flex items-center px-6 z-20 shadow-sm">
-      <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { persistProject(null); setCurrentScreen('landing'); }} />
+      <img src="/logo-main.png" alt="TensorAx Studio" className="h-8 cursor-pointer" onClick={() => { setCurrentScreen('studio'); }} />
       {activeProject && (
         <div className="mx-auto flex items-center gap-3">
           <span className="text-sm font-bold text-[#5c3a62] uppercase tracking-wide">{activeProject.name}</span>
@@ -1383,6 +1397,25 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentScreen === 'project-dashboard' && activeProject) {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <ProjectDashboard
+            project={activeProject}
+            onBack={() => setCurrentScreen('projects')}
+            onOpenInChat={(p) => {
+              persistProject(p);
+              setCurrentScreen('studio');
+            }}
+          />
         </div>
       </div>
     );
