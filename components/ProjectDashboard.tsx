@@ -424,7 +424,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
               href={dashboardUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block bg-gradient-to-r from-[#91569c] to-[#c084fc] rounded-xl p-5 text-white hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer"
+              className="block bg-gradient-to-r from-[#5c3a62] to-[#91569c] rounded-xl p-5 text-white hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -437,13 +437,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
                 <i className="fa-solid fa-arrow-up-right-from-square text-white/60 text-lg" />
               </div>
             </a>
-          )}
-
-          {/* Description */}
-          {project.description && (
-            <div className="bg-white rounded-xl border border-[#e0d6e3] p-5">
-              <p className="text-sm text-[#333] leading-relaxed">{project.description}</p>
-            </div>
           )}
 
           {/* Project Instructions */}
@@ -666,173 +659,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
             </div>
           </div>
 
-          {/* Research Summary */}
-          {m.researchSummary && (
-            <SectionCard
-              title="Research Summary"
-              icon="fa-microscope"
-              onSaveWord={() => saveSectionAsWord('Research Summary', m.researchSummary, 'Research_Summary', project.id, slug)}
-            >
-              <p className="text-sm text-[#333] leading-relaxed whitespace-pre-wrap">{m.researchSummary}</p>
-            </SectionCard>
-          )}
-
-          {/* Key Findings */}
-          {m.findings && (
-            <SectionCard
-              title="Key Findings"
-              icon="fa-lightbulb"
-              onSaveWord={() => saveSectionAsWord('Key Findings', m.findings, 'Key_Findings', project.id, slug)}
-            >
-              <p className="text-sm text-[#333] leading-relaxed whitespace-pre-wrap">{m.findings}</p>
-            </SectionCard>
-          )}
-
-          {/* Competitor Data Table */}
-          {(() => {
-            const compArr = parseArrayField(m.competitorData);
-            if (!compArr || compArr.length === 0) return null;
-            return (
-              <SectionCard
-                title="Competitor Analysis"
-                icon="fa-users"
-                onSaveWord={() => saveSectionAsWord('Competitors', m.competitors || compArr.map((c: any) => `${c.account}: ${c.followers} followers, ${c.avgPlays} avg plays, ${c.style}`).join('\n'), 'Competitors', project.id, slug)}
-                onSaveExcel={() => saveSectionAsExcel('Competitors', compArr, 'Competitors', project.id, slug)}
-              >
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-[#91569c] text-white">
-                        {Object.keys(compArr[0]).map(k => (
-                          <th key={k} className="px-3 py-2 text-left font-bold text-[10px] uppercase tracking-wider">{k}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {compArr.map((row: any, i: number) => (
-                        <tr key={i} className="border-b border-[#f0e6f4] hover:bg-[#faf7fb]">
-                          {Object.values(row).map((v: any, j: number) => (
-                            <td key={j} className="px-3 py-2 text-[#333]">{typeof v === 'number' ? v.toLocaleString() : String(v)}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </SectionCard>
-            );
-          })()}
-
-          {/* Channel Stats / Video Data */}
-          {(() => {
-            const vidArr = parseArrayField(m.videoData);
-            if (!vidArr || vidArr.length === 0) return null;
-            return (
-              <SectionCard
-                title="Channel Performance"
-                icon="fa-chart-bar"
-                onSaveExcel={() => saveSectionAsExcel('Channel Stats', vidArr, 'Channel_Stats', project.id, slug)}
-              >
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {vidArr.map((row: any, i: number) => (
-                    <div key={i} className="bg-[#faf7fb] rounded-lg p-3 text-center border border-[#f0e6f4]">
-                      <div className="text-lg font-bold text-[#91569c]">{typeof row.value === 'number' ? row.value.toLocaleString() : row.value}</div>
-                      <div className="text-[9px] text-[#888] uppercase tracking-wider mt-0.5">{row.metric}</div>
-                      {row.benchmark && <div className="text-[9px] text-[#aaa] mt-1">Benchmark: {typeof row.benchmark === 'number' ? row.benchmark.toLocaleString() : row.benchmark}</div>}
-                      {row.gap && <div className={`text-[9px] font-bold mt-0.5 ${String(row.gap).startsWith('-') ? 'text-red-500' : 'text-green-600'}`}>{row.gap}</div>}
-                    </div>
-                  ))}
-                </div>
-              </SectionCard>
-            );
-          })()}
-
-          {/* Hashtag Data */}
-          {(() => {
-            const htArr = parseArrayField(m.hashtagData);
-            if (!htArr || htArr.length === 0) return null;
-            return (
-              <SectionCard
-                title="Hashtag Strategy"
-                icon="fa-hashtag"
-                onSaveWord={() => saveSectionAsWord('Hashtag Strategy', m.hashtags || htArr.map((h: any) => `${h.hashtag}: ${h.avgPlays?.toLocaleString()} avg plays (${h.priority})`).join('\n'), 'Hashtags', project.id, slug)}
-                onSaveExcel={() => saveSectionAsExcel('Hashtags', htArr, 'Hashtags', project.id, slug)}
-              >
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-[#91569c] text-white">
-                        {Object.keys(htArr[0]).map(k => (
-                          <th key={k} className="px-3 py-2 text-left font-bold text-[10px] uppercase tracking-wider">{k}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {htArr.map((row: any, i: number) => (
-                        <tr key={i} className="border-b border-[#f0e6f4] hover:bg-[#faf7fb]">
-                          {Object.values(row).map((v: any, j: number) => (
-                            <td key={j} className="px-3 py-2 text-[#333]">{typeof v === 'number' ? v.toLocaleString() : String(v)}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </SectionCard>
-            );
-          })()}
-
-          {/* Recommendations */}
-          {m.recommendations && (
-            <SectionCard
-              title="Recommendations"
-              icon="fa-clipboard-check"
-              onSaveWord={() => saveSectionAsWord('Recommendations', m.recommendations, 'Recommendations', project.id, slug)}
-            >
-              <p className="text-sm text-[#333] leading-relaxed whitespace-pre-wrap">{m.recommendations}</p>
-            </SectionCard>
-          )}
-
-          {/* Full Report (collapsible) */}
-          {m.fullReport && (
-            <SectionCard
-              title="Full Research Report"
-              icon="fa-file-lines"
-              onSaveWord={() => saveSectionAsWord('Full Report', m.fullReport, 'Full_Report', project.id, slug)}
-            >
-              <details>
-                <summary className="text-xs font-bold text-[#91569c] cursor-pointer mb-2">Click to expand full report</summary>
-                <div className="text-xs text-[#333] leading-relaxed whitespace-pre-wrap max-h-[500px] overflow-y-auto border-t border-[#f0e6f4] pt-3 mt-2">
-                  {m.fullReport}
-                </div>
-              </details>
-            </SectionCard>
-          )}
-
-          {/* Generated Files */}
-          {files.length > 0 && (
-            <SectionCard title="Generated Files" icon="fa-folder">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {files.map((f, i) => (
-                  <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2.5 rounded-lg border border-[#e0d6e3] hover:border-[#91569c] hover:bg-[#f6f0f8] transition-all">
-                    <i className={`fa-solid ${
-                      /\.(mp4|webm|mov)$/i.test(f.name) ? 'fa-video text-[#91569c]' :
-                      /\.(png|jpg|jpeg|webp)$/i.test(f.name) ? 'fa-image text-blue-500' :
-                      /\.(docx?)$/i.test(f.name) ? 'fa-file-word text-blue-600' :
-                      /\.(xlsx?)$/i.test(f.name) ? 'fa-file-excel text-green-600' :
-                      /\.(pdf)$/i.test(f.name) ? 'fa-file-pdf text-red-500' :
-                      'fa-file text-[#888]'
-                    }`} />
-                    <span className="text-xs text-[#5c3a62] font-bold truncate">{f.name}</span>
-                  </a>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Empty state — only if no research data at all */}
-          {!m.researchSummary && !m.findings && !m.recommendations && !m.fullReport && files.length === 0 && !hasDashboard && (
+          {/* Empty state — only if no dashboard and no files */}
+          {!hasDashboard && allFiles.length === 0 && (
             <div className="text-center py-12">
               <i className="fa-solid fa-folder-open text-4xl text-[#ceadd4] mb-3" />
               <p className="text-sm text-[#888]">No results yet. Start working on this project in the chat.</p>
