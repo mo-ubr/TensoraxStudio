@@ -43,6 +43,17 @@
     .btn-outline:hover { background: #f8f2fa; }
     .caption-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .caption-cell:hover { white-space: normal; max-width: none; }
+    .learn-how { margin-top: 6px; }
+    .learn-how summary { cursor: pointer; color: #91569c; font-size: 11px; font-weight: 600; user-select: none; }
+    .learn-how summary:hover { text-decoration: underline; }
+    .learn-how .guide { background: #faf7fb; border: 1px solid #e8dced; border-radius: 8px; padding: 12px 14px; margin-top: 6px; font-size: 11px; line-height: 1.7; color: #333; }
+    .learn-how .guide h4 { color: #91569c; font-size: 12px; margin: 10px 0 4px; font-family: 'Poppins', sans-serif; }
+    .learn-how .guide h4:first-child { margin-top: 0; }
+    .learn-how .guide ol, .learn-how .guide ul { padding-left: 18px; margin: 4px 0; }
+    .learn-how .guide li { margin: 3px 0; }
+    .learn-how .guide code { background: #e8dced; padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+    .learn-how .guide .tip { background: #e8f5e9; border-left: 3px solid #2e7d32; padding: 6px 10px; border-radius: 4px; margin: 8px 0; font-size: 10px; }
+    .learn-how .guide a { color: #91569c; }
     /* Layout: sidebar + content */
     body { padding: 0; display: flex; min-height: 100vh; }
     .app-sidebar { width: 72px; flex-shrink: 0; background: white; border-right: 1px solid #e0d4e8; display: flex; flex-direction: column; align-items: center; padding-top: 0; }
@@ -461,22 +472,137 @@
     }
     html += '</div>';
 
-    // ─── 6. Action Plan ───
+    // ─── 6. Action Plan with Learn How guides ───
     html += '<div class="card" style="border-left: 4px solid #2e7d32; background: #f9fdf9;">';
     html += '<h3>6. 30-Day Action Plan</h3>';
-    html += '<table style="table-layout:auto"><tr><th style="width:40px">#</th><th style="width:200px">Action</th><th>Details</th><th style="width:80px">Impact</th></tr>';
+
     const actions = [
-      ['Fix hashtags', 'Replace generic tags (#хумор, #детскипеснички) with high-traffic political tags: #бгполитика #bgpolitics #политика #парламент + one politician tag per video', 'High'],
-      ['Hook in first 3s', 'Add bold text overlay with politician name/topic in the first frame. The algorithm decides in 0.5-2 seconds whether to push the video', 'High'],
-      ['Post 5-7 videos/week', 'Current: ~1/day. Increase volume to feed the algorithm more chances to find viral content. Each video is a lottery ticket', 'High'],
-      ['Target 20-30s duration', 'Data shows 16-30s is the sweet spot with ' + fmt(Math.round(durationBuckets['16-30s'].reduce((s,v) => s + (v.playCount||0), 0) / (durationBuckets['16-30s'].length||1))) + ' avg plays. The viral video was 29s. Stick to this range', 'Medium'],
-      ['Design custom thumbnails', 'Stop using auto-generated covers. Top performers use designed thumbnails with bold text, politician faces, and bright colours', 'Medium'],
-      ['Provoke comments', 'End each video with a question or controversial statement. Comment velocity is the #1 signal for the algorithm. Target 50+ comments within first hour', 'High'],
-      ['Use original audio', '82% of successful political TikToks use original sound. The children\'s song format is original — keep this advantage', 'Low (already doing)'],
-      ['Cross-post to reels', 'Repurpose top-performing TikToks to Instagram Reels and YouTube Shorts to multiply reach with zero extra production', 'Medium'],
+      {
+        action: 'Fix hashtags',
+        detail: 'Replace generic tags (#хумор, #детскипеснички) with high-traffic political tags: #бгполитика #bgpolitics #политика #парламент + one politician tag per video',
+        impact: 'High',
+        guide: '<h4>How to fix your hashtags</h4>'
+          + '<p><strong>Important:</strong> TikTok now limits you to <strong>5 hashtags per video</strong>. Quality beats quantity.</p>'
+          + '<ol>'
+          + '<li>Open TikTok → go to the video you want to edit</li>'
+          + '<li>Tap the <strong>three dots (...)</strong> → <strong>Edit post</strong> (available up to 7 days after posting)</li>'
+          + '<li>Delete generic hashtags (#хумор, #детскипеснички, #fyp)</li>'
+          + '<li>Add these 5 hashtags in this order:<br><code>#захората</code> (brand) + <code>#бгполитика</code> (discovery) + <code>#bgpolitics</code> (English discovery) + one politician tag e.g. <code>#пеевски</code> + <code>#сатира</code> (format)</li>'
+          + '<li>For <strong>new videos</strong>: write the hashtags in the caption field before posting</li>'
+          + '</ol>'
+          + '<div class="tip">Tip: Hashtags that describe your actual content rank better. Never use misleading hashtags — TikTok can suppress your video.</div>'
+      },
+      {
+        action: 'Hook in first 3 seconds',
+        detail: 'Add bold text overlay with politician name/topic in the first frame. The algorithm decides in 0.5-2 seconds whether to push the video',
+        impact: 'High',
+        guide: '<h4>How to add a text hook</h4>'
+          + '<ol>'
+          + '<li>Before posting, tap <strong>Text</strong> (Aa icon) in the TikTok editor</li>'
+          + '<li>Type a bold, provocative line: e.g. "Пеевски НЕ иска да видиш това" or "Борисов пее детска песничка"</li>'
+          + '<li>Use a <strong>large font</strong>, <strong>white text</strong> with <strong>black background</strong> for maximum readability</li>'
+          + '<li>Tap the text → <strong>Set duration</strong> → make it appear in the first 0-3 seconds only</li>'
+          + '<li>Position it in the <strong>centre-upper third</strong> of the screen (avoid the bottom — TikTok UI covers it)</li>'
+          + '</ol>'
+          + '<h4>Test your hook</h4>'
+          + '<p>Watch the first 3 seconds on mute. If it doesn\'t communicate what the video is about without sound, revise the text. Aim for <strong>65%+ retention</strong> at the 3-second mark (check in Analytics → Content → select video).</p>'
+          + '<div class="tip">Tip: The hook formula that works best for political satire: [Politician name] + [unexpected action/revelation]. E.g. "Какво каза Борисов на 5-годишно дете?"</div>'
+      },
+      {
+        action: 'Post 5-7 videos/week',
+        detail: 'Current: ~1/day. Increase volume to feed the algorithm more chances to find viral content. Each video is a lottery ticket',
+        impact: 'High',
+        guide: '<h4>How to maintain posting frequency</h4>'
+          + '<ol>'
+          + '<li><strong>Batch create:</strong> Set aside 2-3 hours once a week to produce 7 videos at once</li>'
+          + '<li><strong>Schedule posts:</strong> TikTok now has built-in scheduling — when posting, tap <strong>More options</strong> → <strong>Schedule</strong> and pick date/time</li>'
+          + '<li><strong>Best posting times for Bulgaria:</strong> 7-9 AM (morning commute), 12-2 PM (lunch), 7-10 PM (evening)</li>'
+          + '<li><strong>Content calendar:</strong> Monday=weekly news recap, Tue/Thu=children\'s song satire, Wed/Fri=politician reaction, Weekend=trending topic</li>'
+          + '</ol>'
+          + '<div class="tip">Tip: Consistency matters more than perfection. A mediocre video posted today beats a perfect video never posted. The algorithm rewards accounts that post regularly.</div>'
+      },
+      {
+        action: 'Target 20-30s duration',
+        detail: 'Data shows 16-30s is the sweet spot with ' + fmt(Math.round(durationBuckets['16-30s'].reduce((s,v) => s + (v.playCount||0), 0) / (durationBuckets['16-30s'].length||1))) + ' avg plays. The viral video was 29s',
+        impact: 'Medium',
+        guide: '<h4>How to hit the sweet spot</h4>'
+          + '<ol>'
+          + '<li>Plan your video to be <strong>25-30 seconds</strong> before filming</li>'
+          + '<li>Structure: <strong>Hook (0-3s)</strong> → <strong>Content (3-25s)</strong> → <strong>CTA/question (25-30s)</strong></li>'
+          + '<li>In the editor, use the <strong>trim tool</strong> to cut any dead space</li>'
+          + '<li>If using children\'s song format: pick a 25-30 second segment of the song</li>'
+          + '</ol>'
+          + '<div class="tip">Tip: Your viral video was exactly 29s. The children\'s song format naturally fits this length — don\'t stretch it.</div>'
+      },
+      {
+        action: 'Design custom thumbnails',
+        detail: 'Stop using auto-generated covers. Top performers use designed thumbnails with bold text, politician faces, and bright colours',
+        impact: 'Medium',
+        guide: '<h4>How to set a custom thumbnail</h4>'
+          + '<ol>'
+          + '<li>When posting, on the final screen tap <strong>"Select cover"</strong></li>'
+          + '<li>You can choose a frame from the video OR tap <strong>"Upload cover"</strong> to use a custom image</li>'
+          + '<li>Optimal size: <strong>1080 x 1920 pixels</strong> (9:16 ratio)</li>'
+          + '<li>Design in Canva (free): use bold text, politician\'s face, bright purple/yellow colours matching Za Horata brand</li>'
+          + '<li>To change an existing video\'s cover: tap video → <strong>three dots</strong> → <strong>Edit post</strong> → <strong>Edit cover</strong> (within 7 days)</li>'
+          + '</ol>'
+          + '<h4>Thumbnail design rules</h4>'
+          + '<ul>'
+          + '<li>Always include <strong>text</strong> — thumbnails with text get 19.5% more engagement</li>'
+          + '<li>Use <strong>consistent branding</strong> — same font, colours, layout across all videos</li>'
+          + '<li>Show a <strong>face</strong> (politician or reaction) — faces increase click-through rate</li>'
+          + '<li>Keep it <strong>uncluttered</strong> — one key message, large text, high contrast</li>'
+          + '</ul>'
+      },
+      {
+        action: 'Provoke comments',
+        detail: 'End each video with a question or controversial statement. Comment velocity is the #1 signal for the algorithm. Target 50+ in first hour',
+        impact: 'High',
+        guide: '<h4>How to get more comments</h4>'
+          + '<ol>'
+          + '<li><strong>End with a question:</strong> "Съгласни ли сте?" / "Кой е по-лош?" / "Напишете 🔥 ако мислите същото"</li>'
+          + '<li><strong>Use polls:</strong> In TikTok Stories, use the poll sticker to drive participation</li>'
+          + '<li><strong>Pin a controversial comment:</strong> Post a provocative comment yourself and pin it — this triggers debate</li>'
+          + '<li><strong>Reply to every comment</strong> in the first hour — each reply creates another interaction point</li>'
+          + '<li><strong>Reply with video:</strong> Tap a comment → "Reply with video" to create follow-up content</li>'
+          + '</ol>'
+          + '<h4>The first hour is critical</h4>'
+          + '<p>TikTok tests new videos with a small audience first. Early comments tell the algorithm viewers are reacting, not just watching. Aim for <strong>50+ comments in the first hour</strong>.</p>'
+          + '<div class="tip">Tip: Share the video link in WhatsApp/Telegram groups immediately after posting and ask friends to comment first. This seeds the comment section.</div>'
+      },
+      {
+        action: 'Use original audio',
+        detail: '82% of successful political TikToks use original sound. The children\'s song format is original — keep this advantage',
+        impact: 'Low (already doing)',
+        guide: '<h4>Why this matters</h4>'
+          + '<p>You\'re already doing this correctly. The children\'s song format with political satire lyrics is original audio — this is a competitive advantage because:</p>'
+          + '<ul>'
+          + '<li>Original sounds can become <strong>trending sounds</strong> that others reuse (free viral spread)</li>'
+          + '<li>TikTok\'s algorithm favours original audio over reused commercial music</li>'
+          + '<li>Your sound is <strong>searchable</strong> — if it trends, people find your account</li>'
+          + '</ul>'
+          + '<div class="tip">No action needed — keep using original children\'s song format.</div>'
+      },
+      {
+        action: 'Cross-post to Reels & Shorts',
+        detail: 'Repurpose top-performing TikToks to Instagram Reels and YouTube Shorts to multiply reach with zero extra production',
+        impact: 'Medium',
+        guide: '<h4>How to cross-post</h4>'
+          + '<ol>'
+          + '<li><strong>Download without watermark:</strong> Use <a href="https://snaptik.app" target="_blank">SnapTik.app</a> to download your TikTok video without the TikTok watermark</li>'
+          + '<li><strong>Post to Instagram Reels:</strong> Open Instagram → tap + → Reel → select the downloaded video → add relevant hashtags in caption</li>'
+          + '<li><strong>Post to YouTube Shorts:</strong> Open YouTube → tap + → "Create a Short" → upload the video → add title with keywords</li>'
+          + '</ol>'
+          + '<h4>Automation option</h4>'
+          + '<p>Use <a href="https://repurpose.io" target="_blank">Repurpose.io</a> to automatically cross-post TikToks to Reels and Shorts. YouTube offers a 3-month free trial. Limit: 5 videos/day with scheduling.</p>'
+          + '<div class="tip">Tip: Start by cross-posting your top 3 performing TikToks. Only cross-post videos that already proved they work on TikTok.</div>'
+      },
     ];
+
+    html += '<table style="table-layout:auto"><tr><th style="width:40px">#</th><th style="width:200px">Action</th><th>Details</th><th style="width:80px">Impact</th></tr>';
     actions.forEach((a, i) => {
-      html += '<tr><td>' + (i+1) + '</td><td><strong>' + a[0] + '</strong></td><td>' + a[1] + '</td><td>' + (a[2] === 'High' ? '<span class="engagement">' + a[2] + '</span>' : a[2]) + '</td></tr>';
+      html += '<tr><td>' + (i+1) + '</td><td><strong>' + a.action + '</strong></td><td>' + a.detail + '</td><td>' + (a.impact === 'High' ? '<span class="engagement">' + a.impact + '</span>' : a.impact) + '</td></tr>';
+      html += '<tr><td></td><td colspan="3"><details class="learn-how"><summary>+ Learn how</summary><div class="guide">' + a.guide + '</div></details></td></tr>';
     });
     html += '</table></div>';
 

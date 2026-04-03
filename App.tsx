@@ -704,13 +704,9 @@ const App: React.FC = () => {
   };
 
   const handleSelectProject = (p: Project) => {
-    // Check if project has a dashboard URL — open it directly
+    // Check project metadata for routing
     if (p.id) {
       DB.getMetadata(p.id).then(meta => {
-        if (meta.dashboardUrl && typeof meta.dashboardUrl === 'string') {
-          window.open(meta.dashboardUrl as string, '_blank');
-          return;
-        }
         // Auto-detect template projects and restore activeTemplateId
         if (meta.templateId && typeof meta.templateId === 'string') {
           const metaTemplateId = meta.templateId as TemplateId;
