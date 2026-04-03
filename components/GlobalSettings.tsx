@@ -45,6 +45,7 @@ const PROVIDERS: ProviderDef[] = [
   { id: 'shotstack', name: 'Shotstack',                        keyPlaceholder: 'Shotstack API key',           icon: 'fa-clapperboard', storageKey: 'tensorax_provider_key__shotstack', legacyKeys: ['tensorax_shotstack_key'] },
   { id: 'elevenlabs',name: 'ElevenLabs (TTS / Voice)',         keyPlaceholder: 'ElevenLabs API key',          icon: 'fa-microphone',   storageKey: 'tensorax_provider_key__elevenlabs',legacyKeys: ['tensorax_audio_key'] },
   { id: 'runway',    name: 'Runway',                           keyPlaceholder: 'Runway API key',              icon: 'fa-film',         storageKey: 'tensorax_provider_key__runway',    legacyKeys: ['tensorax_video_key'] },
+  { id: 'apify',     name: 'Apify (Web Scraping)',              keyPlaceholder: 'apify_api_... Apify token',   icon: 'fa-spider',       storageKey: 'tensorax_provider_key__apify',     legacyKeys: [] },
 ];
 
 /** Get the provider API key from localStorage */
@@ -527,6 +528,14 @@ const TASK_SLOTS: TaskSlot[] = [
     fallbackModelKey: 'tensorax_audio_fallback_model', fallbackApiKeyKey: 'tensorax_audio_fallback_key',
     capabilityFilter: ['TTS', 'ASR'],
     recommended: 'elevenlabs-tts', recommendedFallback: 'whisper-v3',
+  },
+  {
+    id: 'sm_research',   label: 'Social Media Research', icon: 'fa-microscope',
+    description: 'Scrape TikTok/Facebook/Instagram/YouTube, build dashboards, analyse engagement, generate recommendations',
+    modelKey: 'tensorax_sm_research_model', apiKeyKey: 'tensorax_provider_key__apify',
+    fallbackModelKey: 'tensorax_sm_research_fallback_model', fallbackApiKeyKey: 'tensorax_sm_research_fallback_key',
+    capabilityFilter: ['Reasoning', 'Research'],
+    recommended: 'gemini-2.5-pro', recommendedFallback: 'claude-opus-4-6',
   },
 ];
 
