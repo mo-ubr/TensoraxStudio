@@ -184,18 +184,19 @@ function generateDashboardHTML({
   projectName,
 }) {
   const cfg = PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.facebook;
-  const totalViews = posts.reduce((s, p) => s + (p.views || 0), 0);
-  const totalLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
-  const totalShares = posts.reduce((s, p) => s + (p.shares || 0), 0);
-  const totalComments = posts.reduce((s, p) => s + (p.comments || 0), 0);
-  const authors = new Set(posts.map(p => p.authorName).filter(Boolean));
-
-  // All posts including competitors for combined views
-  const allPosts = [...posts];
   const compEntries = competitors || [];
+
+  // All posts including competitors for combined stats
+  const allPosts = [...posts];
   compEntries.forEach(c => {
     if (c.posts) allPosts.push(...c.posts);
   });
+
+  const totalViews = allPosts.reduce((s, p) => s + (p.views || 0), 0);
+  const totalLikes = allPosts.reduce((s, p) => s + (p.likes || 0), 0);
+  const totalShares = allPosts.reduce((s, p) => s + (p.shares || 0), 0);
+  const totalComments = allPosts.reduce((s, p) => s + (p.comments || 0), 0);
+  const authors = new Set(allPosts.map(p => p.authorName).filter(Boolean));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -290,11 +291,11 @@ function generateDashboardHTML({
 <div class="main-content">
 
 <h1><i class="${cfg.icon}"></i> ${escHtml(channelName || "")} ${cfg.name} Research</h1>
-<p class="subtitle">Scraped ${scrapedDate || new Date().toISOString().substring(0, 10)} | ${posts.length} ${cfg.contentLabel.toLowerCase()} | ${authors.size} accounts</p>
+<p class="subtitle">Scraped ${scrapedDate || new Date().toISOString().substring(0, 10)} | ${allPosts.length} ${cfg.contentLabel.toLowerCase()} (${posts.length} channel + ${allPosts.length - posts.length} competitors) | ${authors.size} accounts</p>
 
 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
   <div class="stats-bar">
-    <div class="stat"><div class="num">${posts.length}</div><div class="label">${cfg.contentLabel}</div></div>
+    <div class="stat"><div class="num">${allPosts.length}</div><div class="label">${cfg.contentLabel}</div></div>
     <div class="stat"><div class="num">${authors.size}</div><div class="label">Accounts</div></div>
     <div class="stat"><div class="num">${fmt(totalViews)}</div><div class="label">${cfg.viewsLabel}</div></div>
     <div class="stat"><div class="num">${fmt(totalLikes)}</div><div class="label">${cfg.likesLabel}</div></div>
@@ -330,6 +331,8 @@ const PLATFORM = ${JSON.stringify(platform)};
 const CHANNEL_NAME = ${JSON.stringify(channelName || "")};
 const POSTS = ${JSON.stringify(posts)};
 const COMPETITORS = ${JSON.stringify(compEntries.map(c => ({ name: c.name, posts: c.posts || [] })))};
+// ALL_POSTS = channel + all competitor posts combined
+const ALL_POSTS = [...POSTS, ...COMPETITORS.flatMap(c => c.posts || [])];
 const CFG = {
   contentLabel: ${JSON.stringify(cfg.contentLabel)},
   viewsLabel: ${JSON.stringify(cfg.viewsLabel)},
@@ -366,7 +369,7 @@ function escHtml(s) {
 // ── Overview ───────────────────────────────────────────────────────────
 function renderOverview() {
   const authors = {};
-  POSTS.forEach(p => {
+  ALL_POSTS.forEach(p => {
     const a = p.authorName || 'unknown';
     if (!authors[a]) authors[a] = { count: 0, followers: p.authorFollowers||0, totalViews: 0, totalLikes: 0, url: p.authorUrl };
     authors[a].count++;
@@ -413,7 +416,7 @@ function renderCompetitors() {
 
 // ── Top 10 ─────────────────────────────────────────────────────────────
 function renderTop() {
-  const sorted = [...POSTS].sort((a,b) => (b.views||0) - (a.views||0)).slice(0, 10);
+  const sorted = [...ALL_POSTS].sort((a,b) => (b.views||0) - (a.views||0)).slice(0, 10);
   let html = '<h2>Top 10 by ' + CFG.viewsLabel + '</h2>';
   html += buildContentTable(sorted);
   document.getElementById('sec-top').innerHTML = html;
@@ -423,7 +426,7 @@ function renderTop() {
 function renderAllContent() {
   let html = '<input class="filter" id="content-filter" placeholder="Filter by author, text, hashtag..." oninput="filterContent()"><div id="all-content-table"></div>';
   document.getElementById('sec-allcontent').innerHTML = html;
-  renderFilteredContent(POSTS);
+  renderFilteredContent(ALL_POSTS);
 }
 
 function renderFilteredContent(data) {
@@ -432,7 +435,7 @@ function renderFilteredContent(data) {
 
 function filterContent() {
   const q = document.getElementById('content-filter').value.toLowerCase();
-  const filtered = POSTS.filter(p => {
+  const filtered = ALL_POSTS.filter(p => {
     return (p.authorName||'').toLowerCase().includes(q) || (p.text||'').toLowerCase().includes(q) || (p.hashtags||[]).some(h => h.toLowerCase().includes(q));
   });
   renderFilteredContent(filtered);
@@ -441,7 +444,7 @@ function filterContent() {
 // ── Hashtags ───────────────────────────────────────────────────────────
 function renderHashtags() {
   const tags = {};
-  POSTS.forEach(p => {
+  ALL_POSTS.forEach(p => {
     (p.hashtags||[]).forEach(h => {
       const key = h.toLowerCase();
       if (!tags[key]) tags[key] = { tag: h, count: 0, totalViews: 0 };
@@ -487,7 +490,7 @@ function exportExcel(lang) {
   const isEN = lang === 'en';
 
   // Overview sheet
-  const overviewData = POSTS.map(p => ({
+  const overviewData = ALL_POSTS.map(p => ({
     [isEN ? 'Author' : 'Автор']: p.authorName,
     [isEN ? 'Text' : 'Текст']: (p.text||'').substring(0, 200),
     [isEN ? CFG.viewsLabel : 'Гледания']: p.views||0,
@@ -503,7 +506,7 @@ function exportExcel(lang) {
 
   // Hashtags sheet
   const tags = {};
-  POSTS.forEach(p => (p.hashtags||[]).forEach(h => {
+  ALL_POSTS.forEach(p => (p.hashtags||[]).forEach(h => {
     const key = h.toLowerCase();
     if (!tags[key]) tags[key] = { tag: h, count: 0, views: 0 };
     tags[key].count++;
