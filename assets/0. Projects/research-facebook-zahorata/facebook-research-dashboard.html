@@ -469,7 +469,7 @@ function buildContentTable(data) {
   data.forEach(p => {
     const isHighViews = (p.views||0) > 10000;
     html += '<tr class="' + (isHighViews ? 'highlight' : '') + '">'
-      + '<td>' + (p.thumbnailUrl ? '<img class="thumb" src="' + p.thumbnailUrl + '" onerror="this.style.display=\'none\'">' : '-') + '</td>'
+      + '<td>' + (p.thumbnailUrl ? '<img class="thumb" src="' + p.thumbnailUrl + '" onerror="this.style.display=&quot;none&quot;">' : '-') + '</td>'
       + '<td>@' + escHtml(p.authorName) + '</td>'
       + '<td class="caption-cell">' + escHtml((p.text||'').substring(0,100)) + '</td>'
       + '<td class="' + (isHighViews ? 'engagement' : '') + '">' + fmt(p.views) + '</td>'
@@ -601,8 +601,7 @@ function exportExcel(lang) {
       let text = '';
       if (node.tagName === 'UL') {
         if (node.closest('table')) return;
-        text = [...node.querySelectorAll('li')].map(li => '• ' + li.innerText.trim()).join('
-');
+        text = [...node.querySelectorAll('li')].map(li => '• ' + li.innerText.trim()).join('; ');
       } else if (node.tagName === 'H2' || node.tagName === 'H3') {
         text = '▌ ' + node.innerText.trim().toUpperCase();
       } else if (node.tagName === 'P') {
