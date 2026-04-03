@@ -102,7 +102,8 @@
 
 <div class="toolbar">
   <div class="stats-bar" id="stats-bar"></div>
-  <button class="btn-outline" onclick="exportExcel()">&#x1f4e5; Download Excel</button>
+  <button class="btn-outline" onclick="exportExcel('en')">&#x1f4e5; Download Excel (EN)</button>
+  <button class="btn-outline" onclick="exportExcel('bg')">&#x1f4e5; Изтегли Excel (БГ)</button>
 </div>
 
 <div class="tabs">
@@ -842,23 +843,26 @@
   }
 
   // ─── Excel Export — 7 sheets matching dashboard tabs ─────────────
-  window.exportExcel = function() {
+  window.exportExcel = function(lang) {
+    const bg = lang === 'bg';
     const wb = XLSX.utils.book_new();
-    const videoRow = v => ({
-      'Author': '@' + (v.authorMeta?.name || ''),
-      'Followers': v.authorMeta?.fans || 0,
-      'Caption': (v.text || '').replace(/[\t\n\r]/g, ' ').substring(0, 300),
-      'Plays': v.playCount || 0,
-      'Likes': v.diggCount || 0,
-      'Shares': v.shareCount || 0,
-      'Comments': v.commentCount || 0,
-      'Saves': v.collectCount || 0,
-      'Eng Rate': engRate(v),
-      'Hashtags': (v.hashtags||[]).map(h => '#'+h.name).filter(h => h !== '#').join(' '),
-      'Duration (s)': v.videoMeta?.duration || '',
-      'Date': (v.createTimeISO || '').substring(0, 10),
-      'URL': v.webVideoUrl || ''
-    });
+    const videoRow = v => {
+      const row = {};
+      row[bg ? 'Автор' : 'Author'] = '@' + (v.authorMeta?.name || '');
+      row[bg ? 'Последователи' : 'Followers'] = v.authorMeta?.fans || 0;
+      row[bg ? 'Описание' : 'Caption'] = (v.text || '').replace(/[\t\n\r]/g, ' ').substring(0, 300);
+      row[bg ? 'Гледания' : 'Plays'] = v.playCount || 0;
+      row[bg ? 'Харесвания' : 'Likes'] = v.diggCount || 0;
+      row[bg ? 'Споделяния' : 'Shares'] = v.shareCount || 0;
+      row[bg ? 'Коментари' : 'Comments'] = v.commentCount || 0;
+      row[bg ? 'Запазени' : 'Saves'] = v.collectCount || 0;
+      row[bg ? 'Ангажираност' : 'Eng Rate'] = engRate(v);
+      row[bg ? 'Хаштагове' : 'Hashtags'] = (v.hashtags||[]).map(h => '#'+h.name).filter(h => h !== '#').join(' ');
+      row[bg ? 'Времетраене (с)' : 'Duration (s)'] = v.videoMeta?.duration || '';
+      row[bg ? 'Дата' : 'Date'] = (v.createTimeISO || '').substring(0, 10);
+      row[bg ? 'Линк' : 'URL'] = v.webVideoUrl || '';
+      return row;
+    };
 
     // 1. Overview — Top accounts by total plays
     const authorMap = {};
@@ -869,25 +873,26 @@
       authorMap[name].totalPlays += (v.playCount||0);
       authorMap[name].totalLikes += (v.diggCount||0);
     });
-    const overviewRows = Object.values(authorMap).sort((a,b) => b.totalPlays - a.totalPlays).map((a,i) => ({
-      '#': i+1,
-      'Account': a.author,
-      'Followers': a.followers,
-      'Videos': a.videos,
-      'Total Plays': a.totalPlays,
-      'Total Likes': a.totalLikes,
-      'Avg Plays/Video': Math.round(a.totalPlays / a.videos),
-      'Profile URL': a.profileUrl
-    }));
+    const overviewRows = Object.values(authorMap).sort((a,b) => b.totalPlays - a.totalPlays).map((a,i) => {
+      const r = {}; r['#'] = i+1;
+      r[bg ? 'Акаунт' : 'Account'] = a.author;
+      r[bg ? 'Последователи' : 'Followers'] = a.followers;
+      r[bg ? 'Видеа' : 'Videos'] = a.videos;
+      r[bg ? 'Общо гледания' : 'Total Plays'] = a.totalPlays;
+      r[bg ? 'Общо харесвания' : 'Total Likes'] = a.totalLikes;
+      r[bg ? 'Средно гл./видео' : 'Avg Plays/Video'] = Math.round(a.totalPlays / a.videos);
+      r[bg ? 'Профил' : 'Profile URL'] = a.profileUrl;
+      return r;
+    });
     const wsOverview = XLSX.utils.json_to_sheet(overviewRows);
-    wsOverview['!cols'] = [{wch:5},{wch:22},{wch:12},{wch:8},{wch:14},{wch:14},{wch:16},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsOverview, 'Overview');
+    wsOverview['!cols'] = [{wch:5},{wch:22},{wch:14},{wch:8},{wch:16},{wch:16},{wch:18},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsOverview, bg ? 'Преглед' : 'Overview');
 
     // 2. Za Horata — only zahoratabg videos
     const zhVideos = allData.filter(v => v.authorMeta?.name === 'zahoratabg').sort((a,b) => (b.playCount||0) - (a.playCount||0));
     const wsZH = XLSX.utils.json_to_sheet(zhVideos.map(videoRow));
     wsZH['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsZH, 'Za Horata');
+    XLSX.utils.book_append_sheet(wb, wsZH, bg ? 'За Хората' : 'Za Horata');
 
     // 3. Competitors — political accounts
     const competitors = ['aipoliticibg','bg_politics','suprotivata_bg','nakata_bg07','otvetnareakciq','bg.vqturutnapromqnata','satyrtt','bulgarianpolitics','budna_bulgaria','tribunata_bg'];
@@ -896,31 +901,32 @@
       const vids = allData.filter(v => v.authorMeta?.name === comp);
       if (!vids.length) return;
       const totalPlays = vids.reduce((s,v) => s + (v.playCount||0), 0);
-      compRows.push({
-        'Account': '@'+comp,
-        'Followers': vids[0].authorMeta?.fans || 0,
-        'Videos Scraped': vids.length,
-        'Total Plays': totalPlays,
-        'Avg Plays/Video': Math.round(totalPlays / vids.length),
-        'Top Video Plays': Math.max(...vids.map(v => v.playCount||0)),
-        'Profile URL': vids[0].authorMeta?.profileUrl || ''
-      });
+      const cr = {};
+      cr[bg ? 'Акаунт' : 'Account'] = '@'+comp;
+      cr[bg ? 'Последователи' : 'Followers'] = vids[0].authorMeta?.fans || 0;
+      cr[bg ? 'Извлечени видеа' : 'Videos Scraped'] = vids.length;
+      cr[bg ? 'Общо гледания' : 'Total Plays'] = totalPlays;
+      cr[bg ? 'Средно гл./видео' : 'Avg Plays/Video'] = Math.round(totalPlays / vids.length);
+      cr[bg ? 'Топ видео гледания' : 'Top Video Plays'] = Math.max(...vids.map(v => v.playCount||0));
+      cr[bg ? 'Профил' : 'Profile URL'] = vids[0].authorMeta?.profileUrl || '';
+      compRows.push(cr);
     });
-    const wsComp = XLSX.utils.json_to_sheet(compRows.sort((a,b) => b['Total Plays'] - a['Total Plays']));
-    wsComp['!cols'] = [{wch:24},{wch:12},{wch:14},{wch:14},{wch:16},{wch:16},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsComp, 'Competitors');
+    const compSortKey = bg ? 'Общо гледания' : 'Total Plays';
+    const wsComp = XLSX.utils.json_to_sheet(compRows.sort((a,b) => b[compSortKey] - a[compSortKey]));
+    wsComp['!cols'] = [{wch:24},{wch:14},{wch:16},{wch:16},{wch:18},{wch:18},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, wsComp, bg ? 'Конкуренти' : 'Competitors');
 
     // 4. Top 10 Viral
     const top10 = [...allData].sort((a,b) => (b.playCount||0) - (a.playCount||0)).slice(0,10);
     const wsViral = XLSX.utils.json_to_sheet(top10.map(videoRow));
     wsViral['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsViral, 'Top 10 Viral');
+    XLSX.utils.book_append_sheet(wb, wsViral, bg ? 'Топ 10 вирусни' : 'Top 10 Viral');
 
     // 5. All Videos
     const allRows = [...allData].sort((a,b) => (b.playCount||0) - (a.playCount||0)).map(videoRow);
     const wsAll = XLSX.utils.json_to_sheet(allRows);
     wsAll['!cols'] = [{wch:18},{wch:10},{wch:50},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:40},{wch:10},{wch:12},{wch:40}];
-    XLSX.utils.book_append_sheet(wb, wsAll, 'All Videos');
+    XLSX.utils.book_append_sheet(wb, wsAll, bg ? 'Всички видеа' : 'All Videos');
 
     // 6. Hashtags
     const hashMap = {};
@@ -932,16 +938,17 @@
         hashMap[h.name].totalPlays += (v.playCount||0);
       });
     });
-    const hashRows = Object.entries(hashMap).sort((a,b) => b[1].totalPlays - a[1].totalPlays).map(([name, d], i) => ({
-      '#': i+1,
-      'Hashtag': '#'+name,
-      'Videos': d.videos,
-      'Total Plays': d.totalPlays,
-      'Avg Plays/Video': Math.round(d.totalPlays / d.videos)
-    }));
+    const hashRows = Object.entries(hashMap).sort((a,b) => b[1].totalPlays - a[1].totalPlays).map(([name, d], i) => {
+      const r = {}; r['#'] = i+1;
+      r[bg ? 'Хаштаг' : 'Hashtag'] = '#'+name;
+      r[bg ? 'Видеа' : 'Videos'] = d.videos;
+      r[bg ? 'Общо гледания' : 'Total Plays'] = d.totalPlays;
+      r[bg ? 'Средно гл./видео' : 'Avg Plays/Video'] = Math.round(d.totalPlays / d.videos);
+      return r;
+    });
     const wsHash = XLSX.utils.json_to_sheet(hashRows);
-    wsHash['!cols'] = [{wch:5},{wch:30},{wch:10},{wch:14},{wch:16}];
-    XLSX.utils.book_append_sheet(wb, wsHash, 'Hashtags');
+    wsHash['!cols'] = [{wch:5},{wch:30},{wch:10},{wch:16},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, wsHash, bg ? 'Хаштагове' : 'Hashtags');
 
     // 7. Analysis — full analytical report matching dashboard Analysis tab
     const zh = allData.filter(v => v.authorMeta?.name === 'zahoratabg');
@@ -991,65 +998,85 @@
     const compBG = authorMap['bg_politics'];
 
     const R = []; // rows for the sheet
+    // Column header helpers for BG/EN
+    const S = bg ? 'Раздел' : 'Section';
+    const M = bg ? 'Метрика' : 'Metric';
+    const ZH = bg ? 'За Хората' : 'Za Horata';
+    const T10 = bg ? 'Топ 10 средно' : 'Top 10 Avg';
+    const G = bg ? 'Разлика' : 'Gap';
+    const row5 = (s,m,z,t,g) => { const r={}; r[S]=s; r[M]=m; r[ZH]=z; r[T10]=t; r[G]=g; return r; };
 
     // Section 1: Current Position
-    R.push({ 'Section': '1. CURRENT POSITION', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Followers', 'Za Horata': zhFollowers, 'Top 10 Avg': axTop10AvgFollowers, 'Gap': '-' + (100 - zhFollowers/axTop10AvgFollowers*100).toFixed(0) + '%' });
-    R.push({ 'Section': '', 'Metric': 'Avg plays/video (excl. viral)', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': axTop10AvgPlays, 'Gap': '-' + (100 - zhNonViralAvg/axTop10AvgPlays*100).toFixed(0) + '%' });
-    R.push({ 'Section': '', 'Metric': 'Engagement rate', 'Za Horata': zhEngRate + '%', 'Top 10 Avg': mktEngRate + '%', 'Gap': (parseFloat(zhEngRate) - parseFloat(mktEngRate)).toFixed(1) + 'pp' });
-    R.push({ 'Section': '', 'Metric': 'Videos posted', 'Za Horata': zh.length, 'Top 10 Avg': axTop10AvgVids, 'Gap': 'Need more volume' });
-    R.push({ 'Section': '', 'Metric': 'Total plays', 'Za Horata': zhPlays, 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Total likes', 'Za Horata': zhLikes, 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Total shares', 'Za Horata': zhShares, 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Total comments', 'Za Horata': zhComments, 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5(bg ? '1. ТЕКУЩО ПОЛОЖЕНИЕ' : '1. CURRENT POSITION', '', '', '', ''));
+    R.push(row5('', bg ? 'Последователи' : 'Followers', zhFollowers, axTop10AvgFollowers, '-' + (100 - zhFollowers/axTop10AvgFollowers*100).toFixed(0) + '%'));
+    R.push(row5('', bg ? 'Средно гл./видео (без вирусното)' : 'Avg plays/video (excl. viral)', zhNonViralAvg, axTop10AvgPlays, '-' + (100 - zhNonViralAvg/axTop10AvgPlays*100).toFixed(0) + '%'));
+    R.push(row5('', bg ? 'Ангажираност' : 'Engagement rate', zhEngRate + '%', mktEngRate + '%', (parseFloat(zhEngRate) - parseFloat(mktEngRate)).toFixed(1) + 'pp'));
+    R.push(row5('', bg ? 'Публикувани видеа' : 'Videos posted', zh.length, axTop10AvgVids, bg ? 'Нужен е повече обем' : 'Need more volume'));
+    R.push(row5('', bg ? 'Общо гледания' : 'Total plays', zhPlays, '', ''));
+    R.push(row5('', bg ? 'Общо харесвания' : 'Total likes', zhLikes, '', ''));
+    R.push(row5('', bg ? 'Общо споделяния' : 'Total shares', zhShares, '', ''));
+    R.push(row5('', bg ? 'Общо коментари' : 'Total comments', zhComments, '', ''));
+    R.push(row5('', '', '', '', ''));
 
     // Section 2: Viral Video Analysis
-    R.push({ 'Section': '2. VIRAL VIDEO ANALYSIS', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5(bg ? '2. АНАЛИЗ НА ВИРУСНОТО ВИДЕО' : '2. VIRAL VIDEO ANALYSIS', '', '', '', ''));
     if (zhViralVideo) {
-      R.push({ 'Section': '', 'Metric': 'Viral video plays', 'Za Horata': zhViralVideo.playCount, 'Top 10 Avg': '% of total: ' + (zhPlays > 0 ? (zhViralVideo.playCount/zhPlays*100).toFixed(0) : 0) + '%', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Viral video duration', 'Za Horata': (zhViralVideo.videoMeta?.duration||'?') + 's', 'Top 10 Avg': 'Sweet spot', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Viral video comments', 'Za Horata': zhViralVideo.commentCount, 'Top 10 Avg': 'High velocity = algorithm trigger', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Viral video shares', 'Za Horata': zhViralVideo.shareCount, 'Top 10 Avg': '', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Viral video likes', 'Za Horata': zhViralVideo.diggCount, 'Top 10 Avg': '', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Non-viral avg plays', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': 'Other ' + zhNonViral.length + ' videos', 'Gap': 'Did not trigger algorithm' });
-      R.push({ 'Section': '', 'Metric': 'Non-viral avg comments', 'Za Horata': zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.commentCount||0), 0)/zhNonViral.length) : 0, 'Top 10 Avg': '', 'Gap': '' });
-      R.push({ 'Section': '', 'Metric': 'Key takeaway', 'Za Horata': "Children's song + 29s + specific hashtags + comment-provoking = algorithm trigger", 'Top 10 Avg': '', 'Gap': '' });
+      R.push(row5('', bg ? 'Гледания на вирусното видео' : 'Viral video plays', zhViralVideo.playCount, (bg ? '% от общо: ' : '% of total: ') + (zhPlays > 0 ? (zhViralVideo.playCount/zhPlays*100).toFixed(0) : 0) + '%', ''));
+      R.push(row5('', bg ? 'Времетраене' : 'Viral video duration', (zhViralVideo.videoMeta?.duration||'?') + 's', bg ? 'Оптимална зона' : 'Sweet spot', ''));
+      R.push(row5('', bg ? 'Коментари' : 'Viral video comments', zhViralVideo.commentCount, bg ? 'Висока скорост = тригер за алгоритъма' : 'High velocity = algorithm trigger', ''));
+      R.push(row5('', bg ? 'Споделяния' : 'Viral video shares', zhViralVideo.shareCount, '', ''));
+      R.push(row5('', bg ? 'Харесвания' : 'Viral video likes', zhViralVideo.diggCount, '', ''));
+      R.push(row5('', bg ? 'Средно гл. (невирусни)' : 'Non-viral avg plays', zhNonViralAvg, (bg ? 'Други ' : 'Other ') + zhNonViral.length + (bg ? ' видеа' : ' videos'), bg ? 'Не задействаха алгоритъма' : 'Did not trigger algorithm'));
+      R.push(row5('', bg ? 'Средно коментари (невирусни)' : 'Non-viral avg comments', zhNonViral.length > 0 ? Math.round(zhNonViral.reduce((s,v) => s + (v.commentCount||0), 0)/zhNonViral.length) : 0, '', ''));
+      R.push(row5('', bg ? 'Ключов извод' : 'Key takeaway', bg ? "Детска песен + 29с + специфични хаштагове + провокиране на коментари = тригер за алгоритъма" : "Children's song + 29s + specific hashtags + comment-provoking = algorithm trigger", '', ''));
     }
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5('', '', '', '', ''));
 
     // Section 3: Duration Strategy
-    R.push({ 'Section': '3. OPTIMAL DURATION', 'Metric': 'Duration', 'Za Horata': 'Videos', 'Top 10 Avg': 'Avg Plays', 'Gap': 'Recommendation' });
+    R.push(row5(bg ? '3. ОПТИМАЛНО ВРЕМЕТРАЕНЕ' : '3. OPTIMAL DURATION', bg ? 'Времетраене' : 'Duration', bg ? 'Видеа' : 'Videos', bg ? 'Средно гл.' : 'Avg Plays', bg ? 'Препоръка' : 'Recommendation'));
     Object.entries(durBuckets).forEach(([label, vids]) => {
       const avg = vids.length > 0 ? Math.round(vids.reduce((s,v) => s + (v.playCount||0), 0) / vids.length) : 0;
-      R.push({ 'Section': '', 'Metric': label, 'Za Horata': vids.length, 'Top 10 Avg': avg, 'Gap': label === '16-30s' ? 'SWEET SPOT — target this' : label === '0-15s' ? 'Good for hooks' : label === '60s+' ? 'Only if gripping' : 'OK for story-driven' });
+      const rec = bg
+        ? (label === '16-30s' ? 'ОПТИМАЛНА ЗОНА — целете тук' : label === '0-15s' ? 'Добре за тийзъри' : label === '60s+' ? 'Само ако е много интересно' : 'ОК за истории')
+        : (label === '16-30s' ? 'SWEET SPOT — target this' : label === '0-15s' ? 'Good for hooks' : label === '60s+' ? 'Only if gripping' : 'OK for story-driven');
+      R.push(row5('', label, vids.length, avg, rec));
     });
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5('', '', '', '', ''));
 
     // Section 4: Hashtag Gaps
-    R.push({ 'Section': '4. HASHTAG GAPS', 'Metric': 'Hashtag', 'Za Horata': 'Used in Top 30', 'Top 10 Avg': 'Priority', 'Gap': '' });
+    R.push(row5(bg ? '4. ЛИПСВАЩИ ХАШТАГОВЕ' : '4. HASHTAG GAPS', bg ? 'Хаштаг' : 'Hashtag', bg ? 'В Топ 30' : 'Used in Top 30', bg ? 'Приоритет' : 'Priority', ''));
     missingTags.forEach(([name, count]) => {
-      R.push({ 'Section': '', 'Metric': '#' + name, 'Za Horata': count + ' videos', 'Top 10 Avg': count >= 5 ? 'High' : count >= 3 ? 'Medium' : 'Low', 'Gap': '' });
+      const pr = count >= 5 ? (bg ? 'Висок' : 'High') : count >= 3 ? (bg ? 'Среден' : 'Medium') : (bg ? 'Нисък' : 'Low');
+      R.push(row5('', '#' + name, count + (bg ? ' видеа' : ' videos'), pr, ''));
     });
-    R.push({ 'Section': '', 'Metric': 'Current ZH hashtags', 'Za Horata': [...zhTags].map(h => '#'+h).join(', '), 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5('', bg ? 'Текущи хаштагове на ЗХ' : 'Current ZH hashtags', [...zhTags].map(h => '#'+h).join(', '), '', ''));
+    R.push(row5('', '', '', '', ''));
 
     // Section 5: Competitor Intelligence
-    R.push({ 'Section': '5. COMPETITOR INTELLIGENCE', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5(bg ? '5. АНАЛИЗ НА КОНКУРЕНЦИЯТА' : '5. COMPETITOR INTELLIGENCE', '', '', '', ''));
     if (compAI) {
-      R.push({ 'Section': '', 'Metric': 'Closest: @aipoliticibg', 'Za Horata': compAI.followers + ' followers', 'Top 10 Avg': compAI.videos + ' videos', 'Gap': Math.round(compAI.totalPlays/compAI.videos) + ' avg plays/vid' });
-      R.push({ 'Section': '', 'Metric': 'Style', 'Za Horata': 'AI satirical scenes of BG politicians. Inconsistent — some hit 192K, most under 20K', 'Top 10 Avg': '', 'Gap': '' });
+      R.push(row5('', (bg ? 'Най-близък: ' : 'Closest: ') + '@aipoliticibg', compAI.followers + (bg ? ' последователи' : ' followers'), compAI.videos + (bg ? ' видеа' : ' videos'), Math.round(compAI.totalPlays/compAI.videos) + (bg ? ' средно гл./видео' : ' avg plays/vid')));
+      R.push(row5('', bg ? 'Стил' : 'Style', bg ? 'AI сатирични сцени с BG политици. Непостоянни — някои 192K, повечето под 20K' : 'AI satirical scenes of BG politicians. Inconsistent — some hit 192K, most under 20K', '', ''));
     }
     if (compBG) {
-      R.push({ 'Section': '', 'Metric': 'Market leader: @bg_politics', 'Za Horata': compBG.followers + ' followers', 'Top 10 Avg': compBG.videos + ' videos', 'Gap': Math.round(compBG.totalPlays/compBG.videos) + ' avg plays/vid' });
-      R.push({ 'Section': '', 'Metric': 'Style', 'Za Horata': 'High-emotion clip selection, provocative captions', 'Top 10 Avg': '', 'Gap': '' });
+      R.push(row5('', (bg ? 'Лидер: ' : 'Market leader: ') + '@bg_politics', compBG.followers + (bg ? ' последователи' : ' followers'), compBG.videos + (bg ? ' видеа' : ' videos'), Math.round(compBG.totalPlays/compBG.videos) + (bg ? ' средно гл./видео' : ' avg plays/vid')));
+      R.push(row5('', bg ? 'Стил' : 'Style', bg ? 'Силно емоционални клипове, провокативни надписи' : 'High-emotion clip selection, provocative captions', '', ''));
     }
-    R.push({ 'Section': '', 'Metric': 'KEY INSIGHT', 'Za Horata': 'AI political satire niche in Bulgaria is NEW and UNCROWDED — only 6 accounts. First-mover advantage available.', 'Top 10 Avg': '', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5('', bg ? 'КЛЮЧОВ ИЗВОД' : 'KEY INSIGHT', bg ? 'Нишата на AI политическа сатира в България е НОВА и НЕЗАЕТА — само 6 акаунта. Предимство на първия.' : 'AI political satire niche in Bulgaria is NEW and UNCROWDED — only 6 accounts. First-mover advantage available.', '', ''));
+    R.push(row5('', '', '', '', ''));
 
     // Section 6: Action Plan
-    R.push({ 'Section': '6. 30-DAY ACTION PLAN', 'Metric': 'Action', 'Za Horata': 'Details', 'Top 10 Avg': 'Impact', 'Gap': '' });
-    const axActions = [
+    R.push(row5(bg ? '6. ПЛАН ЗА ДЕЙСТВИЕ (30 ДНИ)' : '6. 30-DAY ACTION PLAN', bg ? 'Действие' : 'Action', bg ? 'Подробности' : 'Details', bg ? 'Въздействие' : 'Impact', ''));
+    const axActions = bg ? [
+      ['Поправи хаштаговете', 'Замени #хумор #детскипеснички с #бгполитика #bgpolitics #политика #парламент + един хаштаг за политик', 'Високо'],
+      ['Кука в първите 3 секунди', 'Текст с името на политика в първия кадър. Алгоритъмът решава за 0.5-2с', 'Високо'],
+      ['Публикувай 5-7 видеа/седмица', 'Увеличи обема — всяко видео е лотариен билет за алгоритъма', 'Високо'],
+      ['Цели 20-30с времетраене', 'Данните показват оптимална зона. Вирусното видео беше 29с', 'Средно'],
+      ['Направи собствени обложки', 'Спри автоматичните. Използвай удебелен текст, лица на политици, ярки цветове', 'Средно'],
+      ['Провокирай коментари', 'Завършвай с въпрос/противоречие. Скоростта на коментарите е сигнал №1. Цел: 50+ в първия час', 'Високо'],
+      ['Запази оригиналния звук', '82% от успешните политически TikTok-ове използват оригинален звук', 'Ниско (вече го правиш)'],
+      ['Кръстосано публикуване в Reels/Shorts', 'Препубликувай топ TikTok-ове в IG Reels + YT Shorts за безплатен допълнителен обхват', 'Средно'],
+    ] : [
       ['Fix hashtags', 'Replace #хумор #детскипеснички with #бгполитика #bgpolitics #политика #парламент + one politician tag per video', 'High'],
       ['Hook in first 3 seconds', 'Bold text overlay with politician name/topic in first frame. Algorithm decides in 0.5-2s', 'High'],
       ['Post 5-7 videos/week', 'Increase volume to feed algorithm more chances. Each video is a lottery ticket', 'High'],
@@ -1060,23 +1087,23 @@
       ['Cross-post to Reels/Shorts', 'Repurpose top TikToks to IG Reels + YT Shorts for free extra reach', 'Medium'],
     ];
     axActions.forEach((a, i) => {
-      R.push({ 'Section': '', 'Metric': (i+1) + '. ' + a[0], 'Za Horata': a[1], 'Top 10 Avg': a[2], 'Gap': '' });
+      R.push(row5('', (i+1) + '. ' + a[0], a[1], a[2], ''));
     });
-    R.push({ 'Section': '', 'Metric': '', 'Za Horata': '', 'Top 10 Avg': '', 'Gap': '' });
+    R.push(row5('', '', '', '', ''));
 
     // Section 7: Growth Targets
-    R.push({ 'Section': '7. GROWTH TARGETS (30 DAYS)', 'Metric': 'Metric', 'Za Horata': 'Current', 'Top 10 Avg': '30-Day Target', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Followers', 'Za Horata': zhFollowers, 'Top 10 Avg': '500+', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Total plays', 'Za Horata': zhPlays, 'Top 10 Avg': '500K+', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Videos posted', 'Za Horata': zh.length, 'Top 10 Avg': '35-40', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Avg plays/video', 'Za Horata': zhNonViralAvg, 'Top 10 Avg': '5K+', 'Gap': '' });
-    R.push({ 'Section': '', 'Metric': 'Engagement rate', 'Za Horata': zhEngRate + '%', 'Top 10 Avg': '4.5%+', 'Gap': '' });
+    R.push(row5(bg ? '7. ЦЕЛИ ЗА РАСТЕЖ (30 ДНИ)' : '7. GROWTH TARGETS (30 DAYS)', bg ? 'Метрика' : 'Metric', bg ? 'Текущо' : 'Current', bg ? 'Цел за 30 дни' : '30-Day Target', ''));
+    R.push(row5('', bg ? 'Последователи' : 'Followers', zhFollowers, '500+', ''));
+    R.push(row5('', bg ? 'Общо гледания' : 'Total plays', zhPlays, '500K+', ''));
+    R.push(row5('', bg ? 'Публикувани видеа' : 'Videos posted', zh.length, '35-40', ''));
+    R.push(row5('', bg ? 'Средно гл./видео' : 'Avg plays/video', zhNonViralAvg, '5K+', ''));
+    R.push(row5('', bg ? 'Ангажираност' : 'Engagement rate', zhEngRate + '%', '4.5%+', ''));
 
     const wsAnalysis = XLSX.utils.json_to_sheet(R);
     wsAnalysis['!cols'] = [{wch:28},{wch:30},{wch:55},{wch:25},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, wsAnalysis, 'Analysis');
+    XLSX.utils.book_append_sheet(wb, wsAnalysis, bg ? 'Анализ' : 'Analysis');
 
-    XLSX.writeFile(wb, 'ZaHorata_TikTok_Research_' + new Date().toISOString().substring(0,10) + '.xlsx');
+    XLSX.writeFile(wb, 'ZaHorata_TikTok_' + (bg ? 'Проучване_' : 'Research_') + new Date().toISOString().substring(0,10) + '.xlsx');
   };
 
   // Load data
