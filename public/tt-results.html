@@ -472,9 +472,200 @@
     }
     html += '</div>';
 
-    // ─── 6. Action Plan with Learn How guides ───
+    // ─── 6. How the Algorithm Works ───
+    html += '<div class="card" style="border-left: 4px solid #1a237e; background: #f5f5ff;">';
+    html += '<h3>6. How the TikTok Algorithm Works (2026)</h3>';
+    html += '<p style="margin-bottom:10px">Understanding the algorithm is the foundation of everything else. TikTok uses an <strong>interest graph</strong>, not a social graph — it recommends content based on what a user will enjoy, not who they follow. <strong>Follower count does not matter.</strong> Every video is evaluated independently.</p>';
+
+    html += '<h4 style="color:#1a237e;margin:12px 0 6px">The 6 Algorithm Signals (ranked by weight)</h4>';
+    html += '<table style="table-layout:auto"><tr><th style="width:40px">#</th><th style="width:180px">Signal</th><th style="width:80px">Weight</th><th>What it means</th><th>How to optimise</th></tr>';
+    const algoSignals = [
+      ['Watch time & completion', '~40-50%', 'How much of your video people watch. The 2026 bar for viral push is ~70% completion rate.', 'Keep videos 20-30s. Front-load the hook. Cut all dead space. Make every second count.'],
+      ['Replays / loops', '~15-20%', 'When a viewer watches your video again. Strongest quality signal available.', 'Create content with a twist ending that makes viewers rewatch. Children\'s song format naturally loops.'],
+      ['Shares', '~10-15%', 'Weighted 3x higher than likes. Sharing = "this is worth sending to someone."', 'Make content people want to show friends. Political satire is inherently shareable — lean into controversy.'],
+      ['Saves', '~8-10%', 'Indicates lasting value the viewer wants to revisit. Growing in importance with TikTok search.', 'Include a "useful" element: a hashtag list, a fact, a stat. Saves = bookmark-worthy content.'],
+      ['Comments', '~8-10%', 'Comment velocity in the first hour is critical. TikTok tests with small audience first.', 'End with a question. Pin a controversial comment. Reply to every comment in the first hour.'],
+      ['Likes', '~5%', 'Least weighted signal in 2026. Easy to give, low commitment. Still matters, just less.', 'A strong hook and emotional content naturally gets likes. Don\'t optimise for likes — optimise for shares and saves.'],
+    ];
+    algoSignals.forEach((s, i) => {
+      html += '<tr><td>' + (i+1) + '</td><td><strong>' + s[0] + '</strong></td><td>' + s[1] + '</td><td>' + s[2] + '</td><td>' + s[3] + '</td></tr>';
+    });
+    html += '</table>';
+
+    html += '<h4 style="color:#1a237e;margin:12px 0 6px">Other Important Factors</h4>';
+    html += '<ul style="font-size:12px;line-height:1.8;padding-left:18px">';
+    html += '<li><strong>First 60 minutes:</strong> Early engagement is critical. TikTok decides whether to push your video to a wider audience based on the first hour of performance.</li>';
+    html += '<li><strong>Original content:</strong> Videos reposted from other platforms get suppressed. Always upload native to TikTok first.</li>';
+    html += '<li><strong>TikTok SEO:</strong> In 2026, search is a direct ranking metric. Keywords in captions, spoken audio, on-screen text, and hashtags all get indexed. Say your main keyword in the first 5 seconds of audio.</li>';
+    html += '<li><strong>Caption keywords:</strong> Using relevant keywords in captions boosts visibility by 20-40%. Write captions like a blog intro: short, descriptive, keyword-rich. Max 4,000 characters, but 150-300 is optimal.</li>';
+    html += '<li><strong>Posting time:</strong> For Bulgaria/Eastern Europe, best times are <strong>Tuesday-Thursday 2-6 PM</strong> and <strong>Friday-Sunday evenings 6-11 PM</strong>. Post when your audience is online, not when you wake up.</li>';
+    html += '<li><strong>Consistency:</strong> The algorithm rewards accounts that post regularly. 5-7 videos/week is the minimum for growth.</li>';
+    html += '</ul>';
+    html += '</div>';
+
+    // ─── 7. Target Audience Strategy ───
+    html += '<div class="card" style="border-left: 4px solid #e65100; background: #fff8f0;">';
+    html += '<h3>7. Target Audience Strategy</h3>';
+
+    html += '<h4 style="color:#e65100;margin:12px 0 6px">Who is your audience?</h4>';
+    html += '<table style="table-layout:auto; max-width:700px"><tr><th>Parameter</th><th>Current (estimated)</th><th>Recommended target</th></tr>';
+    html += '<tr><td>Age</td><td>Mixed / undefined</td><td><strong>25-45</strong> — politically engaged adults who remember the references</td></tr>';
+    html += '<tr><td>Location</td><td>Bulgaria (general)</td><td><strong>Bulgaria primary</strong>, Bulgarian diaspora (UK, Germany, Spain) secondary</td></tr>';
+    html += '<tr><td>Language</td><td>Bulgarian</td><td>Bulgarian (keep — this is your niche advantage)</td></tr>';
+    html += '<tr><td>Interests</td><td>Undefined</td><td>Politics, news, comedy, satire, current affairs, Bulgarian culture</td></tr>';
+    html += '<tr><td>Psychographic</td><td>Undefined</td><td>Frustrated with corruption, wants change, shares political content, uses humour as coping mechanism</td></tr>';
+    html += '</table>';
+
+    html += '<details class="learn-how"><summary>+ Learn how to define and reach your target audience</summary><div class="guide">';
+    html += '<h4>Step 1: Check who\'s already watching</h4>';
+    html += '<ol>';
+    html += '<li>Open TikTok → Profile → three lines (☰) → <strong>Business Suite</strong> → <strong>Analytics</strong></li>';
+    html += '<li>Go to the <strong>Audience</strong> tab</li>';
+    html += '<li>Note: Gender split, Age ranges, Top countries, Top cities</li>';
+    html += '<li>This tells you who TikTok is currently showing your content to</li>';
+    html += '</ol>';
+
+    html += '<h4>Step 2: Signal your audience to the algorithm</h4>';
+    html += '<p>TikTok doesn\'t let you choose your organic audience directly. Instead, you <strong>signal</strong> who should see your content through:</p>';
+    html += '<ul>';
+    html += '<li><strong>Hashtags:</strong> Political hashtags (#бгполитика, #bgpolitics) tell TikTok your content is for politically-interested users</li>';
+    html += '<li><strong>Caption keywords:</strong> Write captions with words your target audience searches for: "Пеевски", "корупция", "парламент", "избори"</li>';
+    html += '<li><strong>Audio keywords:</strong> TikTok\'s speech recognition indexes your spoken words. Say politician names and political terms aloud in the first 5 seconds</li>';
+    html += '<li><strong>Engagement patterns:</strong> Follow and interact with political accounts. The algorithm maps creator-viewer clusters</li>';
+    html += '<li><strong>Duet/Stitch:</strong> Stitch or Duet popular political creators — their audience sees your content</li>';
+    html += '</ul>';
+
+    html += '<h4>Step 3: For paid promotions</h4>';
+    html += '<ol>';
+    html += '<li>When using TikTok Promote, select <strong>"Create your own"</strong> audience (not default)</li>';
+    html += '<li>Set: Age <strong>25-45</strong>, Location <strong>Bulgaria</strong></li>';
+    html += '<li>Add interests: <strong>News & Current Affairs, Comedy, Politics</strong></li>';
+    html += '<li>Start with a small budget (EUR 5-10/day for 3 days) to test</li>';
+    html += '<li>Check results in Promote → Order History → compare paid vs organic performance</li>';
+    html += '</ol>';
+
+    html += '<h4>Step 4: Grow beyond Bulgaria</h4>';
+    html += '<p>The Bulgarian diaspora (600K+ in EU) is an untapped audience:</p>';
+    html += '<ul>';
+    html += '<li>Add <strong>#bgpolitics</strong> (English hashtag) to reach diaspora who search in English</li>';
+    html += '<li>Consider occasional <strong>English subtitles</strong> for the biggest hits</li>';
+    html += '<li>The diaspora is highly politically engaged and shares heavily — they can amplify your content back into Bulgaria</li>';
+    html += '</ul>';
+
+    html += '<div class="tip">Tip: Don\'t try to appeal to everyone. Your niche (AI children\'s song political satire in Bulgarian) is your strength. A small, engaged audience that shares is worth more than a large passive one.</div>';
+    html += '</div></details>';
+    html += '</div>';
+
+    // ─── 8. Complete Account Setup Checklist ───
+    html += '<div class="card" style="border-left: 4px solid #00695c; background: #f0faf8;">';
+    html += '<h3>8. Complete Account Setup Checklist</h3>';
+    html += '<p style="margin-bottom:10px">Every setting matters. Here is <strong>every relevant parameter</strong> on your TikTok account and what it should be set to for maximum reach.</p>';
+
+    const setupItems = [
+      {
+        param: 'Account type',
+        current: 'Business Account',
+        recommended: 'Business Account ✓',
+        guide: 'Already correct. Business accounts get analytics, scheduling, Promote access, and the Commercial Music Library. Go to Settings → Manage Account → confirm it says "Business Account".'
+      },
+      {
+        param: 'Bio / Description',
+        current: 'Empty ("No bio yet")',
+        recommended: '"За Хората 🇧🇬 Политическа сатира с AI | Деца пеят за корупцията" + link to YouTube/website',
+        guide: 'Profile → Edit Profile → Bio. Include: what you do, keywords for search (политическа сатира, AI), emoji flag for Bulgaria, and a call to follow. Max 80 characters. Add a link (Linktree or YouTube channel).'
+      },
+      {
+        param: 'Profile photo',
+        current: 'Lady Justice with rainbow',
+        recommended: 'Keep — but ensure 200x200px, clear on small screens',
+        guide: 'Profile → Edit Profile → Change photo. The current image is distinctive and on-brand. Ensure it\'s high-res (200x200px minimum) and recognisable as a tiny circle on the FYP.'
+      },
+      {
+        param: 'Username',
+        current: '@zahoratabg ✓',
+        recommended: 'Good — short, memorable, includes "bg" for Bulgarian identity',
+        guide: 'No change needed. The username is searchable and clear.'
+      },
+      {
+        param: 'Business category',
+        current: 'Check in Settings',
+        recommended: 'Set to "Media & Entertainment" or "Public Figure"',
+        guide: 'Settings → Manage Account → Category. This helps TikTok understand your content type and show it to the right audience.'
+      },
+      {
+        param: 'Privacy — Account',
+        current: 'Public ✓',
+        recommended: 'Must be Public — private accounts cannot go viral',
+        guide: 'Settings → Privacy → Private account → OFF. A private account blocks the algorithm from distributing your content.'
+      },
+      {
+        param: 'Privacy — Duets',
+        current: 'Some videos have "No"',
+        recommended: 'Allow Duets from EVERYONE on all videos',
+        guide: 'Settings → Privacy → Reuse of content → Allow reuse from Everyone. Also check each video: when posting, ensure "Allow Duets" is ON. Duets let other creators react to your content = free distribution to their audience.'
+      },
+      {
+        param: 'Privacy — Stitches',
+        current: 'Some videos have "No"',
+        recommended: 'Allow Stitches from EVERYONE on all videos',
+        guide: 'Same location as Duets. Stitches let creators use the first 5 seconds of your video + add their own. This is how political commentary creators react to each other — you WANT this.'
+      },
+      {
+        param: 'Privacy — Downloads',
+        current: 'Check in Settings',
+        recommended: 'Allow downloads — lets people share your videos on WhatsApp/Telegram',
+        guide: 'Settings → Privacy → Downloads → ON. When people download and share your video on WhatsApp groups, it drives viewers back to your TikTok profile. This is especially important for Bulgarian political content which spreads heavily in chat groups.'
+      },
+      {
+        param: 'Privacy — Comments',
+        current: 'Allow ✓',
+        recommended: 'Allow from Everyone — comments are the #1 algorithm signal',
+        guide: 'Settings → Privacy → Comments → Everyone. Never restrict comments. Even negative comments help — every comment is an engagement signal. Use comment filters only for slurs/spam.'
+      },
+      {
+        param: 'Privacy — Sharing to Story',
+        current: 'Some videos have "No"',
+        recommended: 'Allow — lets viewers share your video to their Story',
+        guide: 'When posting, ensure "Allow Sharing to Story" is ON. Story shares expose your content to the sharer\'s followers.'
+      },
+      {
+        param: 'Content Disclosure',
+        current: 'Empty',
+        recommended: 'Set "AI-generated" disclosure when required',
+        guide: 'When posting AI-generated content: toggle "AI-generated content" ON in the disclosure section. EU regulations (Digital Services Act) require this. Not doing it risks account penalties.'
+      },
+      {
+        param: 'Suggest account to others',
+        current: 'Check in Settings',
+        recommended: 'ON — lets TikTok suggest your account to similar viewers',
+        guide: 'Settings → Privacy → Suggest your account to others → turn ALL options ON (contacts, Facebook friends, people who open your links). This is free discovery.'
+      },
+      {
+        param: 'Push notifications',
+        current: 'Check in Settings',
+        recommended: 'Turn ON for comments, likes, new followers — so you can respond quickly',
+        guide: 'Settings → Push notifications → enable Comments, Likes, New followers, Mentions. Speed of response in the first hour matters for the algorithm.'
+      },
+      {
+        param: 'Linked accounts',
+        current: 'Instagram: empty, YouTube: empty',
+        recommended: 'Link Instagram and YouTube for cross-promotion',
+        guide: 'Profile → Edit Profile → Add Instagram / Add YouTube. Linked accounts show as buttons on your profile, driving traffic between platforms.'
+      },
+    ];
+
+    html += '<table style="table-layout:auto"><tr><th style="width:160px">Setting</th><th style="width:160px">Current</th><th style="width:200px">Recommended</th><th>How to set it</th></tr>';
+    setupItems.forEach(s => {
+      const isOk = s.recommended.includes('✓') || s.recommended.toLowerCase().includes('keep') || s.recommended.toLowerCase().includes('good') || s.recommended.toLowerCase().includes('no change');
+      html += '<tr><td><strong>' + s.param + '</strong></td><td>' + s.current + '</td><td>' + (isOk ? '<span class="engagement">' + s.recommended + '</span>' : s.recommended) + '</td><td style="font-size:11px">' + s.guide + '</td></tr>';
+    });
+    html += '</table>';
+    html += '<div style="background:#e8f5e9;border-left:3px solid #2e7d32;padding:8px 12px;border-radius:4px;margin-top:10px;font-size:11px"><strong>Quick wins:</strong> Fix the bio (currently empty), enable Duets and Stitches on all videos, and add the AI-generated content disclosure. These take 5 minutes and immediately improve discoverability.</div>';
+    html += '</div>';
+
+    // ─── 9. Action Plan with Learn How guides ───
     html += '<div class="card" style="border-left: 4px solid #2e7d32; background: #f9fdf9;">';
-    html += '<h3>6. 30-Day Action Plan</h3>';
+    html += '<h3>9. 30-Day Action Plan</h3>';
 
     const actions = [
       {
@@ -597,6 +788,36 @@
           + '<p>Use <a href="https://repurpose.io" target="_blank">Repurpose.io</a> to automatically cross-post TikToks to Reels and Shorts. YouTube offers a 3-month free trial. Limit: 5 videos/day with scheduling.</p>'
           + '<div class="tip">Tip: Start by cross-posting your top 3 performing TikToks. Only cross-post videos that already proved they work on TikTok.</div>'
       },
+      {
+        action: 'Optimise captions for TikTok SEO',
+        detail: 'TikTok is now a search engine. Keywords in captions, spoken audio, and on-screen text get indexed. Using relevant keywords boosts visibility by 20-40%',
+        impact: 'High',
+        guide: '<h4>How to write SEO-optimised captions</h4>'
+          + '<ol>'
+          + '<li><strong>Research keywords:</strong> Open TikTok Search → type your topic (e.g. "Пеевски") → note the autocomplete suggestions — these are what people actually search for</li>'
+          + '<li><strong>Write the caption:</strong> 150-300 characters. Start with the main keyword. Write like a blog intro — short, descriptive, makes people want to watch</li>'
+          + '<li><strong>Example:</strong> "Пеевски пее детска песничка — какво ще каже парламентът? #бгполитика #bgpolitics #пеевски #сатира #захората"</li>'
+          + '<li><strong>Say the keyword out loud:</strong> TikTok\'s speech recognition indexes your spoken words. Say the politician\'s name or topic in the first 5 seconds of the video</li>'
+          + '<li><strong>On-screen text:</strong> The bold text overlay in your hook also gets indexed for search. Make it keyword-rich</li>'
+          + '</ol>'
+          + '<div class="tip">Tip: TikTok captions now support 4,000 characters, but keep it under 300 for engagement. The first 2 lines are visible before "See more" — make them count.</div>'
+      },
+      {
+        action: 'Post at optimal times for Bulgaria',
+        detail: 'Data shows best engagement for Bulgaria/EE: Tue-Thu 2-6 PM, Fri-Sun 6-11 PM. The first 60 minutes of engagement determines if the algorithm pushes your video wider',
+        impact: 'Medium',
+        guide: '<h4>How to schedule posts at the right time</h4>'
+          + '<ol>'
+          + '<li><strong>Check your own data:</strong> TikTok → Profile → Business Suite → Analytics → Audience → scroll to "Most active times"</li>'
+          + '<li><strong>Schedule posts:</strong> When posting, tap <strong>More options</strong> → <strong>Schedule</strong> → pick date and time</li>'
+          + '<li><strong>General best times for Bulgaria:</strong><br>'
+          + '• Monday-Thursday: <strong>2-6 PM</strong> (afternoon engagement peak)<br>'
+          + '• Friday-Sunday: <strong>6-11 PM</strong> (evening peak, highest engagement)<br>'
+          + '• Avoid: early morning (before 10 AM) and late night (after midnight)</li>'
+          + '<li><strong>Be ready to engage:</strong> Stay online for the first 60 minutes after posting to reply to comments — this is when the algorithm decides your video\'s fate</li>'
+          + '</ol>'
+          + '<div class="tip">Tip: Post at your audience\'s timezone, not yours. If targeting Bulgarian diaspora in the UK, account for the 2-hour time difference (UK is UTC+0/+1, Bulgaria is UTC+2/+3).</div>'
+      },
     ];
 
     html += '<table style="table-layout:auto"><tr><th style="width:40px">#</th><th style="width:200px">Action</th><th>Details</th><th style="width:80px">Impact</th></tr>';
@@ -606,9 +827,9 @@
     });
     html += '</table></div>';
 
-    // ─── 7. Growth Targets ───
+    // ─── 10. Growth Targets ───
     html += '<div class="card" style="border-left: 4px solid #91569c; background: #faf5fc;">';
-    html += '<h3>7. Growth Targets (30 days)</h3>';
+    html += '<h3>10. Growth Targets (30 days)</h3>';
     html += '<table style="table-layout:auto; max-width:500px"><tr><th>Metric</th><th>Current</th><th>30-Day Target</th></tr>';
     html += '<tr><td>Followers</td><td>' + fmt(zhFollowers) + '</td><td class="engagement">500+</td></tr>';
     html += '<tr><td>Total plays</td><td>' + fmt(zhPlays) + '</td><td class="engagement">500K+</td></tr>';
