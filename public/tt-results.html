@@ -66,8 +66,10 @@
     .app-sidebar .nav-btn i { font-size: 16px; }
     .app-sidebar .nav-btn span { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; margin-top: 2px; }
     .main-content { flex: 1; padding: 20px; max-width: 1200px; overflow-y: auto; }
-    .top-header { height: 56px; flex-shrink: 0; background: white; border-bottom: 1px solid #e0d4e8; display: flex; align-items: center; padding: 0 24px; width: 100%; }
+    .top-header { height: 56px; flex-shrink: 0; background: white; border-bottom: 1px solid #e0d4e8; display: flex; align-items: center; padding: 0 24px; width: 100%; gap: 12px; }
     .top-header h2 { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 13px; color: #5c3a62; text-transform: uppercase; letter-spacing: 1px; }
+    .back-arrow { color: #91569c; font-size: 16px; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; transition: all 0.15s; }
+    .back-arrow:hover { background: #f6f0f8; color: #5c3a62; }
     .content-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -93,6 +95,7 @@
 <!-- Main content area -->
 <div class="content-wrapper">
 <div class="top-header">
+  <a href="javascript:history.back()" class="back-arrow" title="Back to project"><i class="fa-solid fa-arrow-left"></i></a>
   <h2>Research — Za Horata TikTok Campaign</h2>
 </div>
 <div class="main-content">
