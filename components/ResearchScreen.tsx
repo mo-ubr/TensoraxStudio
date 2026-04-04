@@ -9,8 +9,7 @@ import {
   type GuardrailResult,
   type PreExecutionCheck,
 } from '../src/workflows/segments/social-media/research/research-guardrails';
-import { runAgent } from '../services/agentRunner';
-import { getModelForType } from '../services/geminiService';
+import { getApiKeyForType, getModelForType } from '../services/geminiService';
 
 // ── Auto-discover competitors via configured best-of-breed API ───────────
 
@@ -20,47 +19,106 @@ interface DiscoveredCompetitor {
   confidence: number;
 }
 
+function detectProvider(model: string): 'gemini' | 'claude' | 'openai' {
+  if (model.startsWith('claude') || model.startsWith('anthropic')) return 'claude';
+  if (model.startsWith('gpt') || model.startsWith('o3') || model.startsWith('o4') || model.startsWith('o1')) return 'openai';
+  return 'gemini';
+}
+
+function resolveDiscoveryKey(provider: 'gemini' | 'claude' | 'openai'): string | null {
+  const model = getModelForType('analysis');
+  if (model) {
+    const perModel = localStorage.getItem(`tensorax_analysis_key__${model}`);
+    if (perModel?.trim()) return perModel.trim();
+  }
+  const generic = getApiKeyForType('analysis');
+  if (generic) return generic;
+  const providerKeys: Record<string, string[]> = {
+    gemini: ['gemini_api_key', 'tensorax_provider_key__gemini'],
+    claude: ['claude_api_key', 'anthropic_api_key', 'tensorax_provider_key__anthropic'],
+    openai: ['openai_api_key', 'tensorax_provider_key__openai'],
+  };
+  for (const key of providerKeys[provider] || []) {
+    const val = localStorage.getItem(key);
+    if (val?.trim()) return val.trim();
+  }
+  return null;
+}
+
 async function discoverCompetitors(
   direction: string,
   platform: PlatformId,
   ownHandle: string,
   maxResults = 8,
 ): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
-  const model = getModelForType('analysis') || undefined; // let agentRunner pick its default
+  const model = getModelForType('analysis') || 'gemini-2.0-flash';
+  const provider = detectProvider(model);
+  const apiKey = resolveDiscoveryKey(provider);
+  if (!apiKey) {
+    return { competitors: [], error: `No API key for ${provider}. Set one in Settings → API Keys.` };
+  }
+
   const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
 
-  const agentPrompt = `You are a social media strategist and competitive intelligence expert.
-Your job is to identify the most relevant accounts on a given platform for a given research direction.
-Return ONLY a JSON object with a "competitors" array. Each entry has: handle (no @ prefix), reasoning (why relevant), confidence (0-1).`;
+  const systemPrompt = `You are a social media strategist and competitive intelligence expert.
+Return ONLY a JSON object: {"competitors": [{"handle": "username_no_at", "reasoning": "why relevant", "confidence": 0.85}]}`;
 
   const userMessage = `Identify the top ${maxResults} ${platformName} accounts for this research direction:
 
 **Research Direction:** "${direction}"
-**Platform:** ${platformName}
-${ownHandle ? `**User's Own Account:** ${ownHandle} (exclude from results)` : ''}
+${ownHandle ? `**Exclude this account:** ${ownHandle}` : ''}
 
 Rules:
-- No @ prefix in handles
-- ${maxResults} accounts maximum
+- No @ prefix in handles. ${maxResults} accounts maximum.
 - Must be real, public accounts on ${platformName}
 - Must be directly relevant to: "${direction.slice(0, 200)}"
-- Sort by relevance (most relevant first)
-- If the direction is in a specific language/country, prioritise accounts from that region`;
+- Sort by relevance. Prioritise accounts from the direction's language/country.`;
 
   try {
-    console.log(`[Discovery] Using model: ${model || 'default'}`);
+    console.log(`[Discovery] Provider: ${provider}, Model: ${model}, Key: ${apiKey.slice(0, 8)}...`);
+    let text: string;
 
-    const result = await runAgent<{ competitors: Array<{ handle: string; reasoning: string; confidence: number }> }>({
-      agentPrompt,
-      userMessage,
-      model,
-      temperature: 0.3,
-      maxTokens: 2048,
-    });
+    if (provider === 'openai') {
+      const { default: OpenAI } = await import('openai');
+      const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+      const isReasoning = /^o[134]/.test(model);
+      const messages: any[] = isReasoning
+        ? [{ role: 'developer', content: systemPrompt }, { role: 'user', content: userMessage }]
+        : [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }];
+      const res = await client.chat.completions.create({
+        model, messages, max_completion_tokens: 2048,
+        ...(isReasoning ? {} : { temperature: 0.3 }),
+        response_format: { type: 'json_object' },
+      });
+      text = res.choices?.[0]?.message?.content || '';
+    } else if (provider === 'claude') {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+      const res = await client.messages.create({
+        model, max_tokens: 2048, temperature: 0.3, system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      });
+      text = res.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+    } else {
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+      const res = await ai.models.generateContent({
+        model, contents: userMessage,
+        config: { systemInstruction: systemPrompt, temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+      });
+      text = res.text || '';
+    }
 
-    console.log(`[Discovery] Provider: ${result.provider}, Model: ${result.model}`);
+    console.log('[Discovery] Response:', text.slice(0, 300));
 
-    const discovered: DiscoveredCompetitor[] = (result.data?.competitors || [])
+    let parsed: any;
+    try { parsed = JSON.parse(text); } catch {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0].replace(/,\s*]/g, ']').replace(/,\s*}/g, '}'));
+    }
+    if (!parsed) return { competitors: [], error: 'Could not parse AI response. Try again.' };
+
+    const discovered: DiscoveredCompetitor[] = (parsed.competitors || [])
       .filter((c: any) => c.handle && typeof c.handle === 'string')
       .map((c: any) => ({
         handle: c.handle.replace(/^@/, '').trim(),

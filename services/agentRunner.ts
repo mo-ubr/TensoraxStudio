@@ -12,13 +12,12 @@
 
 import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
 import { type CreativityLevels, buildCreativityPreamble } from './creativityControl';
 import { verificationAgentPrompt } from '../prompts/qa/verificationAgent';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type AIProvider = 'gemini' | 'claude' | 'openai';
+export type AIProvider = 'gemini' | 'claude';
 
 export interface AgentRunOptions {
   /** The agent's system prompt (from prompts/*.ts) */
@@ -87,38 +86,27 @@ export interface AgentRunResult<T = unknown> {
 
 // ─── Key resolution ─────────────────────────────────────────────────────────
 
-const PROVIDER_STORAGE_KEYS: Record<AIProvider, string[]> = {
-  gemini: ['gemini_api_key', 'tensorax_provider_key__gemini', 'tensorax_analysis_key', 'tensorax_image_gen_key'],
-  claude: ['claude_api_key', 'anthropic_api_key', 'tensorax_provider_key__anthropic'],
-  openai: ['openai_api_key', 'tensorax_provider_key__openai'],
-};
-
-const PROVIDER_ENV_KEYS: Record<AIProvider, string[]> = {
-  gemini: ['VITE_GEMINI_API_KEY', 'TENSORAX_ANALYSIS_KEY', 'GEMINI_API_KEY'],
-  claude: ['VITE_CLAUDE_API_KEY', 'ANTHROPIC_API_KEY'],
-  openai: ['OPENAI_API_KEY', 'VITE_OPENAI_API_KEY'],
-};
-
 function resolveApiKey(provider: AIProvider, explicitKey?: string): string {
   if (explicitKey) return explicitKey;
 
   // Try localStorage (browser context)
   if (typeof window !== 'undefined') {
-    // First try the per-model key (most specific)
-    const modelKey = localStorage.getItem('tensorax_analysis_model');
-    if (modelKey) {
-      const perModelKey = localStorage.getItem(`tensorax_analysis_key__${modelKey}`);
-      if (perModelKey?.trim()) return perModelKey.trim();
-    }
+    const storageKeys = provider === 'gemini'
+      ? ['gemini_api_key', 'tensorax_analysis_key', 'tensorax_image_gen_key']
+      : ['claude_api_key', 'anthropic_api_key'];
 
-    for (const key of PROVIDER_STORAGE_KEYS[provider] || []) {
+    for (const key of storageKeys) {
       const val = localStorage.getItem(key);
       if (val && val.trim() && !/placeholder/i.test(val)) return val.trim();
     }
   }
 
   // Try env vars (build-time or server context)
-  for (const key of PROVIDER_ENV_KEYS[provider] || []) {
+  const envKeys = provider === 'gemini'
+    ? ['VITE_GEMINI_API_KEY', 'TENSORAX_ANALYSIS_KEY']
+    : ['VITE_CLAUDE_API_KEY', 'ANTHROPIC_API_KEY'];
+
+  for (const key of envKeys) {
     const val = (import.meta as any)?.env?.[key] || (typeof process !== 'undefined' ? process.env[key] : undefined);
     if (val && val.trim()) return val.trim();
   }
@@ -128,21 +116,17 @@ function resolveApiKey(provider: AIProvider, explicitKey?: string): string {
 
 // ─── Provider defaults ──────────────────────────────────────────────────────
 
-const DEFAULT_MODELS: Record<AIProvider, string> = {
-  gemini: 'gemini-2.5-flash',
-  claude: 'claude-sonnet-4-6',
-  openai: 'gpt-4.1',
-};
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'];
+const CLAUDE_MODELS = ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6'];
 
 function resolveModel(provider: AIProvider, explicit?: string): string {
   if (explicit) return explicit;
-  return DEFAULT_MODELS[provider];
+  return provider === 'gemini' ? GEMINI_MODELS[0] : CLAUDE_MODELS[0];
 }
 
 function detectProvider(model?: string): AIProvider {
-  if (!model) return 'gemini';
+  if (!model) return 'gemini'; // default
   if (model.startsWith('claude') || model.startsWith('anthropic')) return 'claude';
-  if (model.startsWith('gpt') || model.startsWith('o3') || model.startsWith('o4') || model.startsWith('o1') || model.startsWith('chatgpt')) return 'openai';
   return 'gemini';
 }
 
@@ -299,60 +283,6 @@ async function runClaude(opts: AgentRunOptions & { resolvedKey: string; resolved
   };
 }
 
-// ─── OpenAI execution ──────────────────────────────────────────────────
-
-async function runOpenAI(opts: AgentRunOptions & { resolvedKey: string; resolvedModel: string }): Promise<AgentRunResult> {
-  const client = new OpenAI({ apiKey: opts.resolvedKey, dangerouslyAllowBrowser: true });
-
-  // Build message content
-  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
-
-  if (opts.images?.length) {
-    for (const img of opts.images) {
-      content.push({
-        type: 'image_url',
-        image_url: { url: isDataUri(img) ? img : img },
-      });
-    }
-  }
-
-  content.push({ type: 'text', text: opts.userMessage });
-
-  // o3/o3-pro/o1 models don't support temperature or system messages the same way
-  const isReasoningModel = /^o[134]/.test(opts.resolvedModel);
-
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = isReasoningModel
-    ? [
-        { role: 'developer', content: opts.agentPrompt },
-        { role: 'user', content },
-      ]
-    : [
-        { role: 'system', content: opts.agentPrompt },
-        { role: 'user', content },
-      ];
-
-  const response = await client.chat.completions.create({
-    model: opts.resolvedModel,
-    messages,
-    ...(isReasoningModel ? {} : { temperature: opts.temperature ?? 1 }),
-    max_completion_tokens: opts.maxTokens ?? 8192,
-    response_format: { type: 'json_object' },
-  });
-
-  const rawText = response.choices?.[0]?.message?.content || '';
-
-  return {
-    data: JSON.parse(extractJSON(rawText)),
-    rawText,
-    provider: 'openai',
-    model: opts.resolvedModel,
-    usage: {
-      inputTokens: response.usage?.prompt_tokens,
-      outputTokens: response.usage?.completion_tokens,
-    },
-  };
-}
-
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
@@ -393,11 +323,9 @@ export async function runAgent<T = unknown>(opts: AgentRunOptions): Promise<Agen
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const fullOpts = { ...opts, agentPrompt, userMessage: currentUserMessage, resolvedKey, resolvedModel };
 
-    lastResult = provider === 'openai'
-      ? await runOpenAI(fullOpts)
-      : provider === 'claude'
-        ? await runClaude(fullOpts)
-        : await runGemini(fullOpts);
+    lastResult = provider === 'gemini'
+      ? await runGemini(fullOpts)
+      : await runClaude(fullOpts);
 
     // Skip verification if not configured or no provided text
     if (!opts.verification?.providedText) break;
