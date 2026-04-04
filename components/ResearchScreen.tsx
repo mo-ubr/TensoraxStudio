@@ -87,11 +87,17 @@ async function discoverCompetitors(
   ownHandle: string,
   maxResults = 8,
 ): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
-  const model = getModelForType('analysis') || 'gemini-2.0-flash';
-  const provider = detectProvider(model);
-  const apiKey = resolveDiscoveryKey(provider, model);
+  // Discovery is a lightweight text task — always use Gemini (browser CORS-safe).
+  // Many providers (DashScope, DeepSeek) block browser-side requests.
+  const geminiKey = Settings.get('tensorax_provider_key__gemini')
+    || Settings.get('gemini_api_key')
+    || Settings.get('tensorax_analysis_key__gemini-2.5-flash')
+    || Settings.get('tensorax_analysis_key__gemini-3.1-pro-preview');
+  const model = geminiKey ? 'gemini-2.5-flash' : (getModelForType('analysis') || 'gemini-2.5-flash');
+  const provider = geminiKey ? 'gemini' as ProviderType : detectProvider(model);
+  const apiKey = geminiKey || resolveDiscoveryKey(provider, model);
   if (!apiKey) {
-    return { competitors: [], error: `No API key for ${provider}. Set one in Settings → API Keys.` };
+    return { competitors: [], error: `No API key found. Set a Gemini key in Settings → API Keys.` };
   }
 
   const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
