@@ -444,6 +444,35 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
             <button onClick={exportAllExcel} disabled={exporting === 'excel'} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-[10px] font-bold hover:bg-green-700 disabled:opacity-50 transition-all">
               <i className={`fa-solid ${exporting === 'excel' ? 'fa-spinner fa-spin' : 'fa-file-excel'}`} /> Save All as Excel
             </button>
+            <button
+              onClick={async () => {
+                setSyncing(true);
+                setSyncResult(null);
+                try {
+                  const result = await DB.syncProjectAssets(project.id);
+                  setSyncResult(result);
+                } catch (err: any) {
+                  alert(`Sync failed: ${err.message || err}`);
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+              disabled={syncing}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                syncResult && syncResult.assetsCreated === 0
+                  ? 'bg-gray-100 border border-gray-300 text-gray-500'
+                  : syncResult
+                  ? 'bg-green-50 border border-green-300 text-green-600'
+                  : 'bg-[#91569c] text-white hover:bg-[#7a4685]'
+              } disabled:opacity-50`}
+            >
+              <i className={`fa-solid ${syncing ? 'fa-spinner fa-spin' : syncResult ? 'fa-check' : 'fa-database'}`} />
+              {syncResult
+                ? syncResult.assetsCreated > 0
+                  ? `${syncResult.assetsCreated} saved to Assets`
+                  : 'All synced'
+                : 'Save to Assets'}
+            </button>
           </div>
         </div>
       </div>
