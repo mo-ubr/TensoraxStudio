@@ -1105,12 +1105,9 @@ router.post("/discover-competitors", async (req, res) => {
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
 
-    // Resolve model and API key
+    // Resolve model and provider
     const model = settings.tensorax_analysis_model || 'gemini-2.5-flash';
-    let apiKey = settings[`tensorax_analysis_key__${model}`]
-      || settings.tensorax_analysis_key;
 
-    // Determine provider
     let provider = 'gemini';
     if (model.startsWith('claude') || model.startsWith('anthropic')) provider = 'claude';
     else if (model.startsWith('gpt') || /^o[134]/.test(model)) provider = 'openai';
@@ -1120,7 +1117,7 @@ router.post("/discover-competitors", async (req, res) => {
     else if (model.includes('llama')) provider = 'openrouter';
     else if (model.startsWith('gemini') || model.startsWith('imagen')) provider = 'gemini';
 
-    // Resolve provider key if per-model key not found
+    // Resolve API key: per-model key → provider key → generic analysis key
     const providerKeyMap = {
       gemini: ['tensorax_provider_key__gemini', 'gemini_api_key'],
       claude: ['tensorax_provider_key__claude'],
@@ -1130,11 +1127,13 @@ router.post("/discover-competitors", async (req, res) => {
       mistral: ['tensorax_provider_key__mistral'],
       openrouter: ['tensorax_provider_key__openrouter'],
     };
+    let apiKey = settings[`tensorax_analysis_key__${model}`];
     if (!apiKey) {
       for (const k of providerKeyMap[provider] || []) {
         if (settings[k]) { apiKey = settings[k]; break; }
       }
     }
+    if (!apiKey) apiKey = settings.tensorax_analysis_key;
     if (!apiKey) return res.status(400).json({ error: `No API key for provider ${provider}. Set one in Settings.` });
 
     const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
