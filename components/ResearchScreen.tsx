@@ -3,22 +3,14 @@ import { runResearch } from '../src/workflows/segments/social-media/research/res
 import type { ResearchOrchestrationResult, ResearchProgress } from '../src/workflows/segments/social-media/research/research-orchestrator';
 import type { Project, PlatformResearchConfig, ResearchSettings, ProjectMemory } from '../src/project/types';
 import type { PlatformId } from '../src/workflows/segments/social-media/_shared/platform-config.types';
+import {
+  runPreExecutionChecks,
+  runPostExecutionChecks,
+  type GuardrailResult,
+  type PreExecutionCheck,
+} from '../src/workflows/segments/social-media/research/research-guardrails';
 
-// ── Default popular accounts per platform (used when competitors left blank) ──
-
-const DEFAULT_COMPETITORS: Record<PlatformId, string[]> = {
-  tiktok: ['@zara', '@hm', '@shein', '@prettylittlething', '@asos'],
-  instagram: ['@zara', '@hm', '@marksandspencer', '@asos', '@nextofficial'],
-  youtube: ['@ZaraOfficial', '@HM', '@ASOS', '@MarkAndSpencer', '@Primark'],
-  facebook: ['@Zara', '@HM', '@marksandspencer', '@ASOS.com', '@NEXT'],
-};
-
-const DEFAULT_HASHTAGS: Record<PlatformId, string[]> = {
-  tiktok: ['#fashion', '#retailtok', '#ootd', '#haul', '#newcollection'],
-  instagram: ['#fashion', '#retailtherapy', '#ootd', '#instafashion', '#styleinspo'],
-  youtube: ['#fashion', '#haul', '#tryonhaul', '#retailreview', '#newcollection'],
-  facebook: ['#fashion', '#retail', '#shopping', '#newcollection', '#dealoftheday'],
-};
+// ── NO hardcoded defaults. Direction drives everything. ───────────────────
 
 interface ResearchScreenProps {
   onBack: () => void;
@@ -45,20 +37,12 @@ function createResearchProject(overrides: {
 }): Project {
   const apiKey = getApifyKey();
 
-  const effectiveCompetitors = overrides.competitors.length > 0
-    ? overrides.competitors
-    : DEFAULT_COMPETITORS[overrides.platform];
-
-  const effectiveHashtags = overrides.hashtags.length > 0
-    ? overrides.hashtags
-    : DEFAULT_HASHTAGS[overrides.platform];
-
   const platformConfig: PlatformResearchConfig = {
     platform: overrides.platform,
     enabled: true,
     ownAccountHandle: overrides.ownHandle,
-    competitorHandles: effectiveCompetitors,
-    targetHashtags: effectiveHashtags,
+    competitorHandles: overrides.competitors,
+    targetHashtags: overrides.hashtags,
     scrapingConfig: {
       method: 'thirdParty',
       apiKey,
@@ -117,6 +101,42 @@ function createResearchProject(overrides: {
   };
 }
 
+// ── Guardrail Alert ───────────────────────────────────────────────────────
+
+function GuardrailAlert({ results, title }: { results: GuardrailResult[]; title: string }) {
+  const errors = results.filter(r => !r.passed && r.severity === 'error');
+  const warnings = results.filter(r => !r.passed && r.severity === 'warning');
+
+  if (errors.length === 0 && warnings.length === 0) return null;
+
+  return (
+    <div className="space-y-2 mb-4">
+      {errors.map((r, i) => (
+        <div key={i} className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-start gap-2">
+            <i className="fa-solid fa-shield-halved text-red-500 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-700 text-sm">{r.code}: {r.message}</h3>
+              {r.details && <pre className="text-xs text-red-600 mt-1 whitespace-pre-wrap font-sans">{r.details}</pre>}
+            </div>
+          </div>
+        </div>
+      ))}
+      {warnings.map((r, i) => (
+        <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <div className="flex items-start gap-2">
+            <i className="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5" />
+            <div>
+              <p className="text-sm text-amber-700">{r.message}</p>
+              {r.details && <p className="text-xs text-amber-600 mt-1">{r.details}</p>}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Progress Bar ──────────────────────────────────────────────────────────
 
 function ProgressBar({ progress }: { progress: ResearchProgress | null }) {
@@ -149,13 +169,19 @@ function ProgressBar({ progress }: { progress: ResearchProgress | null }) {
   );
 }
 
-// ── Results Display ──────────────────────��────────────────────────────────
+// ── Results Display ───────────────────────────────────────────────────────
 
-function ResultsPanel({ result }: { result: ResearchOrchestrationResult }) {
+function ResultsPanel({ result, direction }: { result: ResearchOrchestrationResult; direction: string }) {
   const { report, errors } = result;
+
+  // Run post-execution guardrails
+  const postChecks = runPostExecutionChecks(report, direction);
 
   return (
     <div className="space-y-4">
+      {/* Post-execution guardrail alerts */}
+      <GuardrailAlert results={postChecks} title="Post-Execution Checks" />
+
       {errors.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
           <h3 className="font-semibold text-red-700 mb-2">Errors ({errors.length})</h3>
@@ -339,7 +365,7 @@ function ResultsPanel({ result }: { result: ResearchOrchestrationResult }) {
   );
 }
 
-// ── Main Screen ─────────────────────────────────────────��─────────────────
+// ── Main Screen ───────────────────────────────────────────────────────────
 
 export default function ResearchScreen({ onBack, activeProject }: ResearchScreenProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId>('tiktok');
@@ -351,11 +377,47 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
   const [progress, setProgress] = useState<ResearchProgress | null>(null);
   const [result, setResult] = useState<ResearchOrchestrationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [preCheckResults, setPreCheckResults] = useState<GuardrailResult[]>([]);
   const abortRef = useRef(false);
 
   const hasApifyKey = !!getApifyKey();
 
   const handleRun = useCallback(async () => {
+    // Parse inputs
+    const parsedCompetitors = competitors.split(',').map(s => s.trim()).filter(Boolean);
+    const parsedHashtags = hashtags.split(',').map(s => s.trim()).filter(Boolean);
+
+    // ── PRE-EXECUTION GUARDRAILS ──────────────────────────────────────────
+    const preCheck = runPreExecutionChecks(
+      parsedCompetitors,
+      parsedHashtags,
+      direction.trim(),
+      selectedPlatform
+    );
+
+    const allPreResults = [...preCheck.competitors, ...preCheck.hashtags, ...preCheck.config];
+    setPreCheckResults(allPreResults);
+
+    if (!preCheck.canProceed) {
+      // Guardrails blocked execution — show errors, don't run
+      return;
+    }
+
+    // Guardrails passed — check we actually have competitors
+    if (preCheck.effectiveCompetitors.length === 0 && !direction.trim()) {
+      setError('Please enter competitor handles or a research direction.');
+      return;
+    }
+
+    if (preCheck.effectiveCompetitors.length === 0 && direction.trim()) {
+      setError(
+        'No competitors provided. Please enter competitor handles relevant to your direction:\n' +
+        `"${direction.trim().slice(0, 100)}"\n\n` +
+        'The system cannot auto-discover competitors yet — this feature is coming soon.'
+      );
+      return;
+    }
+
     setRunning(true);
     setError(null);
     setResult(null);
@@ -365,8 +427,8 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
     const project = createResearchProject({
       platform: selectedPlatform,
       ownHandle: ownHandle.trim(),
-      competitors: competitors.split(',').map(s => s.trim()).filter(Boolean),
-      hashtags: hashtags.split(',').map(s => s.trim()).filter(Boolean),
+      competitors: preCheck.effectiveCompetitors,
+      hashtags: preCheck.effectiveHashtags,
       direction: direction.trim(),
     });
 
@@ -387,6 +449,11 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
     }
   }, [selectedPlatform, ownHandle, competitors, hashtags, direction]);
 
+  // Live validation hint: show warning if direction is set but competitors look like defaults
+  const parsedCompetitors = competitors.split(',').map(s => s.trim()).filter(Boolean);
+  const directionSet = !!direction.trim();
+  const competitorsEmpty = parsedCompetitors.length === 0;
+
   return (
     <div className="flex-1 min-w-0 overflow-y-auto p-6">
       <div className="max-w-4xl mx-auto">
@@ -406,10 +473,13 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
             <p className="text-sm text-amber-700">
               <i className="fa-solid fa-triangle-exclamation mr-1" />
-              No Apify API key found. Add one in <strong>Settings → API Keys → Apify</strong> to enable scraping.
+              No Apify API key found. Add one in <strong>Settings &rarr; API Keys &rarr; Apify</strong> to enable scraping.
             </p>
           </div>
         )}
+
+        {/* Pre-execution guardrail alerts */}
+        <GuardrailAlert results={preCheckResults} title="Pre-Execution Checks" />
 
         {/* Config Form */}
         <div className="bg-white rounded-xl border border-[#e0d6e3] p-5 mb-6">
@@ -435,14 +505,18 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
             </div>
           </div>
 
-          {/* Direction */}
+          {/* Direction — THE BINDING CONSTRAINT */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Direction</label>
-            <p className="text-xs text-gray-400 mb-1">Industry, niche, target audience, or specific research focus. This shapes the analysis and recommendations.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Direction <span className="text-xs text-gray-400 font-normal">(binds all research decisions)</span>
+            </label>
+            <p className="text-xs text-gray-400 mb-1">
+              Industry, niche, target audience, or topic. Competitors and hashtags must align with this.
+            </p>
             <textarea
               value={direction}
               onChange={e => setDirection(e.target.value)}
-              placeholder="e.g. Fast fashion for 18-30 women in the UK, focused on TikTok viral trends and sustainable messaging"
+              placeholder="e.g. Bulgarian political parties and politicians, civic engagement campaigns, voter awareness"
               rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#91569c] resize-none"
             />
@@ -461,17 +535,24 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Competitor Handles</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Competitor Handles
+                {directionSet && competitorsEmpty && (
+                  <span className="text-red-500 font-normal text-xs ml-1">* required when direction is set</span>
+                )}
+              </label>
               <input
                 type="text"
                 value={competitors}
                 onChange={e => setCompetitors(e.target.value)}
-                placeholder={DEFAULT_COMPETITORS[selectedPlatform].join(', ') + '  (defaults if blank)'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#91569c]"
+                placeholder="@competitor1, @competitor2, @competitor3"
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-[#91569c] ${
+                  directionSet && competitorsEmpty ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
               />
-              {!competitors.trim() && (
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  Using defaults: {DEFAULT_COMPETITORS[selectedPlatform].join(', ')}
+              {directionSet && competitorsEmpty && (
+                <p className="text-[11px] text-red-500 mt-0.5">
+                  Enter competitors relevant to your direction. No defaults will be used.
                 </p>
               )}
             </div>
@@ -483,14 +564,9 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
               type="text"
               value={hashtags}
               onChange={e => setHashtags(e.target.value)}
-              placeholder={DEFAULT_HASHTAGS[selectedPlatform].join(', ') + '  (defaults if blank)'}
+              placeholder={directionSet ? 'Enter hashtags relevant to your direction' : '#hashtag1, #hashtag2'}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#91569c]"
             />
-            {!hashtags.trim() && (
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Using defaults: {DEFAULT_HASHTAGS[selectedPlatform].join(', ')}
-              </p>
-            )}
           </div>
 
           {/* Run Button */}
@@ -517,12 +593,12 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
             <h3 className="font-semibold text-red-700 mb-1">Error</h3>
-            <p className="text-sm text-red-600">{error}</p>
+            <pre className="text-sm text-red-600 whitespace-pre-wrap font-sans">{error}</pre>
           </div>
         )}
 
         {/* Results */}
-        {result && <ResultsPanel result={result} />}
+        {result && <ResultsPanel result={result} direction={direction} />}
       </div>
     </div>
   );
