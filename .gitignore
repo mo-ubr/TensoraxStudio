@@ -34,3 +34,6 @@ public/test-refs/*.mp4
 *.njsproj
 *.sln
 *.sw?
+extracted_sessions/
+extract_conversations.py
+speak.ps1

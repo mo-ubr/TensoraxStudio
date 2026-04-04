@@ -9,8 +9,8 @@ import {
   type GuardrailResult,
   type PreExecutionCheck,
 } from '../src/workflows/segments/social-media/research/research-guardrails';
-import { GeminiService, getApiKeyForType, getModelForType } from '../services/geminiService';
-import { GoogleGenAI } from '@google/genai';
+import { runAgent } from '../services/agentRunner';
+import { getModelForType } from '../services/geminiService';
 
 // ── Auto-discover competitors via configured best-of-breed API ───────────
 
@@ -26,38 +26,18 @@ async function discoverCompetitors(
   ownHandle: string,
   maxResults = 8,
 ): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
-  const apiKey = getApiKeyForType('analysis') || GeminiService.getApiKey();
-  const model = getModelForType('analysis') || 'gemini-2.0-flash';
-  if (!apiKey) {
-    return { competitors: [], error: 'No API key configured for Analysis. Set one in Settings.' };
-  }
-
+  const model = getModelForType('analysis') || undefined; // let agentRunner pick its default
   const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
 
-  const prompt = `You are a social media strategist and competitive intelligence expert.
+  const agentPrompt = `You are a social media strategist and competitive intelligence expert.
+Your job is to identify the most relevant accounts on a given platform for a given research direction.
+Return ONLY a JSON object with a "competitors" array. Each entry has: handle (no @ prefix), reasoning (why relevant), confidence (0-1).`;
 
-Given a research direction/brief and platform, identify the top ${maxResults} ${platformName} accounts that are the most relevant competitors, benchmarks, or leading voices in this domain.
+  const userMessage = `Identify the top ${maxResults} ${platformName} accounts for this research direction:
 
 **Research Direction:** "${direction}"
 **Platform:** ${platformName}
 ${ownHandle ? `**User's Own Account:** ${ownHandle} (exclude from results)` : ''}
-
-Your task:
-1. Identify the top-performing and most relevant ${platformName} accounts in this exact domain/niche
-2. Include a mix of: direct competitors, industry leaders, and top-rated pages in this space
-3. Only suggest accounts that actually exist on ${platformName}
-4. Prefer accounts with high engagement and relevance to the direction
-
-Return ONLY valid JSON, no markdown fences:
-{
-  "competitors": [
-    {
-      "handle": "username_without_at_symbol",
-      "reasoning": "Brief explanation of why this account is relevant",
-      "confidence": 0.85
-    }
-  ]
-}
 
 Rules:
 - No @ prefix in handles
@@ -68,44 +48,19 @@ Rules:
 - If the direction is in a specific language/country, prioritise accounts from that region`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    console.log(`[Discovery] Using model: ${model}, key: ${apiKey.slice(0, 8)}...`);
+    console.log(`[Discovery] Using model: ${model || 'default'}`);
 
-    const response = await ai.models.generateContent({
+    const result = await runAgent<{ competitors: Array<{ handle: string; reasoning: string; confidence: number }> }>({
+      agentPrompt,
+      userMessage,
       model,
-      contents: prompt,
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 2048,
-        responseMimeType: 'application/json',
-      },
+      temperature: 0.3,
+      maxTokens: 2048,
     });
 
-    const text = response.text || '';
-    console.log('[Discovery] Response:', text);
+    console.log(`[Discovery] Provider: ${result.provider}, Model: ${result.model}`);
 
-    if (!text.trim()) {
-      return { competitors: [], error: 'AI returned empty response. Try again.' };
-    }
-
-    // Parse JSON — should be clean thanks to responseMimeType, but be defensive
-    let parsed: any = null;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const cleaned = jsonMatch[0].replace(/,\s*]/g, ']').replace(/,\s*}/g, '}');
-        try { parsed = JSON.parse(cleaned); } catch { /* fall through */ }
-      }
-    }
-
-    if (!parsed) {
-      console.error('[Discovery] Could not parse:', text);
-      return { competitors: [], error: 'Could not parse AI response. Try again.' };
-    }
-
-    const discovered: DiscoveredCompetitor[] = (parsed.competitors || [])
+    const discovered: DiscoveredCompetitor[] = (result.data?.competitors || [])
       .filter((c: any) => c.handle && typeof c.handle === 'string')
       .map((c: any) => ({
         handle: c.handle.replace(/^@/, '').trim(),
