@@ -41,15 +41,19 @@ export type ProgressCallback = (progress: ResearchProgress) => void;
 // ── Platform config loader (dynamic import from platform-configs/) ─────────
 
 async function loadPlatformConfig(platform: PlatformId): Promise<PlatformConfig> {
-  try {
-    const configModule = await import(`./platform-configs/${platform}`);
-    return configModule.PLATFORM_CONFIG ?? configModule.default ?? configModule[`${platform}Config`] ?? configModule.config;
-  } catch {
-    throw new Error(
-      `Platform config not found for "${platform}". ` +
-      `Expected a file at research/platform-configs/${platform}.ts`
-    );
+  // Static map — Vite cannot resolve dynamic import() without a literal file extension
+  const configs: Record<string, () => Promise<any>> = {
+    tiktok:    () => import('./platform-configs/tiktok.ts'),
+    facebook:  () => import('./platform-configs/facebook.ts'),
+    instagram: () => import('./platform-configs/instagram.ts'),
+    youtube:   () => import('./platform-configs/youtube.ts'),
+  };
+  const loader = configs[platform];
+  if (!loader) {
+    throw new Error(`No platform config for "${platform}". Supported: ${Object.keys(configs).join(', ')}`);
   }
+  const configModule = await loader();
+  return configModule.PLATFORM_CONFIG ?? configModule.default ?? configModule[`${platform}Config`] ?? configModule.config;
 }
 
 // ── Main orchestrator ──────────────────────────────────────────────────────
