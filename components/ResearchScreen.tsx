@@ -20,18 +20,53 @@ interface DiscoveredCompetitor {
   confidence: number;
 }
 
-function detectProvider(model: string): 'gemini' | 'claude' | 'openai' {
+type ProviderType = 'gemini' | 'claude' | 'openai' | 'openai-compat';
+
+/** Map of OpenAI-compatible providers and their base URLs. */
+const OPENAI_COMPAT_PROVIDERS: Record<string, { baseURL: string; keySettings: string[] }> = {
+  qwen:     { baseURL: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', keySettings: ['tensorax_provider_key__dashscope', 'tensorax_provider_key__qwen'] },
+  deepseek: { baseURL: 'https://api.deepseek.com/v1', keySettings: ['tensorax_provider_key__deepseek'] },
+  mistral:  { baseURL: 'https://api.mistral.ai/v1', keySettings: ['tensorax_provider_key__mistral'] },
+  meta:     { baseURL: 'https://openrouter.ai/api/v1', keySettings: ['tensorax_provider_key__openrouter'] },
+};
+
+function detectProvider(model: string): ProviderType {
   if (model.startsWith('claude') || model.startsWith('anthropic')) return 'claude';
   if (model.startsWith('gpt') || model.startsWith('o3') || model.startsWith('o4') || model.startsWith('o1')) return 'openai';
-  return 'gemini';
+  if (model.startsWith('gemini') || model.startsWith('imagen')) return 'gemini';
+  // OpenAI-compatible providers
+  if (model.startsWith('qwen') || model.includes('qwen')) return 'openai-compat';
+  if (model.startsWith('deepseek')) return 'openai-compat';
+  if (model.startsWith('mistral') || model.startsWith('pixtral')) return 'openai-compat';
+  if (model.startsWith('meta-llama') || model.startsWith('llama')) return 'openai-compat';
+  return 'gemini'; // fallback
 }
 
-function resolveDiscoveryKey(provider: 'gemini' | 'claude' | 'openai'): string | null {
-  const model = getModelForType('analysis');
-  if (model) {
-    const perModel = Settings.get(`tensorax_analysis_key__${model}`);
+function getCompatProviderConfig(model: string): { baseURL: string; keySettings: string[] } | null {
+  for (const [prefix, config] of Object.entries(OPENAI_COMPAT_PROVIDERS)) {
+    if (model.toLowerCase().includes(prefix)) return config;
+  }
+  return null;
+}
+
+function resolveDiscoveryKey(provider: ProviderType, model?: string): string | null {
+  const analysisModel = model || getModelForType('analysis');
+  if (analysisModel) {
+    const perModel = Settings.get(`tensorax_analysis_key__${analysisModel}`);
     if (perModel) return perModel;
   }
+
+  // For OpenAI-compatible providers, check provider-specific keys first
+  if (provider === 'openai-compat' && analysisModel) {
+    const config = getCompatProviderConfig(analysisModel);
+    if (config) {
+      for (const key of config.keySettings) {
+        const val = Settings.get(key);
+        if (val) return val;
+      }
+    }
+  }
+
   const generic = getApiKeyForType('analysis');
   if (generic) return generic;
   const providerKeys: Record<string, string[]> = {
@@ -54,7 +89,7 @@ async function discoverCompetitors(
 ): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
   const model = getModelForType('analysis') || 'gemini-2.0-flash';
   const provider = detectProvider(model);
-  const apiKey = resolveDiscoveryKey(provider);
+  const apiKey = resolveDiscoveryKey(provider, model);
   if (!apiKey) {
     return { competitors: [], error: `No API key for ${provider}. Set one in Settings → API Keys.` };
   }
@@ -79,9 +114,14 @@ Rules:
     console.log(`[Discovery] Provider: ${provider}, Model: ${model}, Key: ${apiKey.slice(0, 8)}...`);
     let text: string;
 
-    if (provider === 'openai') {
+    if (provider === 'openai' || provider === 'openai-compat') {
       const { default: OpenAI } = await import('openai');
-      const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+      const compatConfig = provider === 'openai-compat' ? getCompatProviderConfig(model) : null;
+      const client = new OpenAI({
+        apiKey,
+        dangerouslyAllowBrowser: true,
+        ...(compatConfig ? { baseURL: compatConfig.baseURL } : {}),
+      });
       const isReasoning = /^o[134]/.test(model);
       const messages: any[] = isReasoning
         ? [{ role: 'developer', content: systemPrompt }, { role: 'user', content: userMessage }]
