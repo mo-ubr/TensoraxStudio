@@ -251,6 +251,15 @@ function getDB() {
     CREATE INDEX IF NOT EXISTS idx_asset_lang_group ON asset_language_groups(groupId);
     CREATE INDEX IF NOT EXISTS idx_asset_perf_asset ON asset_performance(assetId);
     CREATE INDEX IF NOT EXISTS idx_asset_perf_collected ON asset_performance(collectedAt);
+
+    -- Global & per-project settings (API keys, model selections, preferences)
+    CREATE TABLE IF NOT EXISTS settings (
+      key       TEXT NOT NULL,
+      value     TEXT NOT NULL DEFAULT '',
+      scope     TEXT NOT NULL DEFAULT 'global',  -- 'global' or a projectId
+      updatedAt TEXT NOT NULL,
+      PRIMARY KEY (key, scope)
+    );
   `);
 
   // Migrate: add metadata column if missing (existing DBs)
@@ -1017,6 +1026,70 @@ router.delete("/assets/:id", (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Settings (API keys, model selections, preferences) ─────────────────────
+
+// GET /api/db/settings?scope=global  →  { key: value, ... }
+// GET /api/db/settings?scope=<projectId>  →  merged global + project overrides
+router.get("/settings", (req, res) => {
+  try {
+    const d = getDB();
+    const scope = req.query.scope || "global";
+
+    // Always load global settings
+    const globalRows = d.prepare("SELECT key, value FROM settings WHERE scope = 'global'").all();
+    const result = {};
+    for (const r of globalRows) result[r.key] = r.value;
+
+    // If a project scope is requested, overlay project-specific settings
+    if (scope !== "global") {
+      const projectRows = d.prepare("SELECT key, value FROM settings WHERE scope = ?").all(scope);
+      for (const r of projectRows) result[r.key] = r.value;
+    }
+
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/db/settings  →  body: { scope?: string, settings: { key: value, ... } }
+// Upserts all provided key-value pairs into the given scope.
+router.put("/settings", (req, res) => {
+  try {
+    const d = getDB();
+    const scope = req.body.scope || "global";
+    const settings = req.body.settings || {};
+    const ts = now();
+
+    const upsert = d.prepare(
+      "INSERT INTO settings (key, value, scope, updatedAt) VALUES (?, ?, ?, ?) ON CONFLICT(key, scope) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt"
+    );
+
+    const batch = d.transaction(() => {
+      for (const [key, value] of Object.entries(settings)) {
+        upsert.run(key, String(value), scope, ts);
+      }
+    });
+    batch();
+
+    res.json({ ok: true, count: Object.keys(settings).length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /api/db/settings/:key?scope=global  →  delete a single setting
+router.delete("/settings/:key", (req, res) => {
+  try {
+    const d = getDB();
+    const scope = req.query.scope || "global";
+    d.prepare("DELETE FROM settings WHERE key = ? AND scope = ?").run(req.params.key, scope);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

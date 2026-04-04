@@ -5,6 +5,7 @@ import { CharacterProfile, loadCharacters, saveCharacters, buildPromptFromTraits
 import { generateImageWithCurrentProvider } from '../services/imageProvider';
 import { getApiKeyForType } from '../services/geminiService';
 import { DB, type Project } from '../services/projectDB';
+import { Settings } from '../services/settingsDB';
 
 const saveToProject = async (filename: string, data: string, folder?: string): Promise<string> => {
   const res = await fetch('http://localhost:5182/api/save-file', {
@@ -520,7 +521,7 @@ Output ONLY the prompt. No explanations.`,
         <div className="flex items-center gap-3">
           {(() => {
             const hasKey = !!(getApiKeyForType('image') || getApiKeyForType('analysis'));
-            const model = (() => { try { return localStorage.getItem('tensorax_image_model')?.trim() || 'gemini-3-flash-image'; } catch { return 'gemini-3-flash-image'; } })();
+            const model = Settings.get('tensorax_image_model') || 'gemini-3-flash-image';
             return (
               <span className={`text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1.5 ${hasKey ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-500 border border-red-200'}`}>
                 <i className={`fa-solid ${hasKey ? 'fa-circle-check' : 'fa-circle-xmark'} text-[7px]`}></i>

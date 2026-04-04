@@ -1,6 +1,7 @@
 import type { ImageGenParams } from "./geminiService";
 import { GeminiService } from "./geminiService";
 import { getFalApiKey } from "./imageTaskRouter";
+import { Settings } from "./settingsDB";
 
 export type ImageProviderId = "gemini" | "openai" | "fal-edit" | "other";
 
@@ -25,7 +26,7 @@ async function editWithFal(params: ImageGenParams): Promise<string> {
   }
 
   const sourceImage = params.referenceImages[0];
-  const modelId = localStorage.getItem('tensorax_fal_model')?.trim() || 'nano-banana';
+  const modelId = Settings.get('tensorax_fal_model') || 'nano-banana';
 
   const res = await fetch("/api/image-edit", {
     method: "POST",

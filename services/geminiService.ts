@@ -1,6 +1,7 @@
 import { Chat, GoogleGenAI } from "@google/genai";
 import { AspectRatio, ImageSize } from "../types";
 import { ANALYSIS_INSTRUCTION, ASSISTANT_SYSTEM_INSTRUCTION, COPY_INSTRUCTION } from "./promptConstants";
+import { Settings } from "./settingsDB";
 
 const CHAT_MODEL = "gemini-2.5-flash";
 /** Gemini image models (generateContent) – best first. */
@@ -151,22 +152,20 @@ const ENV_MODELS: Record<string, string> = {
 export function getApiKeyForType(type: "analysis" | "copy" | "image"): string | null {
   const baseKey = `tensorax_${type}_key`;
   const modelKey = `tensorax_${type}_model`;
-  if (typeof window !== "undefined") {
-    try {
-      const model = localStorage.getItem(modelKey)?.trim();
-      if (model) {
-        // 1. Per-model key
-        const perModel = normalizeApiKey(localStorage.getItem(`${baseKey}__${model}`));
-        if (perModel) return perModel;
-      }
-      // 2. Base slot key (written by legacy sync)
-      const base = normalizeApiKey(localStorage.getItem(baseKey));
-      if (base) return base;
-      // 3. Provider key (centralised)
-      const providerKey = normalizeApiKey(localStorage.getItem('tensorax_provider_key__gemini'));
-      if (providerKey) return providerKey;
-    } catch { /* ignore */ }
+
+  // 1. Check Settings (DB-backed, falls back to localStorage internally)
+  const model = Settings.get(modelKey);
+  if (model) {
+    const perModel = normalizeApiKey(Settings.get(`${baseKey}__${model}`));
+    if (perModel) return perModel;
   }
+  // 2. Base slot key
+  const base = normalizeApiKey(Settings.get(baseKey));
+  if (base) return base;
+  // 3. Provider key (centralised)
+  const providerKey = normalizeApiKey(Settings.get('tensorax_provider_key__gemini'));
+  if (providerKey) return providerKey;
+  // 4. Env var fallback
   const envKey = normalizeApiKey(ENV_KEYS[type]);
   if (envKey) return envKey;
   return null;
@@ -174,25 +173,17 @@ export function getApiKeyForType(type: "analysis" | "copy" | "image"): string | 
 
 /** Check if user has stored an API key for a given type. */
 export function hasStoredKeyForType(type: "analysis" | "copy" | "image"): boolean {
-  if (typeof window !== "undefined") {
-    try {
-      const baseKey = `tensorax_${type}_key`;
-      const model = localStorage.getItem(`tensorax_${type}_model`)?.trim();
-      if (model && normalizeApiKey(localStorage.getItem(`${baseKey}__${model}`))) return true;
-      if (normalizeApiKey(localStorage.getItem(baseKey))) return true;
-    } catch { /* ignore */ }
-  }
+  const baseKey = `tensorax_${type}_key`;
+  const model = Settings.get(`tensorax_${type}_model`);
+  if (model && normalizeApiKey(Settings.get(`${baseKey}__${model}`))) return true;
+  if (normalizeApiKey(Settings.get(baseKey))) return true;
   return !!normalizeApiKey(ENV_KEYS[type]);
 }
 
 export function getModelForType(type: "analysis" | "copy" | "image"): string | null {
-  // 1. localStorage (user-entered via UI)
-  if (typeof window !== "undefined") {
-    try {
-      const m = localStorage.getItem(`tensorax_${type}_model`)?.trim();
-      if (m) return m;
-    } catch { /* ignore */ }
-  }
+  // 1. Settings (DB-backed, falls back to localStorage)
+  const m = Settings.get(`tensorax_${type}_model`);
+  if (m) return m;
   // 2. Env var baked in at build time
   const envModel = ENV_MODELS[type]?.trim();
   if (envModel) return envModel;
@@ -568,12 +559,8 @@ Reply with only the single description.`;
     if (getSavedApiKey()) return true;
     if (normalizeApiKey(process.env.GEMINI_API_KEY || process.env.API_KEY)) return true;
     // Fall back to analysis key (Google) for assistant chat
-    if (typeof window !== "undefined") {
-      try {
-        const ak = normalizeApiKey(localStorage.getItem('tensorax_analysis_key'));
-        if (ak) { setApiKey(ak); return true; }
-      } catch { /* ignore */ }
-    }
+    const ak = normalizeApiKey(Settings.get('tensorax_analysis_key'));
+    if (ak) { setApiKey(ak); return true; }
     return false;
   },
 

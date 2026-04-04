@@ -10,6 +10,7 @@ import {
   setStoredCreativityLevels,
   clearStoredCreativityLevels,
 } from '../services/creativityControl';
+import { Settings } from '../services/settingsDB';
 
 interface ApiSlot {
   id: string;
@@ -148,7 +149,7 @@ const API_SLOTS: ApiSlot[] = [
 ];
 
 function getStoredKey(storageKey: string): string {
-  try { return localStorage.getItem(storageKey)?.trim() || ''; } catch { return ''; }
+  return Settings.get(storageKey);
 }
 
 // Check if a model is fal.ai-based (Kling, Seedance)
@@ -157,36 +158,32 @@ function isFalModel(model: string): boolean {
 }
 
 function getStoredKeyForModel(baseKey: string, model: string): string {
-  try {
-    // Per-model key first
-    const perModel = localStorage.getItem(`${baseKey}__${model}`)?.trim();
-    if (perModel) return perModel;
-    // Shared fal.ai key for all fal-based models
-    if (isFalModel(model)) {
-      const falKey = localStorage.getItem('tensorax_fal_key')?.trim();
-      if (falKey) return falKey;
-    }
-    // Base key fallback
-    return localStorage.getItem(baseKey)?.trim() || '';
-  } catch { return ''; }
+  // Per-model key first
+  const perModel = Settings.get(`${baseKey}__${model}`);
+  if (perModel) return perModel;
+  // Shared fal.ai key for all fal-based models
+  if (isFalModel(model)) {
+    const falKey = Settings.get('tensorax_fal_key');
+    if (falKey) return falKey;
+  }
+  // Base key fallback
+  return Settings.get(baseKey);
 }
 
 function setStoredKeyForModel(baseKey: string, model: string, value: string) {
-  try {
-    localStorage.setItem(`${baseKey}__${model}`, value);
-    // Also save as shared fal key so it works across all fal models
-    if (isFalModel(model)) {
-      localStorage.setItem('tensorax_fal_key', value);
-    }
-  } catch { /* ignore */ }
+  Settings.set(`${baseKey}__${model}`, value);
+  // Also save as shared fal key so it works across all fal models
+  if (isFalModel(model)) {
+    Settings.set('tensorax_fal_key', value);
+  }
 }
 
 function getStoredModel(storageKey: string, defaultModel: string): string {
-  try { return localStorage.getItem(storageKey)?.trim() || defaultModel; } catch { return defaultModel; }
+  return Settings.get(storageKey) || defaultModel;
 }
 
 function setStoredValue(storageKey: string, value: string) {
-  try { localStorage.setItem(storageKey, value); } catch { /* ignore */ }
+  Settings.set(storageKey, value);
 }
 
 interface ProjectSettingsProps {

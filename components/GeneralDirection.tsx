@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GeneralDirection as GeneralDirectionType, BrandProfile } from '../types';
+import { Settings } from '../services/settingsDB';
 
 interface GeneralDirectionProps {
   value: GeneralDirectionType;
@@ -256,15 +257,11 @@ const StyleInspirations: React.FC<{ value: GeneralDirectionType; onChange: (v: G
         try { return localStorage.getItem(modelStorageKey)?.trim() || 'gemini-3.1-pro-preview'; } catch { return 'gemini-3.1-pro-preview'; }
       })();
 
-      const apiKey = (() => {
-        try {
-          return localStorage.getItem(`${keyStorageKey}__${model}`)?.trim()
-              || localStorage.getItem(keyStorageKey)?.trim()
-              || localStorage.getItem(`tensorax_analysis_key__${model}`)?.trim()
-              || localStorage.getItem('tensorax_analysis_key')?.trim()
+      const apiKey = Settings.get(`${keyStorageKey}__${model}`)
+              || Settings.get(keyStorageKey)
+              || Settings.get(`tensorax_analysis_key__${model}`)
+              || Settings.get('tensorax_analysis_key')
               || '';
-        } catch { return ''; }
-      })();
       if (!apiKey) { alert('Set an Analysis API key in Project Settings first.'); setAnalysing(null); return; }
 
       const res = await fetch('/api/video/analyse-video', {

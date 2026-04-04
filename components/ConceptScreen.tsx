@@ -8,6 +8,7 @@ import { GeneralDirection, emptyDirection, GENERAL_DIRECTION_SYSTEM_PROMPT, SING
 import { isClaudeModel } from '../services/claudeService';
 import { DB, type Project } from '../services/projectDB';
 import { generateImageWithCurrentProvider } from '../services/imageProvider';
+import { Settings } from '../services/settingsDB';
 
 type ConceptStep = 'direction' | 'ideas' | 'screenplay';
 
@@ -526,7 +527,7 @@ Rules:
   };
 
   const callAiText = async (prompt: string): Promise<string> => {
-    const globalModel = (() => { try { return localStorage.getItem('tensorax_active_model') || ''; } catch { return ''; } })();
+    const globalModel = Settings.get('tensorax_active_model');
     const model = globalModel || getAiModel() || 'gemini-2.5-flash';
 
     if (isClaudeModel(model || null)) {
@@ -669,7 +670,7 @@ Rules:
   };
 
   const getAiModel = (): string | undefined => {
-    const globalModel = (() => { try { return localStorage.getItem('tensorax_active_model') || ''; } catch { return ''; } })();
+    const globalModel = Settings.get('tensorax_active_model');
     return getModelForType('copy') || getModelForType('analysis') || globalModel || undefined;
   };
 

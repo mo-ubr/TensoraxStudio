@@ -12,6 +12,7 @@ import { VideoScreen } from './components/VideoScreen';
 import { BrandSelector } from './components/BrandSelector';
 import { loadBrands, saveBrands, getActiveBrandId, setActiveBrandId } from './services/brandData';
 import { DB, type Project } from './services/projectDB';
+import { Settings } from './services/settingsDB';
 import { NewProjectWizard, getScopeRoute, type NewProjectData } from './components/NewProjectWizard';
 import { PipelineWizard, type PipelineResult } from './components/PipelineWizard';
 import { TemplateWizard } from './components/TemplateWizard';
@@ -654,6 +655,8 @@ const App: React.FC = () => {
   const [pipelineName, setPipelineName] = useState('');
 
   useEffect(() => {
+    // Load API keys & settings from SQLite (migrates from localStorage on first run)
+    Settings.load().catch(() => {});
     // Always start on the project selection screen — don't auto-restore last project
     localStorage.removeItem('tensorax_active_project');
     DB.listProjects().then(setAllProjects).catch(() => {});
@@ -818,7 +821,7 @@ const App: React.FC = () => {
   };
 
   const getVideoModel = (): string => {
-    try { return localStorage.getItem('tensorax_video_model')?.trim() || 'seedance-2.0'; } catch { return 'seedance-2.0'; }
+    return Settings.get('tensorax_video_model') || 'seedance-2.0';
   };
   const getVideoProvider = (): 'seedance' | 'veo' | 'kling' => {
     const m = getVideoModel();
@@ -828,12 +831,10 @@ const App: React.FC = () => {
   };
   const getVideoApiKey = (): string => {
     const model = getVideoModel();
-    try {
-      return localStorage.getItem(`tensorax_video_key__${model}`)?.trim()
-          || (model.startsWith('kling-') || model.startsWith('seedance') ? localStorage.getItem('tensorax_fal_key')?.trim() : '')
-          || localStorage.getItem('tensorax_video_key')?.trim()
-          || '';
-    } catch { return ''; }
+    return Settings.get(`tensorax_video_key__${model}`)
+        || ((model.startsWith('kling-') || model.startsWith('seedance')) ? Settings.get('tensorax_fal_key') : '')
+        || Settings.get('tensorax_video_key')
+        || '';
   };
 
   // Video State
@@ -1863,8 +1864,8 @@ const App: React.FC = () => {
                     <div>
                       <label className="block text-[11px] font-heading font-bold text-[#3a3a3a] uppercase tracking-wide mb-1">Image Provider</label>
                       <select
-                        value={(() => { try { return localStorage.getItem('tensorax_image_provider') || 'gemini'; } catch { return 'gemini'; } })()}
-                        onChange={(e) => { localStorage.setItem('tensorax_image_provider', e.target.value); }}
+                        value={Settings.get('tensorax_image_provider') || 'gemini'}
+                        onChange={(e) => { Settings.set('tensorax_image_provider', e.target.value); }}
                         className="w-full bg-white border border-[#ceadd4] rounded-lg px-3 py-2.5 text-[11px] focus:ring-1 focus:ring-[#91569c]/50 outline-none text-[#3a3a3a]"
                       >
                         <option value="gemini">Gemini (Imagen)</option>

@@ -20,6 +20,7 @@ export type ImageTaskRoute =
   | 'standard-generate';   // Single new image from prompt (no reference)
 
 import { type CreativityLevels, detectCreativityLevels } from './creativityControl';
+import { Settings } from './settingsDB';
 
 export interface ImageTaskRoutingResult {
   route: ImageTaskRoute;
@@ -173,24 +174,13 @@ export function buildEditInstruction(
  * Check if a fal.ai API key is available for image editing.
  */
 export function hasFalApiKey(): boolean {
-  try {
-    const key = localStorage.getItem('tensorax_fal_key')?.trim()
-      || localStorage.getItem('FAL_KEY')?.trim();
-    return !!key;
-  } catch {
-    return false;
-  }
+  const key = Settings.get('tensorax_fal_key') || Settings.get('FAL_KEY');
+  return !!key;
 }
 
 /**
  * Get the fal.ai API key.
  */
 export function getFalApiKey(): string | null {
-  try {
-    return localStorage.getItem('tensorax_fal_key')?.trim()
-      || localStorage.getItem('FAL_KEY')?.trim()
-      || null;
-  } catch {
-    return null;
-  }
+  return Settings.get('tensorax_fal_key') || Settings.get('FAL_KEY') || null;
 }
