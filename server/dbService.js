@@ -94,6 +94,163 @@ function getDB() {
     CREATE INDEX IF NOT EXISTS idx_assets_type ON assets(type);
     CREATE INDEX IF NOT EXISTS idx_pa_project  ON project_assets(projectId);
     CREATE INDEX IF NOT EXISTS idx_pa_asset    ON project_assets(assetId);
+
+    -- Session A: Research, Measurement & Project Foundation tables
+
+    CREATE TABLE IF NOT EXISTS project_memory_facts (
+      id              TEXT PRIMARY KEY,
+      projectId       TEXT NOT NULL,
+      category        TEXT NOT NULL,  -- 'audience','content','timing','platform','competitor','trend'
+      fact            TEXT NOT NULL,
+      confidence      REAL NOT NULL DEFAULT 0.5,
+      evidenceCount   INTEGER NOT NULL DEFAULT 1,
+      firstObserved   TEXT NOT NULL,
+      lastConfirmed   TEXT NOT NULL,
+      stillValid      INTEGER NOT NULL DEFAULT 1,
+      source          TEXT NOT NULL DEFAULT 'automated',  -- 'automated','user','research'
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS project_memory_context (
+      id          TEXT PRIMARY KEY,
+      projectId   TEXT NOT NULL,
+      text        TEXT NOT NULL,
+      category    TEXT NOT NULL,  -- 'brand_voice','audience','goals','constraints','style','general'
+      addedAt     TEXT NOT NULL,
+      active      INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS project_memory_decisions (
+      id            TEXT PRIMARY KEY,
+      projectId     TEXT NOT NULL,
+      decision      TEXT NOT NULL,
+      rationale     TEXT NOT NULL DEFAULT '',
+      madeAt        TEXT NOT NULL,
+      madeBy        TEXT NOT NULL DEFAULT 'user',  -- 'user','system'
+      category      TEXT NOT NULL DEFAULT '',
+      supersededBy  TEXT,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS project_memory_baselines (
+      id          TEXT PRIMARY KEY,
+      projectId   TEXT NOT NULL,
+      platform    TEXT NOT NULL,
+      metric      TEXT NOT NULL,
+      value       REAL NOT NULL,
+      measuredAt  TEXT NOT NULL,
+      periodDays  INTEGER NOT NULL DEFAULT 30,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS project_brand_profiles (
+      projectId        TEXT PRIMARY KEY,
+      voiceDescriptors TEXT NOT NULL DEFAULT '[]',   -- JSON array
+      toneRangeMin     TEXT NOT NULL DEFAULT 'neutral',
+      toneRangeMax     TEXT NOT NULL DEFAULT 'neutral',
+      visualStyle      TEXT NOT NULL DEFAULT '',
+      tabooTopics      TEXT NOT NULL DEFAULT '[]',   -- JSON array
+      keyMessages      TEXT NOT NULL DEFAULT '[]',   -- JSON array
+      languageNotes    TEXT NOT NULL DEFAULT '{}',   -- JSON object
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS research_settings (
+      projectId           TEXT PRIMARY KEY,
+      autoRefreshEnabled  INTEGER NOT NULL DEFAULT 0,
+      refreshFrequency    TEXT NOT NULL DEFAULT 'weekly',
+      lastRefreshAt       TEXT,
+      nextRefreshAt       TEXT,
+      outputLanguages     TEXT NOT NULL DEFAULT '["en"]',  -- JSON array
+      defaultExportFormat TEXT NOT NULL DEFAULT 'xlsx',
+      userInstructions    TEXT NOT NULL DEFAULT '',
+      minFollowers        INTEGER NOT NULL DEFAULT 1000,
+      maxCompetitors      INTEGER NOT NULL DEFAULT 20,
+      engagementRateFloor REAL NOT NULL DEFAULT 0.01,
+      dateRange           INTEGER NOT NULL DEFAULT 14,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS platform_research_configs (
+      id                       TEXT PRIMARY KEY,
+      projectId                TEXT NOT NULL,
+      platform                 TEXT NOT NULL,  -- 'tiktok','facebook','instagram','youtube'
+      enabled                  INTEGER NOT NULL DEFAULT 1,
+      ownAccountHandle         TEXT NOT NULL DEFAULT '',
+      competitorHandles        TEXT NOT NULL DEFAULT '[]',  -- JSON array
+      targetHashtags           TEXT NOT NULL DEFAULT '[]',  -- JSON array
+      scrapingMethod           TEXT NOT NULL DEFAULT 'thirdParty',
+      scrapingApiKey           TEXT,
+      maxPostsPerAccount       INTEGER NOT NULL DEFAULT 100,
+      includePromotedPosts     INTEGER NOT NULL DEFAULT 1,
+      platformSpecificSettings TEXT NOT NULL DEFAULT '{}',  -- JSON object
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE,
+      UNIQUE(projectId, platform)
+    );
+
+    CREATE TABLE IF NOT EXISTS source_files (
+      id               TEXT PRIMARY KEY,
+      projectId        TEXT NOT NULL,
+      filename         TEXT NOT NULL,
+      mimeType         TEXT NOT NULL DEFAULT '',
+      sizeBytes        INTEGER NOT NULL DEFAULT 0,
+      category         TEXT NOT NULL DEFAULT 'user_upload',
+      description      TEXT NOT NULL DEFAULT '',
+      uploadedAt       TEXT NOT NULL,
+      uploadedBy       TEXT NOT NULL DEFAULT '',
+      storagePath      TEXT NOT NULL DEFAULT '',
+      checksum         TEXT NOT NULL DEFAULT '',
+      metadata         TEXT NOT NULL DEFAULT '{}',
+      linkedExecutions TEXT NOT NULL DEFAULT '[]',  -- JSON array
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS asset_language_groups (
+      groupId     TEXT NOT NULL,
+      assetId     TEXT NOT NULL,
+      language    TEXT NOT NULL,
+      isTranslation INTEGER NOT NULL DEFAULT 0,
+      sourceAssetId TEXT,
+      PRIMARY KEY (groupId, assetId),
+      FOREIGN KEY (assetId) REFERENCES assets(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS asset_performance (
+      id               TEXT PRIMARY KEY,
+      assetId          TEXT NOT NULL,
+      collectedAt      TEXT NOT NULL,
+      platform         TEXT NOT NULL,
+      views            INTEGER NOT NULL DEFAULT 0,
+      likes            INTEGER NOT NULL DEFAULT 0,
+      shares           INTEGER NOT NULL DEFAULT 0,
+      comments         INTEGER NOT NULL DEFAULT 0,
+      saves            INTEGER NOT NULL DEFAULT 0,
+      engagementRate   REAL NOT NULL DEFAULT 0,
+      reach            INTEGER NOT NULL DEFAULT 0,
+      impressions      INTEGER NOT NULL DEFAULT 0,
+      clickThroughRate REAL NOT NULL DEFAULT 0,
+      FOREIGN KEY (assetId) REFERENCES assets(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS asset_versions (
+      assetId           TEXT NOT NULL,
+      previousVersionId TEXT NOT NULL,
+      version           INTEGER NOT NULL,
+      createdAt         TEXT NOT NULL,
+      PRIMARY KEY (assetId),
+      FOREIGN KEY (assetId) REFERENCES assets(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_memory_facts_project ON project_memory_facts(projectId);
+    CREATE INDEX IF NOT EXISTS idx_memory_context_project ON project_memory_context(projectId);
+    CREATE INDEX IF NOT EXISTS idx_memory_decisions_project ON project_memory_decisions(projectId);
+    CREATE INDEX IF NOT EXISTS idx_memory_baselines_project ON project_memory_baselines(projectId);
+    CREATE INDEX IF NOT EXISTS idx_platform_configs_project ON platform_research_configs(projectId);
+    CREATE INDEX IF NOT EXISTS idx_source_files_project ON source_files(projectId);
+    CREATE INDEX IF NOT EXISTS idx_asset_lang_group ON asset_language_groups(groupId);
+    CREATE INDEX IF NOT EXISTS idx_asset_perf_asset ON asset_performance(assetId);
+    CREATE INDEX IF NOT EXISTS idx_asset_perf_collected ON asset_performance(collectedAt);
   `);
 
   // Migrate: add metadata column if missing (existing DBs)
