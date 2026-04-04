@@ -9,9 +9,10 @@ import {
   type GuardrailResult,
   type PreExecutionCheck,
 } from '../src/workflows/segments/social-media/research/research-guardrails';
-import { GeminiService, getApiKeyForType } from '../services/geminiService';
+import { GeminiService, getApiKeyForType, getModelForType } from '../services/geminiService';
+import { GoogleGenAI } from '@google/genai';
 
-// ── Auto-discover competitors via Gemini ─────────────────────────────────
+// ── Auto-discover competitors via configured best-of-breed API ───────────
 
 interface DiscoveredCompetitor {
   handle: string;
@@ -25,9 +26,10 @@ async function discoverCompetitors(
   ownHandle: string,
   maxResults = 8,
 ): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
-  const apiKey = GeminiService.getApiKey() || getApiKeyForType('analysis');
+  const apiKey = getApiKeyForType('analysis') || GeminiService.getApiKey();
+  const model = getModelForType('analysis') || 'gemini-2.0-flash';
   if (!apiKey) {
-    return { competitors: [], error: 'No Gemini API key set. Add one in Settings to enable auto-discovery.' };
+    return { competitors: [], error: 'No API key configured for Analysis. Set one in Settings.' };
   }
 
   const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
@@ -66,37 +68,43 @@ Rules:
 - If the direction is in a specific language/country, prioritise accounts from that region`;
 
   try {
-    // Use Gemini chat for the discovery
-    const { GoogleGenAI } = await import('@anthropic-ai/sdk').catch(() => ({ GoogleGenAI: null }));
+    const ai = new GoogleGenAI({ apiKey });
+    console.log(`[Discovery] Using model: ${model}, key: ${apiKey.slice(0, 8)}...`);
 
-    // Direct Gemini API call
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
-        }),
-      }
-    );
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
+    });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      return { competitors: [], error: `Gemini API error: ${(errData as any)?.error?.message || response.status}` };
+    const text = response.text || '';
+    console.log('[Discovery] Response:', text);
+
+    if (!text.trim()) {
+      return { competitors: [], error: 'AI returned empty response. Try again.' };
     }
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Parse JSON — should be clean thanks to responseMimeType, but be defensive
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const cleaned = jsonMatch[0].replace(/,\s*]/g, ']').replace(/,\s*}/g, '}');
+        try { parsed = JSON.parse(cleaned); } catch { /* fall through */ }
+      }
+    }
 
-    // Parse JSON from response (handle markdown fences)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    if (!parsed) {
+      console.error('[Discovery] Could not parse:', text);
       return { competitors: [], error: 'Could not parse AI response. Try again.' };
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
     const discovered: DiscoveredCompetitor[] = (parsed.competitors || [])
       .filter((c: any) => c.handle && typeof c.handle === 'string')
       .map((c: any) => ({
@@ -108,6 +116,7 @@ Rules:
 
     return { competitors: discovered };
   } catch (err: any) {
+    console.error('[Discovery] Error:', err);
     return { competitors: [], error: `Discovery failed: ${err.message || err}` };
   }
 }
@@ -471,10 +480,11 @@ function ResultsPanel({ result, direction }: { result: ResearchOrchestrationResu
 
 export default function ResearchScreen({ onBack, activeProject }: ResearchScreenProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformId>('tiktok');
-  const [ownHandle, setOwnHandle] = useState('');
+  // Dev test defaults — pre-fill for quick testing
+  const [ownHandle, setOwnHandle] = useState('zahorata222a');
   const [competitors, setCompetitors] = useState('');
   const [hashtags, setHashtags] = useState('');
-  const [direction, setDirection] = useState('');
+  const [direction, setDirection] = useState('Политика, български политически партии или страници афилиирани към политически партии, български политици');
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<ResearchProgress | null>(null);
   const [result, setResult] = useState<ResearchOrchestrationResult | null>(null);
