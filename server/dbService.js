@@ -727,6 +727,50 @@ assetRoutes("characters");
 assetRoutes("scenery");
 assetRoutes("clothing");
 
+// ─── Generic assets endpoint (for image, video, concept types) ──────────────
+router.get("/assets", (_req, res) => {
+  try {
+    const rows = getDB().prepare("SELECT * FROM assets ORDER BY createdAt DESC").all();
+    res.json(rows.map(assetRow));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/assets", (req, res) => {
+  try {
+    const d = getDB();
+    const id = req.body.id || newId();
+    d.prepare(`INSERT INTO assets (id, type, name, description, thumbnail, filePath, createdAt, tags, metadata, referenceImages)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      id,
+      req.body.type || "image",
+      req.body.name || "Unnamed",
+      req.body.description || "",
+      req.body.thumbnail || "",
+      req.body.filePath || "",
+      now(),
+      JSON.stringify(req.body.tags || []),
+      JSON.stringify(req.body.metadata || {}),
+      JSON.stringify(req.body.referenceImages || [])
+    );
+    const row = d.prepare("SELECT * FROM assets WHERE id = ?").get(id);
+    res.json(assetRow(row));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/assets/:id", (req, res) => {
+  try {
+    getDB().prepare("DELETE FROM assets WHERE id = ?").run(req.params.id);
+    getDB().prepare("DELETE FROM project_assets WHERE assetId = ?").run(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 ensureAssetFolders().then(() => {

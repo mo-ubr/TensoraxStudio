@@ -201,6 +201,8 @@ export const ImagesScreen: React.FC<ImagesScreenProps> = ({ onBack, brands, acti
   const [selectedCharForBuilder, setSelectedCharForBuilder] = useState<string | null>(null);
   const [charBuilderAction, setCharBuilderAction] = useState<'auto' | 'upload' | 'specify' | null>(null);
   const [assets, setAssets] = useState<GeneratedAsset[]>(loadAssets);
+  const [savedAssetIds, setSavedAssetIds] = useState<Set<string>>(new Set());
+  const [savingAssetIds, setSavingAssetIds] = useState<Set<string>>(new Set());
   const [charBrief, setCharBrief] = useState('Caucasian family, single character, green screen background');
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
   const [promptDraft, setPromptDraft] = useState('');
@@ -445,6 +447,35 @@ Output ONLY the prompt. No explanations.`,
       prev.forEach(a => { if (a.isGenerating) cancelledRef.current.add(a.id); });
       return prev.map(a => a.isGenerating ? { ...a, isGenerating: false } : a);
     });
+  };
+
+  const saveAssetToDB = async (asset: GeneratedAsset) => {
+    if (!activeProject || !asset.imageUrl || savedAssetIds.has(asset.id)) return;
+    setSavingAssetIds(prev => new Set(prev).add(asset.id));
+    try {
+      await DB.saveToAssets(activeProject.id, {
+        type: asset.type === 'characters' ? 'character' : 'image',
+        name: asset.label,
+        description: asset.prompt,
+        thumbnail: asset.imageUrl,
+        tags: [asset.type],
+        metadata: { source: 'images-screen', step: asset.type },
+      });
+      setSavedAssetIds(prev => new Set(prev).add(asset.id));
+    } catch (err: any) {
+      console.error('[SaveAsset] Failed:', err);
+      alert(`Failed to save asset: ${err.message || err}`);
+    } finally {
+      setSavingAssetIds(prev => { const s = new Set(prev); s.delete(asset.id); return s; });
+    }
+  };
+
+  const saveAllAssetsToDB = async () => {
+    const unsaved = assets.filter(a => a.imageUrl && !savedAssetIds.has(a.id));
+    if (!unsaved.length || !activeProject) return;
+    for (const asset of unsaved) {
+      await saveAssetToDB(asset);
+    }
   };
 
   const autoSuggestPrompts = (): { label: string; prompt: string }[] => {
@@ -812,6 +843,15 @@ Output ONLY the prompt. No explanations.`,
               {step === 'review' ? 'All Assets' : `${STEP_META[stepIndex].label} Assets`}
               {stepAssets.length > 0 && <span className="text-[8px] font-normal text-[#888]/40 ml-1">({(step === 'review' ? assets : stepAssets).length})</span>}
             </h2>
+            {activeProject && (step === 'review' ? assets : stepAssets).some(a => a.imageUrl && !savedAssetIds.has(a.id)) && (
+              <button
+                onClick={saveAllAssetsToDB}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors"
+              >
+                <i className="fa-solid fa-database text-[8px]"></i>
+                Save All to Assets
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
@@ -893,9 +933,23 @@ Output ONLY the prompt. No explanations.`,
                                 }
                                 catch { const a = document.createElement('a'); a.href = asset.imageUrl!; a.download = filename; a.click(); }
                               }}
-                              className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-[#edecec]/60 flex items-center justify-center text-[#91569c] hover:bg-[#edecec]/80 transition-colors" title="Save image">
+                              className="absolute bottom-2 right-2 w-7 h-7 rounded-lg bg-[#edecec]/60 flex items-center justify-center text-[#91569c] hover:bg-[#edecec]/80 transition-colors" title="Save to disk">
                               <i className="fa-solid fa-floppy-disk text-[9px]"></i>
                             </button>
+                            {activeProject && (
+                              <button
+                                onClick={() => saveAssetToDB(asset)}
+                                disabled={savedAssetIds.has(asset.id) || savingAssetIds.has(asset.id)}
+                                className={`absolute bottom-2 right-11 w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                                  savedAssetIds.has(asset.id)
+                                    ? 'bg-green-500/60 text-white cursor-default'
+                                    : 'bg-[#edecec]/60 text-[#91569c] hover:bg-[#edecec]/80'
+                                }`}
+                                title={savedAssetIds.has(asset.id) ? 'Saved to assets' : 'Save to assets database'}
+                              >
+                                <i className={`fa-solid ${savingAssetIds.has(asset.id) ? 'fa-spinner fa-spin' : savedAssetIds.has(asset.id) ? 'fa-check' : 'fa-database'} text-[9px]`}></i>
+                              </button>
+                            )}
                           </>
                         ) : asset.isGenerating ? (
                           <div className="text-center">

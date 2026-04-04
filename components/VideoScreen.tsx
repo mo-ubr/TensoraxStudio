@@ -191,6 +191,10 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
   const [isReviewingVideo, setIsReviewingVideo] = useState(false);
   const [videoReview, setVideoReview] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const [savedVideoToAssets, setSavedVideoToAssets] = useState(false);
+  const [savingVideoToAssets, setSavingVideoToAssets] = useState(false);
+  const [savedRefKeys, setSavedRefKeys] = useState<Set<string>>(new Set());
+  const [savedFrameKeys, setSavedFrameKeys] = useState<Set<string>>(new Set());
 
   const provider = getVideoProvider();
   const scenes = useMemo(() => parseScreenplayScenes(screenplay || ''), [screenplay]);
@@ -462,6 +466,7 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
 
       if (url) {
         setVideoState(v => ({ ...v, resultUrl: url, isGenerating: false, progressMessage: '' }));
+        setSavedVideoToAssets(false);
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') { console.log("[Video] Generation cancelled by user."); return; }
@@ -566,7 +571,50 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <label className="text-sm font-heading font-bold text-[#5c3a62] uppercase tracking-wide">Screenplay Scenes</label>
-                <span className="text-[8px] text-[#3a3a3a]/50 font-bold">{scenes.length} scenes</span>
+                <div className="flex items-center gap-2">
+                  {projectId && (Object.keys(refImages).length > 0 || Object.keys(frameImages).length > 0) && (
+                    <button
+                      onClick={async () => {
+                        if (!projectId) return;
+                        let saved = 0;
+                        for (const [key, url] of Object.entries(refImages)) {
+                          if (savedRefKeys.has(key)) continue;
+                          const [si, ci] = key.split('-').map(Number);
+                          await DB.saveToAssets(projectId, {
+                            type: 'image',
+                            name: `Scene ${si + 1} Clip ${ci + 1} — Reference`,
+                            description: scenes[si]?.videoPrompts[ci]?.prompt || '',
+                            thumbnail: url,
+                            tags: ['reference', 'video'],
+                            metadata: { source: 'video-screen' },
+                          });
+                          setSavedRefKeys(prev => new Set(prev).add(key));
+                          saved++;
+                        }
+                        for (const [key, url] of Object.entries(frameImages)) {
+                          if (savedFrameKeys.has(key)) continue;
+                          const [si, fi] = key.split('-').map(Number);
+                          await DB.saveToAssets(projectId, {
+                            type: 'image',
+                            name: `Scene ${si + 1} Frame ${fi + 1}`,
+                            description: scenes[si]?.framePrompts[fi]?.prompt || '',
+                            thumbnail: url,
+                            tags: ['frame', 'video'],
+                            metadata: { source: 'video-screen' },
+                          });
+                          setSavedFrameKeys(prev => new Set(prev).add(key));
+                          saved++;
+                        }
+                        if (saved === 0) alert('All images already saved to assets.');
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider bg-[#91569c] text-white hover:bg-[#5c3a62] transition-colors"
+                    >
+                      <i className="fa-solid fa-database text-[7px]"></i>
+                      Save All to Assets
+                    </button>
+                  )}
+                  <span className="text-[8px] text-[#3a3a3a]/50 font-bold">{scenes.length} scenes</span>
+                </div>
               </div>
 
               {scenes.map((scene) => {
@@ -983,6 +1031,38 @@ export const VideoScreen: React.FC<VideoScreenProps> = ({
                 >
                   <i className="fa-solid fa-download" />
                 </a>
+                {projectId && (
+                  <button
+                    onClick={async () => {
+                      if (!projectId || !videoState.resultUrl || savedVideoToAssets) return;
+                      setSavingVideoToAssets(true);
+                      try {
+                        await DB.saveToAssets(projectId, {
+                          type: 'video',
+                          name: `${getVideoModel()} — ${videoState.prompt?.slice(0, 60) || 'Video'}`,
+                          description: videoState.prompt || '',
+                          thumbnail: videoState.startImage || videoState.resultUrl,
+                          tags: ['video', getVideoProvider()],
+                          metadata: { source: 'video-screen', model: getVideoModel(), provider: getVideoProvider() },
+                        });
+                        setSavedVideoToAssets(true);
+                      } catch (err: any) {
+                        alert(`Failed to save to assets: ${err?.message || err}`);
+                      } finally {
+                        setSavingVideoToAssets(false);
+                      }
+                    }}
+                    disabled={savedVideoToAssets || savingVideoToAssets}
+                    className={`w-12 h-12 backdrop-blur-xl border rounded-full flex items-center justify-center transition-all shadow-xl ${
+                      savedVideoToAssets
+                        ? 'bg-green-500/30 border-green-400/40 text-green-200'
+                        : 'bg-white/10 border-white/20 text-[#5c3a62] hover:bg-white/20'
+                    }`}
+                    title={savedVideoToAssets ? 'Saved to assets' : 'Save to assets database'}
+                  >
+                    <i className={`fa-solid ${savingVideoToAssets ? 'fa-spinner fa-spin' : savedVideoToAssets ? 'fa-check' : 'fa-database'}`} />
+                  </button>
+                )}
               </div>
             </div>
 

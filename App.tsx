@@ -24,6 +24,7 @@ import { TemplateRunner } from './components/TemplateRunner';
 import { StudioLayout } from './components/StudioLayout';
 import { AgentCataloguePanel } from './components/AgentCataloguePanel';
 import { ProjectDashboard } from './components/ProjectDashboard';
+import { AssetsScreen } from './components/AssetsScreen';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -608,8 +609,7 @@ const App: React.FC = () => {
     } else if (screen === 'agents') {
       setCurrentScreen('agents' as any);
     } else if (screen === 'assets') {
-      // Placeholder — future asset library screen
-      setCurrentScreen('landing');
+      setCurrentScreen('assets' as any);
     } else if (screen === 'settings') {
       // Map sidebar "Settings" to project-settings when a project is active, global settings otherwise
       setLandingInitialView(undefined);
@@ -625,6 +625,7 @@ const App: React.FC = () => {
     : currentScreen === 'project-settings' ? 'settings'
     : currentScreen === 'studio' ? 'studio'
     : (currentScreen as string) === 'agents' ? 'agents'
+    : (currentScreen as string) === 'assets' ? 'assets'
     : currentScreen === 'scenes' ? 'scenes'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
@@ -1393,6 +1394,21 @@ const App: React.FC = () => {
         <div className="flex flex-1 min-h-0">
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectsScreen onSelectProject={handleSelectProject} onBack={() => setCurrentScreen('landing')} />
+        </div>
+      </div>
+    );
+  }
+
+  if ((currentScreen as string) === 'assets') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <AssetsScreen
+            onBack={() => setCurrentScreen('landing')}
+            projects={allProjects}
+          />
         </div>
       </div>
     );

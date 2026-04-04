@@ -166,6 +166,8 @@ export const ConceptScreen: React.FC<ConceptScreenProps> = ({ onBack, onOpenApiK
   const [frameImages, setFrameImages] = useState<Record<string, string>>({});
   const [generatingFrames, setGeneratingFrames] = useState<Set<string>>(new Set());
   const [frameErrors, setFrameErrors] = useState<Record<string, string>>({});
+  const [savedToAssets, setSavedToAssets] = useState(false);
+  const [savingToAssets, setSavingToAssets] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load from DB on mount
@@ -1182,6 +1184,51 @@ Please refine the concept based on this feedback. Keep the same structure but in
                 <i className="fa-solid fa-floppy-disk"></i>
                 Save Screenplay & All Images
               </button>
+              {activeProject && screenplay && (
+                <button
+                  onClick={async () => {
+                    if (!activeProject || savedToAssets) return;
+                    setSavingToAssets(true);
+                    try {
+                      // Save screenplay as a concept asset
+                      await DB.saveToAssets(activeProject.id, {
+                        type: 'concept',
+                        name: `${generalDirection.projectName || 'Project'} — Screenplay`,
+                        description: screenplay.slice(0, 500),
+                        tags: ['screenplay', 'concept'],
+                        metadata: { source: 'concept-screen' },
+                      });
+                      // Save each frame image as an image asset
+                      for (const [key, dataUrl] of Object.entries(frameImages)) {
+                        const parts = key.match(/scene-(\d+)-frame-(\d+)/);
+                        const name = parts ? `Scene ${parseInt(parts[1]) + 1} Frame ${parts[2]}` : key;
+                        await DB.saveToAssets(activeProject.id, {
+                          type: 'image',
+                          name,
+                          description: 'Frame image from screenplay',
+                          thumbnail: dataUrl,
+                          tags: ['frame', 'screenplay'],
+                          metadata: { source: 'concept-screen' },
+                        });
+                      }
+                      setSavedToAssets(true);
+                    } catch (err: any) {
+                      alert(`Failed to save to assets: ${err.message || err}`);
+                    } finally {
+                      setSavingToAssets(false);
+                    }
+                  }}
+                  disabled={savedToAssets || savingToAssets}
+                  className={`w-full mt-2 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
+                    savedToAssets
+                      ? 'bg-green-50 border-green-300 text-green-600 cursor-default'
+                      : 'bg-[#f6f0f8] border-[#ceadd4] text-[#5c3a62] hover:border-[#91569c] hover:bg-[#91569c]/10'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <i className={`fa-solid ${savingToAssets ? 'fa-spinner fa-spin' : savedToAssets ? 'fa-check' : 'fa-database'} text-[9px]`}></i>
+                  {savedToAssets ? 'Saved to Assets' : savingToAssets ? 'Saving...' : 'Save All to Assets Database'}
+                </button>
+              )}
             </div>
           </div>
         ) : step === 'direction' ? (

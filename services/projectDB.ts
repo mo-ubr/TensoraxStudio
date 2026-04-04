@@ -215,4 +215,18 @@ export const DB = {
     apiFetch<Record<string, unknown>>(`/projects/${projectId}/metadata`),
   saveMetadata: (projectId: string, patch: Record<string, unknown>) =>
     apiFetch<Record<string, unknown>>(`/projects/${projectId}/metadata`, { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  // Generic assets
+  listAssets: () => apiFetch<AssetRef[]>('/assets'),
+  createAsset: (asset: { type: string; name: string; description?: string; thumbnail?: string; filePath?: string; tags?: string[]; metadata?: Record<string, string> }) =>
+    apiFetch<AssetRef>('/assets', { method: 'POST', body: JSON.stringify(asset) }),
+  deleteAsset: (id: string) =>
+    apiFetch<{ ok: boolean }>(`/assets/${id}`, { method: 'DELETE' }),
+
+  /** Create an asset record and link it to a project in one call */
+  saveToAssets: async (projectId: string, asset: { type: string; name: string; description?: string; thumbnail?: string; filePath?: string; tags?: string[]; metadata?: Record<string, string> }): Promise<AssetRef> => {
+    const created = await apiFetch<AssetRef>('/assets', { method: 'POST', body: JSON.stringify(asset) });
+    await apiFetch(`/projects/${projectId}/link`, { method: 'POST', body: JSON.stringify({ assetType: asset.type, assetId: created.id }) });
+    return created;
+  },
 };

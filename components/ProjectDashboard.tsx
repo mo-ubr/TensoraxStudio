@@ -47,11 +47,19 @@ async function saveSectionAsWord(title: string, content: string, filename: strin
   a.download = `${slug}_${filename}.docx`;
   a.click();
   URL.revokeObjectURL(url);
-  // Also save to project dir
+  // Also save to project dir + register as asset
   const reader = new FileReader();
   reader.onload = async () => {
     const base64 = (reader.result as string).split(',')[1];
-    await DB.saveProjectFile(projectId, `${slug}_${filename}.docx`, base64, 'concepts').catch(() => {});
+    const savedFile = await DB.saveProjectFile(projectId, `${slug}_${filename}.docx`, base64, 'concepts').catch(() => null);
+    await DB.saveToAssets(projectId, {
+      type: 'concept',
+      name: `${title} (Word)`,
+      description: content.slice(0, 300),
+      filePath: savedFile?.path || `${slug}_${filename}.docx`,
+      tags: ['export', 'word', filename.toLowerCase()],
+      metadata: { source: 'project-dashboard', format: 'docx' },
+    }).catch(() => {});
   };
   reader.readAsDataURL(blob);
 }
@@ -74,7 +82,15 @@ async function saveSectionAsExcel(sheetName: string, data: any[], filename: stri
   const reader = new FileReader();
   reader.onload = async () => {
     const base64 = (reader.result as string).split(',')[1];
-    await DB.saveProjectFile(projectId, `${slug}_${filename}.xlsx`, base64, 'concepts').catch(() => {});
+    const savedFile = await DB.saveProjectFile(projectId, `${slug}_${filename}.xlsx`, base64, 'concepts').catch(() => null);
+    await DB.saveToAssets(projectId, {
+      type: 'concept',
+      name: `${sheetName} (Excel)`,
+      description: `${data.length} rows of ${sheetName} data`,
+      filePath: savedFile?.path || `${slug}_${filename}.xlsx`,
+      tags: ['export', 'excel', filename.toLowerCase()],
+      metadata: { source: 'project-dashboard', format: 'xlsx', rows: String(data.length) },
+    }).catch(() => {});
   };
   reader.readAsDataURL(blob);
 }
@@ -309,7 +325,15 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(',')[1];
-        await DB.saveProjectFile(project.id, `${slug}_Full_Report.docx`, base64, 'concepts').catch(() => {});
+        const savedFile = await DB.saveProjectFile(project.id, `${slug}_Full_Report.docx`, base64, 'concepts').catch(() => null);
+        await DB.saveToAssets(project.id, {
+          type: 'concept',
+          name: `${project.name} — Full Report (Word)`,
+          description: `Full research report with ${sections.length} sections`,
+          filePath: savedFile?.path || `${slug}_Full_Report.docx`,
+          tags: ['export', 'word', 'full-report'],
+          metadata: { source: 'project-dashboard', format: 'docx' },
+        }).catch(() => {});
       };
       reader.readAsDataURL(blob);
     } catch (err) {
@@ -356,7 +380,15 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(',')[1];
-        await DB.saveProjectFile(project.id, `${slug}_Full_Report.xlsx`, base64, 'concepts').catch(() => {});
+        const savedFile = await DB.saveProjectFile(project.id, `${slug}_Full_Report.xlsx`, base64, 'concepts').catch(() => null);
+        await DB.saveToAssets(project.id, {
+          type: 'concept',
+          name: `${project.name} — Full Report (Excel)`,
+          description: 'Full research report with all data sheets',
+          filePath: savedFile?.path || `${slug}_Full_Report.xlsx`,
+          tags: ['export', 'excel', 'full-report'],
+          metadata: { source: 'project-dashboard', format: 'xlsx' },
+        }).catch(() => {});
       };
       reader.readAsDataURL(blob);
     } catch (err) {
