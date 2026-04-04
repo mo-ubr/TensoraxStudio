@@ -1093,6 +1093,131 @@ router.delete("/settings/:key", (req, res) => {
   }
 });
 
+// ─── Discovery proxy (server-side AI call, no CORS issues) ──────────────────
+
+router.post("/discover-competitors", async (req, res) => {
+  try {
+    const { direction, platform, ownHandle, maxResults = 8 } = req.body;
+    if (!direction) return res.status(400).json({ error: "direction is required" });
+
+    const d = getDB();
+    const rows = d.prepare("SELECT key, value FROM settings WHERE scope = 'global'").all();
+    const settings = {};
+    for (const r of rows) settings[r.key] = r.value;
+
+    // Resolve model and API key
+    const model = settings.tensorax_analysis_model || 'gemini-2.5-flash';
+    let apiKey = settings[`tensorax_analysis_key__${model}`]
+      || settings.tensorax_analysis_key;
+
+    // Determine provider
+    let provider = 'gemini';
+    if (model.startsWith('claude') || model.startsWith('anthropic')) provider = 'claude';
+    else if (model.startsWith('gpt') || /^o[134]/.test(model)) provider = 'openai';
+    else if (model.includes('qwen')) provider = 'dashscope';
+    else if (model.startsWith('deepseek')) provider = 'deepseek';
+    else if (model.startsWith('mistral') || model.startsWith('pixtral')) provider = 'mistral';
+    else if (model.includes('llama')) provider = 'openrouter';
+    else if (model.startsWith('gemini') || model.startsWith('imagen')) provider = 'gemini';
+
+    // Resolve provider key if per-model key not found
+    const providerKeyMap = {
+      gemini: ['tensorax_provider_key__gemini', 'gemini_api_key'],
+      claude: ['tensorax_provider_key__claude'],
+      openai: ['tensorax_provider_key__openai'],
+      dashscope: ['tensorax_provider_key__dashscope'],
+      deepseek: ['tensorax_provider_key__deepseek'],
+      mistral: ['tensorax_provider_key__mistral'],
+      openrouter: ['tensorax_provider_key__openrouter'],
+    };
+    if (!apiKey) {
+      for (const k of providerKeyMap[provider] || []) {
+        if (settings[k]) { apiKey = settings[k]; break; }
+      }
+    }
+    if (!apiKey) return res.status(400).json({ error: `No API key for provider ${provider}. Set one in Settings.` });
+
+    const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
+    const systemPrompt = `You are a social media strategist and competitive intelligence expert.\nReturn ONLY a JSON object: {"competitors": [{"handle": "username_no_at", "reasoning": "why relevant", "confidence": 0.85}]}`;
+    const userMessage = `Identify the top ${maxResults} ${platformName} accounts for this research direction:\n\n**Research Direction:** "${direction}"\n${ownHandle ? `**Exclude this account:** ${ownHandle}` : ''}\n\nRules:\n- No @ prefix in handles. ${maxResults} accounts maximum.\n- Must be real, public accounts on ${platformName}\n- Must be directly relevant to: "${direction.slice(0, 200)}"\n- Sort by relevance. Prioritise accounts from the direction's language/country.`;
+
+    console.log(`[Discovery API] Provider: ${provider}, Model: ${model}, Key: ${apiKey.slice(0, 8)}...`);
+
+    let text = '';
+
+    if (provider === 'gemini') {
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey });
+      const r = await ai.models.generateContent({
+        model, contents: userMessage,
+        config: { systemInstruction: systemPrompt, temperature: 0.3, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+      });
+      text = r.text || '';
+    } else {
+      // OpenAI-compatible (works for OpenAI, DashScope, DeepSeek, Mistral, OpenRouter)
+      const baseURLs = {
+        openai: 'https://api.openai.com/v1',
+        dashscope: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+        deepseek: 'https://api.deepseek.com/v1',
+        mistral: 'https://api.mistral.ai/v1',
+        openrouter: 'https://openrouter.ai/api/v1',
+        claude: null,
+      };
+      const baseURL = baseURLs[provider];
+
+      if (provider === 'claude') {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model, max_tokens: 2048, temperature: 0.3, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+        });
+        const data = await resp.json();
+        text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      } else {
+        const isReasoning = /^o[134]/.test(model);
+        const messages = isReasoning
+          ? [{ role: 'developer', content: systemPrompt }, { role: 'user', content: userMessage }]
+          : [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }];
+        const resp = await fetch(`${baseURL}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model, messages, max_tokens: 2048,
+            ...(isReasoning ? {} : { temperature: 0.3 }),
+            response_format: { type: 'json_object' },
+          }),
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+        text = data.choices?.[0]?.message?.content || '';
+      }
+    }
+
+    console.log('[Discovery API] Response:', text.slice(0, 300));
+
+    // Parse JSON
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); } catch {
+      const m = cleaned.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { parsed = JSON.parse(m[0].replace(/,\s*]/g, ']').replace(/,\s*}/g, '}').replace(/[\x00-\x1f]/g, ' ')); } catch { /* give up */ }
+      }
+    }
+    if (!parsed) return res.json({ competitors: [], error: `Could not parse AI response: "${cleaned.slice(0, 100)}…"` });
+
+    const competitors = (parsed.competitors || [])
+      .filter(c => c.handle && typeof c.handle === 'string')
+      .map(c => ({ handle: c.handle.replace(/^@/, '').trim(), reasoning: c.reasoning || '', confidence: typeof c.confidence === 'number' ? c.confidence : 0.5 }))
+      .filter(c => !ownHandle || c.handle.toLowerCase() !== ownHandle.replace(/^@/, '').toLowerCase());
+
+    res.json({ competitors, model, provider });
+  } catch (e) {
+    console.error('[Discovery API] Error:', e);
+    res.status(500).json({ error: e.message || String(e) });
+  }
+});
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 ensureAssetFolders().then(() => {

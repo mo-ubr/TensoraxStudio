@@ -47,7 +47,21 @@ npm run build         # Vite production build → dist/
 npm run preview       # Preview production build locally
 ```
 
-No test runner or linter is configured.
+### Validation (mandatory)
+
+A pre-commit hook runs `node tests/validate-app.mjs` automatically before every commit. It checks 7 gates:
+
+1. **Build compiles** — Vite build must succeed
+2. **App serves** — localhost:5180 must return HTML with root element (skipped if dev server not running)
+3. **No hardcoded retail defaults** — no retail competitor handles as defaults in research code
+4. **Discovery uses configured API** — no hardcoded Gemini; must use `getModelForType`/`detectProvider`
+5. **Key files exist** — 14 critical files must be present
+6. **Platform configs are real** — each platform config must have >200 chars and metrics definitions
+7. **Direction field is binding** — Direction must be described as a binding constraint in the UI
+
+If any gate fails, the commit is blocked. Fix the failures and try again. **Do not bypass with `--no-verify`.**
+
+You can also run validation manually: `node tests/validate-app.mjs`
 
 Production deploy (DigitalOcean/PM2): `bash deploy.sh` runs git pull → npm ci → build → pm2 reload.
 
