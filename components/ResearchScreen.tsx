@@ -112,9 +112,20 @@ Rules:
     console.log('[Discovery] Response:', text.slice(0, 300));
 
     let parsed: any;
-    try { parsed = JSON.parse(text); } catch {
-      const m = text.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0].replace(/,\s*]/g, ']').replace(/,\s*}/g, '}'));
+    // Strip markdown fences if present (```json ... ```)
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    try { parsed = JSON.parse(cleaned); } catch {
+      // Try extracting the outermost JSON object
+      const m = cleaned.match(/\{[\s\S]*\}/);
+      if (m) {
+        const sanitised = m[0]
+          .replace(/,\s*]/g, ']')       // trailing commas in arrays
+          .replace(/,\s*}/g, '}')       // trailing commas in objects
+          .replace(/[\x00-\x1f]/g, ' '); // control chars that break parsing
+        try { parsed = JSON.parse(sanitised); } catch (e2: any) {
+          console.warn('[Discovery] JSON cleanup failed:', e2.message, sanitised.slice(0, 200));
+        }
+      }
     }
     if (!parsed) return { competitors: [], error: 'Could not parse AI response. Try again.' };
 
