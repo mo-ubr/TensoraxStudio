@@ -10,6 +10,7 @@ import {
   type PreExecutionCheck,
 } from '../src/workflows/segments/social-media/research/research-guardrails';
 import { getApiKeyForType, getModelForType } from '../services/geminiService';
+import { Settings } from '../services/settingsDB';
 
 // ── Auto-discover competitors via configured best-of-breed API ───────────
 
@@ -28,8 +29,8 @@ function detectProvider(model: string): 'gemini' | 'claude' | 'openai' {
 function resolveDiscoveryKey(provider: 'gemini' | 'claude' | 'openai'): string | null {
   const model = getModelForType('analysis');
   if (model) {
-    const perModel = localStorage.getItem(`tensorax_analysis_key__${model}`);
-    if (perModel?.trim()) return perModel.trim();
+    const perModel = Settings.get(`tensorax_analysis_key__${model}`);
+    if (perModel) return perModel;
   }
   const generic = getApiKeyForType('analysis');
   if (generic) return generic;
@@ -39,8 +40,8 @@ function resolveDiscoveryKey(provider: 'gemini' | 'claude' | 'openai'): string |
     openai: ['openai_api_key', 'tensorax_provider_key__openai'],
   };
   for (const key of providerKeys[provider] || []) {
-    const val = localStorage.getItem(key);
-    if (val?.trim()) return val.trim();
+    const val = Settings.get(key);
+    if (val) return val;
   }
   return null;
 }
@@ -160,7 +161,7 @@ const PLATFORMS: { id: PlatformId; label: string; icon: string }[] = [
 ];
 
 function getApifyKey(): string {
-  return localStorage.getItem('tensorax_provider_key__apify') ?? localStorage.getItem('apify_api_key') ?? '';
+  return Settings.get('tensorax_provider_key__apify') || Settings.get('apify_api_key') || '';
 }
 
 function createResearchProject(overrides: {
