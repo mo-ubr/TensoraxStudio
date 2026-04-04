@@ -9,6 +9,108 @@ import {
   type GuardrailResult,
   type PreExecutionCheck,
 } from '../src/workflows/segments/social-media/research/research-guardrails';
+import { GeminiService, getApiKeyForType } from '../services/geminiService';
+
+// ── Auto-discover competitors via Gemini ─────────────────────────────────
+
+interface DiscoveredCompetitor {
+  handle: string;
+  reasoning: string;
+  confidence: number;
+}
+
+async function discoverCompetitors(
+  direction: string,
+  platform: PlatformId,
+  ownHandle: string,
+  maxResults = 8,
+): Promise<{ competitors: DiscoveredCompetitor[]; error?: string }> {
+  const apiKey = GeminiService.getApiKey() || getApiKeyForType('analysis');
+  if (!apiKey) {
+    return { competitors: [], error: 'No Gemini API key set. Add one in Settings to enable auto-discovery.' };
+  }
+
+  const platformName = platform === 'tiktok' ? 'TikTok' : platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : 'Facebook';
+
+  const prompt = `You are a social media strategist and competitive intelligence expert.
+
+Given a research direction/brief and platform, identify the top ${maxResults} ${platformName} accounts that are the most relevant competitors, benchmarks, or leading voices in this domain.
+
+**Research Direction:** "${direction}"
+**Platform:** ${platformName}
+${ownHandle ? `**User's Own Account:** ${ownHandle} (exclude from results)` : ''}
+
+Your task:
+1. Identify the top-performing and most relevant ${platformName} accounts in this exact domain/niche
+2. Include a mix of: direct competitors, industry leaders, and top-rated pages in this space
+3. Only suggest accounts that actually exist on ${platformName}
+4. Prefer accounts with high engagement and relevance to the direction
+
+Return ONLY valid JSON, no markdown fences:
+{
+  "competitors": [
+    {
+      "handle": "username_without_at_symbol",
+      "reasoning": "Brief explanation of why this account is relevant",
+      "confidence": 0.85
+    }
+  ]
+}
+
+Rules:
+- No @ prefix in handles
+- ${maxResults} accounts maximum
+- Must be real, public accounts on ${platformName}
+- Must be directly relevant to: "${direction.slice(0, 200)}"
+- Sort by relevance (most relevant first)
+- If the direction is in a specific language/country, prioritise accounts from that region`;
+
+  try {
+    // Use Gemini chat for the discovery
+    const { GoogleGenAI } = await import('@anthropic-ai/sdk').catch(() => ({ GoogleGenAI: null }));
+
+    // Direct Gemini API call
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      return { competitors: [], error: `Gemini API error: ${(errData as any)?.error?.message || response.status}` };
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Parse JSON from response (handle markdown fences)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { competitors: [], error: 'Could not parse AI response. Try again.' };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const discovered: DiscoveredCompetitor[] = (parsed.competitors || [])
+      .filter((c: any) => c.handle && typeof c.handle === 'string')
+      .map((c: any) => ({
+        handle: c.handle.replace(/^@/, '').trim(),
+        reasoning: c.reasoning || '',
+        confidence: typeof c.confidence === 'number' ? c.confidence : 0.5,
+      }))
+      .filter((c: DiscoveredCompetitor) => c.handle.toLowerCase() !== ownHandle.replace(/^@/, '').toLowerCase());
+
+    return { competitors: discovered };
+  } catch (err: any) {
+    return { competitors: [], error: `Discovery failed: ${err.message || err}` };
+  }
+}
 
 // ── NO hardcoded defaults. Direction drives everything. ───────────────────
 
@@ -379,8 +481,48 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
   const [error, setError] = useState<string | null>(null);
   const [preCheckResults, setPreCheckResults] = useState<GuardrailResult[]>([]);
   const abortRef = useRef(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveredCompetitors, setDiscoveredCompetitors] = useState<DiscoveredCompetitor[]>([]);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
   const hasApifyKey = !!getApifyKey();
+
+  const handleDiscover = useCallback(async () => {
+    if (!direction.trim() && !ownHandle.trim()) return;
+    setDiscovering(true);
+    setDiscoveryError(null);
+    setDiscoveredCompetitors([]);
+    try {
+      const result = await discoverCompetitors(
+        direction.trim() || `Research about ${ownHandle.trim()} and similar accounts`,
+        selectedPlatform,
+        ownHandle.trim(),
+      );
+      if (result.error) {
+        setDiscoveryError(result.error);
+      } else if (result.competitors.length > 0) {
+        setDiscoveredCompetitors(result.competitors);
+        // Auto-populate the competitors field
+        const handles = result.competitors.map(c => `@${c.handle}`).join(', ');
+        setCompetitors(prev => {
+          const existing = prev.split(',').map(s => s.trim()).filter(Boolean);
+          if (existing.length === 0) return handles;
+          // Merge — add new ones that aren't already there
+          const existingLower = new Set(existing.map(h => h.replace(/^@/, '').toLowerCase()));
+          const newHandles = result.competitors
+            .filter(c => !existingLower.has(c.handle.toLowerCase()))
+            .map(c => `@${c.handle}`);
+          return [...existing, ...newHandles].join(', ');
+        });
+      } else {
+        setDiscoveryError('No competitors found for this direction. Try a more specific brief.');
+      }
+    } catch (err: any) {
+      setDiscoveryError(err.message || 'Discovery failed');
+    } finally {
+      setDiscovering(false);
+    }
+  }, [direction, selectedPlatform, ownHandle]);
 
   const handleRun = useCallback(async () => {
     // Parse inputs
@@ -409,13 +551,21 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
       return;
     }
 
+    // Auto-discover competitors if none provided but direction exists
     if (preCheck.effectiveCompetitors.length === 0 && direction.trim()) {
-      setError(
-        'No competitors provided. Please enter competitor handles relevant to your direction:\n' +
-        `"${direction.trim().slice(0, 100)}"\n\n` +
-        'The system cannot auto-discover competitors yet — this feature is coming soon.'
-      );
-      return;
+      setError(null);
+      setProgress({ phase: 'scraping', platform: selectedPlatform, progress: 5, message: 'Discovering top competitors via AI...' });
+      const discovery = await discoverCompetitors(direction.trim(), selectedPlatform, ownHandle.trim());
+      if (discovery.error || discovery.competitors.length === 0) {
+        setError(discovery.error || 'Could not auto-discover competitors. Please enter them manually.');
+        setProgress(null);
+        return;
+      }
+      // Populate the field and use discovered competitors
+      const handles = discovery.competitors.map(c => `@${c.handle}`);
+      setCompetitors(handles.join(', '));
+      setDiscoveredCompetitors(discovery.competitors);
+      preCheck.effectiveCompetitors = discovery.competitors.map(c => c.handle);
     }
 
     setRunning(true);
@@ -538,21 +688,54 @@ export default function ResearchScreen({ onBack, activeProject }: ResearchScreen
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Competitor Handles
                 {directionSet && competitorsEmpty && (
-                  <span className="text-red-500 font-normal text-xs ml-1">* required when direction is set</span>
+                  <span className="text-[#91569c] font-normal text-xs ml-1">— will auto-discover if left empty</span>
                 )}
               </label>
-              <input
-                type="text"
-                value={competitors}
-                onChange={e => setCompetitors(e.target.value)}
-                placeholder="@competitor1, @competitor2, @competitor3"
-                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-[#91569c] ${
-                  directionSet && competitorsEmpty ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
-              />
-              {directionSet && competitorsEmpty && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={competitors}
+                  onChange={e => setCompetitors(e.target.value)}
+                  placeholder={directionSet ? 'Leave empty to auto-discover, or enter manually' : '@competitor1, @competitor2, @competitor3'}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#91569c]"
+                />
+                <button
+                  onClick={handleDiscover}
+                  disabled={discovering || (!direction.trim() && !ownHandle.trim())}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-[#f6f0f8] border border-[#ceadd4] text-[#91569c] hover:bg-[#91569c] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                  title="Use AI to find top competitors in your niche"
+                >
+                  <i className={`fa-solid ${discovering ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'} text-xs`} />
+                  {discovering ? 'Finding...' : 'Discover'}
+                </button>
+              </div>
+              {discoveryError && (
                 <p className="text-[11px] text-red-500 mt-0.5">
-                  Enter competitors relevant to your direction. No defaults will be used.
+                  <i className="fa-solid fa-triangle-exclamation mr-0.5" />{discoveryError}
+                </p>
+              )}
+              {discoveredCompetitors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#91569c]">
+                    <i className="fa-solid fa-wand-magic-sparkles mr-1" />AI-discovered competitors
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {discoveredCompetitors.map((c, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#f6f0f8] border border-[#ceadd4] text-[10px] text-[#5c3a62]"
+                        title={c.reasoning}
+                      >
+                        @{c.handle}
+                        <span className="text-[8px] text-[#91569c] font-bold">{Math.round(c.confidence * 100)}%</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {directionSet && competitorsEmpty && discoveredCompetitors.length === 0 && !discovering && (
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  Click "Discover" or leave empty — competitors will be auto-discovered when you run research.
                 </p>
               )}
             </div>
