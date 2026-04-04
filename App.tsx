@@ -1374,8 +1374,8 @@ const App: React.FC = () => {
           brands={brands}
           activeBrandId={activeBrandId}
           activeTemplateId={activeTemplateId}
-          onBack={() => { setCurrentScreen('landing'); }}
-          onSwitchProject={() => { persistProject(null); setActiveTemplateId(null); setCurrentScreen('landing'); }}
+          onBack={() => { setLandingInitialView('projects'); setCurrentScreen('landing'); }}
+          onSwitchProject={() => { persistProject(null); setActiveTemplateId(null); setLandingInitialView('projects'); setCurrentScreen('landing'); }}
           onUpdateProject={(updated) => {
             persistProject(updated);
             setAllProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -1422,7 +1422,7 @@ const App: React.FC = () => {
           <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
           <ProjectDashboard
             project={activeProject}
-            onBack={() => setCurrentScreen('projects')}
+            onBack={() => { setLandingInitialView('projects'); setCurrentScreen('landing'); }}
             onOpenInChat={(p) => {
               persistProject(p);
               setCurrentScreen('studio');

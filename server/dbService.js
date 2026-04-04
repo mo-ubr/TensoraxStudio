@@ -804,6 +804,98 @@ router.get("/projects/:id/serve-file/:filepath(*)", async (req, res) => {
   }
 });
 
+// ─── Sync project files to assets ────────────────────────────────────────────
+
+/** Detect asset type from file extension */
+function detectAssetType(filename) {
+  if (/\.(png|jpg|jpeg|webp|gif|svg)$/i.test(filename)) return "image";
+  if (/\.(mp4|webm|mov|avi)$/i.test(filename)) return "video";
+  if (/\.(docx?|xlsx?|pdf|txt|md|csv)$/i.test(filename)) return "concept";
+  if (/\.(json|html)$/i.test(filename)) return "concept";
+  return "concept";
+}
+
+router.post("/projects/:id/sync-assets", async (req, res) => {
+  try {
+    const d = getDB();
+    const p = d.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!p) return res.status(404).json({ error: "Project not found" });
+
+    const projectDir = getProjectDir(p);
+    await mkdir(projectDir, { recursive: true });
+
+    // Walk all files
+    const files = [];
+    async function walk(dir, prefix) {
+      try {
+        const entries = await readdir(dir, { withFileTypes: true });
+        for (const e of entries) {
+          const fullPath = join(dir, e.name);
+          if (e.isDirectory()) {
+            await walk(fullPath, prefix ? prefix + "/" + e.name : e.name);
+          } else {
+            const s = await stat(fullPath).catch(() => null);
+            files.push({
+              name: e.name,
+              folder: prefix || "",
+              path: fullPath,
+              size: s?.size || 0,
+              url: `/api/db/projects/${p.id}/serve-file/${encodeURIComponent(prefix ? prefix + "/" + e.name : e.name)}`,
+            });
+          }
+        }
+      } catch { /* dir doesn't exist yet */ }
+    }
+    await walk(projectDir, "");
+
+    // Get existing asset filePaths for this project to avoid duplicates
+    const linked = d.prepare("SELECT assetId FROM project_assets WHERE projectId = ?").all(req.params.id);
+    const linkedIds = new Set(linked.map(r => r.assetId));
+    const existingPaths = new Set();
+    for (const { assetId } of linked) {
+      const asset = d.prepare("SELECT filePath FROM assets WHERE id = ?").get(assetId);
+      if (asset?.filePath) existingPaths.add(asset.filePath);
+    }
+
+    let created = 0;
+    for (const f of files) {
+      // Skip if already registered (match by file path or name)
+      const relPath = f.folder ? f.folder + "/" + f.name : f.name;
+      if (existingPaths.has(relPath) || existingPaths.has(f.path) || existingPaths.has(f.name)) continue;
+
+      // Also check by name+type to avoid duplicates
+      const type = detectAssetType(f.name);
+      const existing = d.prepare("SELECT id FROM assets WHERE name = ? AND type = ? AND filePath = ?").get(f.name, type, relPath);
+      if (existing) {
+        // Link if not linked
+        if (!linkedIds.has(existing.id)) {
+          d.prepare("INSERT OR IGNORE INTO project_assets (projectId, assetId, assetType, linkedAt) VALUES (?, ?, ?, ?)").run(req.params.id, existing.id, type, now());
+        }
+        continue;
+      }
+
+      const id = newId();
+      const folderTag = f.folder.split("/")[0] || "output";
+      d.prepare(`INSERT INTO assets (id, type, name, description, thumbnail, filePath, createdAt, tags, metadata, referenceImages)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, type, f.name, "",
+        type === "image" ? f.url : "",
+        relPath, now(),
+        JSON.stringify([folderTag, type]),
+        JSON.stringify({ source: "sync", size: String(f.size), project: p.name }),
+        "[]"
+      );
+      d.prepare("INSERT OR IGNORE INTO project_assets (projectId, assetId, assetType, linkedAt) VALUES (?, ?, ?, ?)").run(req.params.id, id, type, now());
+      created++;
+    }
+
+    d.prepare("UPDATE projects SET updatedAt = ? WHERE id = ?").run(now(), req.params.id);
+    res.json({ ok: true, filesScanned: files.length, assetsCreated: created });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Generic asset CRUD (characters, scenery, clothing) ──────────────────────
 
 function assetRoutes(typeName) {

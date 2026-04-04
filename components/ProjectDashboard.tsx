@@ -155,6 +155,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ project, onB
   const [instructionsSaved, setInstructionsSaved] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ filesScanned: number; assetsCreated: number } | null>(null);
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Actions config

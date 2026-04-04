@@ -223,6 +223,10 @@ export const DB = {
   deleteAsset: (id: string) =>
     apiFetch<{ ok: boolean }>(`/assets/${id}`, { method: 'DELETE' }),
 
+  /** Scan all project files on disk and register them as assets */
+  syncProjectAssets: (projectId: string) =>
+    apiFetch<{ ok: boolean; filesScanned: number; assetsCreated: number }>(`/projects/${projectId}/sync-assets`, { method: 'POST' }),
+
   /** Create an asset record and link it to a project in one call */
   saveToAssets: async (projectId: string, asset: { type: string; name: string; description?: string; thumbnail?: string; filePath?: string; tags?: string[]; metadata?: Record<string, string> }): Promise<AssetRef> => {
     const created = await apiFetch<AssetRef>('/assets', { method: 'POST', body: JSON.stringify(asset) });
