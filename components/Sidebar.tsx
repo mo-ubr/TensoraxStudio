@@ -57,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'agents',    label: 'Teams',      icon: 'fa-users-gear',  screen: 'agents' },
   { id: 'projects',  label: 'Projects',  icon: 'fa-folder-open', screen: 'projects' },
   { id: 'assets',    label: 'Assets',    icon: 'fa-images',      screen: 'assets' },
+  { id: 'workflows', label: 'Workflows', icon: 'fa-diagram-project', screen: 'workflows' },
   { id: 'settings',  label: 'Settings',  icon: 'fa-gear',        screen: 'settings' },
 ];
 

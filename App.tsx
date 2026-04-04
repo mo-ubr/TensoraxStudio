@@ -25,6 +25,7 @@ import { StudioLayout } from './components/StudioLayout';
 import { AgentCataloguePanel } from './components/AgentCataloguePanel';
 import { ProjectDashboard } from './components/ProjectDashboard';
 import { AssetsScreen } from './components/AssetsScreen';
+import WorkflowsScreen from './components/WorkflowsScreen';
 
 const GRID_SIZE = 3;
 const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
@@ -610,6 +611,8 @@ const App: React.FC = () => {
       setCurrentScreen('agents' as any);
     } else if (screen === 'assets') {
       setCurrentScreen('assets' as any);
+    } else if (screen === 'workflows') {
+      setCurrentScreen('workflows' as any);
     } else if (screen === 'settings') {
       // Map sidebar "Settings" to project-settings when a project is active, global settings otherwise
       setLandingInitialView(undefined);
@@ -626,6 +629,7 @@ const App: React.FC = () => {
     : currentScreen === 'studio' ? 'studio'
     : (currentScreen as string) === 'agents' ? 'agents'
     : (currentScreen as string) === 'assets' ? 'assets'
+    : (currentScreen as string) === 'workflows' ? 'workflows'
     : currentScreen === 'scenes' ? 'scenes'
     : currentScreen === 'template-library' || currentScreen === 'template-runner' ? 'templates'
     : currentScreen === 'landing' ? (landingInitialView === 'templates' ? 'templates' : landingInitialView === 'projects' ? 'projects' : 'landing')
@@ -1616,6 +1620,21 @@ const App: React.FC = () => {
               }}
             />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if ((currentScreen as string) === 'workflows') {
+    return (
+      <div className="flex flex-col h-screen bg-[#edecec]">
+        {TopHeader}
+        <div className="flex flex-1 min-h-0">
+          <Sidebar currentScreen={sidebarActiveScreen} onNavigate={handleSidebarNav} onTemplates={() => handleSidebarNav('templates')} />
+          <WorkflowsScreen
+            onBack={() => handleSidebarNav('studio')}
+            activeProject={activeProject}
+          />
         </div>
       </div>
     );

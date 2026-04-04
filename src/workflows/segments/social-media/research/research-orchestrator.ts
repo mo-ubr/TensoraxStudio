@@ -41,14 +41,13 @@ export type ProgressCallback = (progress: ResearchProgress) => void;
 // ── Platform config loader (dynamic import from platform-configs/) ─────────
 
 async function loadPlatformConfig(platform: PlatformId): Promise<PlatformConfig> {
-  // Dynamic import from the platform-configs directory (managed by agent B)
   try {
-    const configModule = await import(`./platform-configs/${platform}.config`);
-    return configModule.default ?? configModule[`${platform}Config`] ?? configModule.config;
+    const configModule = await import(`./platform-configs/${platform}`);
+    return configModule.PLATFORM_CONFIG ?? configModule.default ?? configModule[`${platform}Config`] ?? configModule.config;
   } catch {
     throw new Error(
       `Platform config not found for "${platform}". ` +
-      `Expected a file at research/platform-configs/${platform}.config.ts`
+      `Expected a file at research/platform-configs/${platform}.ts`
     );
   }
 }
