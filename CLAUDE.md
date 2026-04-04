@@ -150,3 +150,41 @@ NEXT brand identity rules (logotype, typography, colours, CTAs) are defined in `
 - Dev ports: frontend 5180, backend 5182.
 - UK/US (ISO/ANSI) keyboard layouts preferred.
 - Test changes before committing.
+
+## Architecture Governance — MANDATORY
+
+The definitive system architecture is documented in:
+- **Master document:** `H:\Shared drives\zLibraries\TENSORAX\Design & Scope\The Tensorax Studio Design Architecture v2.md` (and .docx)
+- **NotebookLM:** "Tensorax Architecture & Development" notebook (query with `notebook_query` or `cross_notebook_query`)
+- **Memory files:** `brain_architecture.md`, `brain_agent_teams.md`, `project_3tier_mo_architecture.md`
+
+### At Session Start
+Every session MUST read `brain_agent_teams.md` and `project_3tier_mo_architecture.md` from the memory directory. These define:
+- The 3-layer agent hierarchy (MO → PM → TL → Specialist)
+- The 22 teams and 145 specialist agents
+- The 3-tier interaction model (Template Launcher + MO Chat + Dev Sandbox)
+- The phased development strategy (Phase 0 orchestration framework first)
+- The meta-prompt requirements for MO
+
+### Before Any Architectural Work
+Before implementing any of the following, you MUST query NotebookLM ("Tensorax Architecture & Development" notebook) to verify alignment with the Design Architecture v2:
+- Creating or modifying agent roles, teams, or specialists
+- Building or changing orchestrators or pipelines
+- Modifying MO's behaviour or routing logic
+- Creating or modifying workflow templates
+- Changing the PM, TL, or Specialist communication protocols
+- Adding new layers, control loops, or quality gates
+
+The query should be: "Does [proposed change] align with the Design Architecture v2? Which section governs this?"
+
+### Architecture Rules (Non-Negotiable)
+1. **3-layer hierarchy:** MO (Account Manager) → PM (Composer/Planner) → TL (Quality Guardian) → Specialist (Skilled Hands). Never bypass layers.
+2. **MO is interface only** — MO routes and composes, never executes production work.
+3. **PMs don't produce** — PMs decompose, compose, coordinate, and manage quality gates. They never generate images, write copy, or produce assets.
+4. **TLs own the testing loop** — test/rework/retest happens between TL and specialists. User never sees internal iterations.
+5. **Specialists are interchangeable** — if one underperforms, TL reassigns. No specialist is irreplaceable.
+6. **Templates are the execution format** — even freeform compositions output TemplateConfig JSON and run through existing orchestrators.
+7. **Platform is domain-agnostic** — never hardcode retail/NEXT defaults. Direction field defines the domain.
+8. **Phase 0 first** — the orchestration framework (PM agent, TL agent, template format, state management, communication protocols) must be built before wiring individual skills.
+9. **PM system prompt is highest priority** — the PM's creative decomposition capability defines the platform's intelligence ceiling.
+10. **Devil's advocate** — Peer Review PM validates workflow composition before execution. Post-hoc Retrospective runs after every completed workflow.
