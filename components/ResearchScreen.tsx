@@ -156,7 +156,11 @@ Rules:
       text = res.text || '';
     }
 
-    console.log('[Discovery] Response:', text.slice(0, 300));
+    console.log('[Discovery] Raw response:', text.slice(0, 500));
+
+    if (!text || !text.trim()) {
+      return { competitors: [], error: 'AI returned empty response. Try again — this is usually transient.' };
+    }
 
     let parsed: any;
     // Strip markdown fences if present (```json ... ```)
@@ -168,13 +172,27 @@ Rules:
         const sanitised = m[0]
           .replace(/,\s*]/g, ']')       // trailing commas in arrays
           .replace(/,\s*}/g, '}')       // trailing commas in objects
-          .replace(/[\x00-\x1f]/g, ' '); // control chars that break parsing
+          .replace(/[\x00-\x1f]/g, ' ') // control chars that break parsing
+          .replace(/"\s*\n\s*"/g, '", "'); // broken string continuations
         try { parsed = JSON.parse(sanitised); } catch (e2: any) {
-          console.warn('[Discovery] JSON cleanup failed:', e2.message, sanitised.slice(0, 200));
+          console.warn('[Discovery] JSON cleanup failed:', e2.message, '\nInput:', sanitised.slice(0, 400));
+        }
+      }
+      // Last resort: try to find a JSON array of handles
+      if (!parsed) {
+        const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          try {
+            const arr = JSON.parse(arrMatch[0].replace(/,\s*]/g, ']'));
+            if (Array.isArray(arr)) parsed = { competitors: arr };
+          } catch { /* give up */ }
         }
       }
     }
-    if (!parsed) return { competitors: [], error: 'Could not parse AI response. Try again.' };
+    if (!parsed) {
+      console.error('[Discovery] Unparseable response:', cleaned.slice(0, 300));
+      return { competitors: [], error: `Could not parse AI response. Raw: "${cleaned.slice(0, 80)}…"` };
+    }
 
     const discovered: DiscoveredCompetitor[] = (parsed.competitors || [])
       .filter((c: any) => c.handle && typeof c.handle === 'string')
